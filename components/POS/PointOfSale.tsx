@@ -23,9 +23,6 @@ type Customer = {
   email: string;
 };
 
-// Add this type definition
-type Option = Customer | undefined;
-
 type PointOfSaleProps = {
   categories: Category[];
   products: Product[];
@@ -43,7 +40,7 @@ export default function PointOfSale({
   const initialCustomer = customers.find(
     (item: Customer) => item.value === initialCustomerId
   );
-  const [selectedCustomer, setSelectedCustomer] = useState<Option>(initialCustomer);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(initialCustomer || null);
   const [searchResults, setSearchResults] = useState(products);
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -57,11 +54,15 @@ export default function PointOfSale({
   const dispatch = useAppDispatch();
 
   async function handleCreateOrder() {
+    if (!selectedCustomer) {
+      toast.error("Please select a customer");
+      return;
+    }
     setProcessing(true);
     const customerData = {
-      customerId: selectedCustomer?.value as string,
-      customerName: selectedCustomer?.label as string,
-      customerEmail: selectedCustomer?.email as string,
+      customerId: selectedCustomer.value,
+      customerName: selectedCustomer.label,
+      customerEmail: selectedCustomer.email,
     };
     const orderItems = orderLineItems;
     const orderAmount = +totalSum;
@@ -85,7 +86,6 @@ export default function PointOfSale({
   }
 
   function clearOrder() {
-    //Handle Remove From LocalStorage
     dispatch(removeAllProductsFromOrderLine());
     setSuccess(false);
   }
