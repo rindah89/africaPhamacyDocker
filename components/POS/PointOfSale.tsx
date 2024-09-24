@@ -16,6 +16,7 @@ import { Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { removeAllProductsFromOrderLine } from "@/redux/slices/pointOfSale";
 import { ReceiptPrint } from "./ReceiptPrint";
+import { Option, Options } from "react-tailwindcss-select/dist/components/type";
 
 type Customer = {
   label: string;
@@ -40,7 +41,9 @@ export default function PointOfSale({
   const initialCustomer = customers.find(
     (item: Customer) => item.value === initialCustomerId
   );
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(initialCustomer || null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Option>(
+    initialCustomer ? { label: initialCustomer.label, value: initialCustomer.value } : { label: "", value: "" }
+  );
   const [searchResults, setSearchResults] = useState(products);
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -54,15 +57,21 @@ export default function PointOfSale({
   const dispatch = useAppDispatch();
 
   async function handleCreateOrder() {
-    if (!selectedCustomer) {
+    if (!selectedCustomer.value) {
       toast.error("Please select a customer");
       return;
     }
     setProcessing(true);
+    const customer = customers.find(c => c.value === selectedCustomer.value);
+    if (!customer) {
+      toast.error("Selected customer not found");
+      setProcessing(false);
+      return;
+    }
     const customerData = {
-      customerId: selectedCustomer.value,
-      customerName: selectedCustomer.label,
-      customerEmail: selectedCustomer.email,
+      customerId: customer.value,
+      customerName: customer.label,
+      customerEmail: customer.email,
     };
     const orderItems = orderLineItems;
     const orderAmount = +totalSum;
@@ -156,9 +165,9 @@ export default function PointOfSale({
         <div className="pt-2">
           <FormSelectInput
             label="Customers"
-            options={customers}
+            options={customers as Options}
             option={selectedCustomer}
-            setOption={setSelectedCustomer}
+            setOption={(option: Option) => setSelectedCustomer(option)}
             toolTipText="Add New Customer"
             href="/dashboard/sales/customers/new"
           />
