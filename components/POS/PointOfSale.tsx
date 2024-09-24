@@ -224,7 +224,7 @@ export default function PointOfSale({
                 Total
               </h2>
               <h2 className="scroll-m-20 pb-2 text-base font-semibold tracking-tight first:mt-0 py-3 text-muted-foreground">
-                {totalSum.toLocaleString('fr-CM')} FCFA
+                {totalSum}
               </h2>
             </div>
             {processing ? (
