@@ -23,6 +23,9 @@ type Customer = {
   email: string;
 };
 
+// Add this type definition
+type Option = Customer | undefined;
+
 type PointOfSaleProps = {
   categories: Category[];
   products: Product[];
@@ -36,12 +39,11 @@ export default function PointOfSale({
   products,
   customers,
 }: PointOfSaleProps) {
-  const initialCustomerId = "666679618a65b2eadc3fe772";
+  const initialCustomerId = "66f315c039c6f3090b648c54";
   const initialCustomer = customers.find(
     (item: Customer) => item.value === initialCustomerId
   );
-  const [selectedCustomer, setSelectedCustomer] =
-    useState<Customer | undefined>(initialCustomer);
+  const [selectedCustomer, setSelectedCustomer] = useState<Option>(initialCustomer);
   const [searchResults, setSearchResults] = useState(products);
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
