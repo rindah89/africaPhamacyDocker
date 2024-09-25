@@ -8,9 +8,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { UserProps } from "@/types/types";
 
 import TextInput from "@/components/global/FormInputs/TextInput";
@@ -30,13 +31,14 @@ export default function ShippingAddressForm() {
   const {
     register,
     handleSubmit,
+    control,
     reset,
     formState: { errors },
   } = useForm<ShippingAddress>({
     defaultValues: {
       apartment: shippingAddress.apartment,
       city: shippingAddress.city,
-      state: shippingAddress.state,
+      state: shippingAddress.state || "Douala", // Set Douala as default if no state is selected
       zipCode: shippingAddress.zipCode,
       country: shippingAddress.country,
       streetAddress: shippingAddress.streetAddress,
@@ -48,6 +50,29 @@ export default function ShippingAddressForm() {
     dispatch(setActiveStep(activeStep + 1));
     dispatch(setShippingAddress(data));
   }
+
+  const cameroonianTowns = [
+    "Douala",
+    "Yaoundé",
+    "Bamenda",
+    "Bafoussam",
+    "Garoua",
+    "Maroua",
+    "Ngaoundéré",
+    "Bertoua",
+    "Loum",
+    "Kumba",
+    "Edéa",
+    "Kumbo",
+    "Foumban",
+    "Mbouda",
+    "Dschang",
+    "Limbé",
+    "Ebolowa",
+    "Kousséri",
+    "Guider",
+    "Meiganga",
+  ];
 
   return (
     <form className="w-full" onSubmit={handleSubmit(saveData)}>
@@ -62,7 +87,7 @@ export default function ShippingAddressForm() {
           <TextInput
             register={register}
             errors={errors}
-            label="Apartment or Unit No."
+            label="Apartment or Office No."
             name="apartment"
           />
         </div>
@@ -73,27 +98,35 @@ export default function ShippingAddressForm() {
             label="City"
             name="city"
           />
-          <TextInput
-            register={register}
-            errors={errors}
-            label="State"
+          <Controller
             name="state"
+            control={control}
+            rules={{ required: "State is required" }}
+            render={({ field }) => (
+              <div>
+                <label htmlFor="state" className="block text-sm font-medium text-gray-700">
+                  Town
+                </label>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a town" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cameroonianTowns.map((town) => (
+                      <SelectItem key={town} value={town}>
+                        {town}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.state && (
+                  <p className="mt-1 text-sm text-red-600">{errors.state.message}</p>
+                )}
+              </div>
+            )}
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <TextInput
-            register={register}
-            errors={errors}
-            label="Zip Code"
-            name="zipCode"
-          />
-          <TextInput
-            register={register}
-            errors={errors}
-            label="Country"
-            name="country"
-          />
-        </div>
+        
       </div>
       <div className="py-4 flex items-center justify-between">
         <PreviousButton />

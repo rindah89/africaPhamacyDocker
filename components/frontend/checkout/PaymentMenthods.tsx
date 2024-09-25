@@ -13,7 +13,7 @@ import NextButton from "./NextButton";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { FormEvent, useState } from "react";
 import { RadioGroup } from "@headlessui/react";
-import { Check, CreditCard, Handshake, Loader2 } from "lucide-react";
+import { Check, Handshake, Loader2, Smartphone } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks/hooks";
 import { setActiveStep } from "@/redux/slices/stepSlice";
 import { PaymentMethod, setPaymentMethod } from "@/redux/slices/checkoutSlice";
@@ -27,10 +27,10 @@ const plans = [
     method: "cod",
   },
   {
-    name: "Credit Card",
-    description: "Securely pay with Stripe",
-    icon: CreditCard,
-    method: "card",
+    name: "Mobile Money",
+    description: "Securely pay with MTN/ORANGE Money",
+    icon: Smartphone,
+    method: "momo",
   },
 ];
 

@@ -100,7 +100,7 @@ export function CartMenu({ from = "header" }: { from?: string }) {
                     </button>
                   </div>
                   <div className="space-y-2">
-                    <h2 className="text-sx">${item.price}</h2>
+                    <h2 className="text-sx">{item.price.toLocaleString('fr-CM', { style: 'currency', currency: 'XAF' })}</h2>
                     <div className="flex items-center space-x-3">
                       <button
                         onClick={() => handleQtyDecrement(item.id)}

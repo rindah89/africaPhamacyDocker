@@ -92,7 +92,7 @@ export default function OrderSummary() {
           </Table>
           <div className="pt-3 w-full border-t flex items-center justify-between">
             <h2 className="text-xl font-semibold">Total</h2>
-            <p className="text-xl font-semibold">${totalSum.toFixed(2)}</p>
+            <p className="text-xl font-semibold">{totalSum.toLocaleString('fr-CM', { style: 'currency', currency: 'XAF' })}</p>
           </div>
         </CardContent>
         <CardFooter className="">

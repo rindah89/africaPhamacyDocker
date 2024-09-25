@@ -67,14 +67,13 @@ const data = [
 
 function valueFormatter(number: number) {
   const formatter = new Intl.NumberFormat("en-US", {
-    maximumFractionDigits: 0,
     notation: "compact",
     compactDisplay: "short",
-    style: "currency",
-    currency: "USD",
+    maximumFractionDigits: 1,
   });
 
-  return formatter.format(number);
+  // Remove any currency symbols (like $) that might appear
+  return formatter.format(number).replace(/^\$/, '');
 }
 
 export default function BarChartCard() {
@@ -86,7 +85,7 @@ export default function BarChartCard() {
           Sales overview
         </h3>
         <p className="text-tremor-default text-tremor-content dark:text-dark-tremor-content">
-          Lorem ipsum dolor sit amet, consetetur sadipscing elitr.
+          Compare monthly sales data to track performance and identify trends.
         </p>
         <BarChart
           data={data}

@@ -68,8 +68,7 @@ export default function CheckoutPage({ session }: { session: Session }) {
                 <ShoppingBag className="w-6 h-6 " />
               </div>
               <p>
-                You have {cartItems.length} items in cart. Sub total is 
-                {totalSum.toLocaleString('fr-CM')} FCFA
+                You have {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'} in cart. Sub total is {totalSum.toLocaleString('fr-CM')} FCFA
               </p>
             </div>
             <CartMenu from="checkout" />

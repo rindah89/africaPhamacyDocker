@@ -70,12 +70,12 @@ export function AvatarMenuButton({ session }: { session: Session }) {
       href: "/dashboard/profile",
     },
     {
-      name: "Send an Email",
+      name: "Send an Email at rindah@pantherai.io",
       icon: Mail,
       href: "/dashboard/pos",
     },
     {
-      name: "Talk to Us - 256 784 143 872",
+      name: "Talk to Us - 00237 691 262 678",
       icon: PhoneCall,
       href: "/dashboard/pos",
     },
@@ -104,7 +104,7 @@ export function AvatarMenuButton({ session }: { session: Session }) {
           </div>
           <div className="flex space-x-6 items-center py-6 border-b">
             <Button asChild variant={"outline"}>
-              <Link href="/dashboard/account">
+              <Link href="/dashboard/settings">
                 <User className="h-4 w-4 mr-2" />
                 <span>Manage Account</span>
               </Link>
