@@ -51,22 +51,9 @@ export default async function Home() {
             products={products.slice(7, 13)}
             cardType="vertical"
           />
-          <ProductListing
-            title="Same Day Delivery (EasyNow)"
-            detailLink="#"
-            products={products.slice(8, 19)}
-            cardType="cart"
-            scrollable
-            className="bg-slate-800 text-white border-b-0 "
-          />
+          
           <BrandList brands={brands} title="Browse By Brands" />
-          <ProductListing
-            title="Same Day Delivery (EasyNow)"
-            detailLink="#"
-            products={products.slice(8, 19)}
-            carousel
-            cardType="cart"
-          />
+          
           <ProductListing
             title="Trending Products"
             detailLink="#"

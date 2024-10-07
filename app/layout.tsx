@@ -29,8 +29,8 @@ export const metadata: Metadata = {
   ],
   authors: [
     {
-      name: "MMA",
-      url: "https://MMA.com",
+      name: "Karen Pharmacy",
+      url: "https://Karen Pharmacy.com",
     },
   ],
   alternates: {
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
       "en-US": "/en-US",
     },
   },
-  creator: "MMA",
+  creator: "Karen Pharmacy",
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -64,7 +64,7 @@ export const metadata: Metadata = {
     creator: "@shadcn",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/PHARMACYICON.ico",
     shortcut: "/favicon-16x16.png",
     apple: "/apple-touch-icon.png",
   },

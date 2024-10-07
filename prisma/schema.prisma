@@ -153,6 +153,9 @@ model Product {
   isFeatured       Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  shelfNo          String?  // Optional string for shelf number
+  dosage           String?  // Optional string for dosage information
+  weight           Float?   // Optional float for product weight
 
   // Relationships
   subCategory   SubCategory @relation(fields: [subCategoryId], references: [id])

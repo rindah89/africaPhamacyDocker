@@ -348,7 +348,7 @@ async function seedDatabase() {
       firstName: "Regular",
       lastName: "User",
       name: "Regular User",
-      phone: "0237691232678",
+      phone: "0987654321",
       roleId: userRole!.id,
       profileImage: "/placeholder.svg",
       status: true,

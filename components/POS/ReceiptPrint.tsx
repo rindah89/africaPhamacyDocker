@@ -55,7 +55,7 @@ export function ReceiptPrint({ setSuccess }: { setSuccess: any }) {
           <div className="" ref={componentRef}>
             <DrawerHeader>
               <DrawerTitle className="uppercase tracking-widest text-center">
-                MMA Shop
+                Karen Pharmacy Shop
               </DrawerTitle>
               <div className="flex items-center justify-center space-x-2 border-b pb-2">
                 <p className="text-xs">City: Bonapriso - Douala</p>

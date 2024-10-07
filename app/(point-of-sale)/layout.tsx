@@ -7,8 +7,8 @@ import React, { ReactNode } from "react";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "MMA POS",
-  description: "Stockiy Point of sale is good",
+  title: "Karen Pharmacy POS",
+  description: "Karen Pharmacy Point of Sale",
   alternates: {
     canonical: "/pos",
     languages: {

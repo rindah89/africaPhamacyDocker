@@ -63,7 +63,7 @@ export default function PurchaseDetails({
             </div>
             <div className="">
               <h2 className="font-medium pb-3">Company Info</h2>
-              <p>MMA</p>
+              <p>Karen Pharmacy</p>
               <p>itsupply@gmail.com</p>
               <p>07853545544</p>
               <p>Kampala william street</p>

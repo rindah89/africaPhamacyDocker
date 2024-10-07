@@ -174,6 +174,9 @@ export default function ProductForm({
       expiryDate: convertIsoToDateString(initialData?.expiryDate ?? new Date()),
       batchNumber: initialData?.batchNumber,
       isFeatured: initialData?.isFeatured,
+      shelfNo: initialData?.shelfNo,
+      dosage: initialData?.dosage,
+      weight: initialData?.weight,
     },
   });
   // console.log(productImages);
@@ -201,6 +204,9 @@ export default function ProductForm({
       data.productCode = barcode;
       data.expiryDate = convertDateToIso(data.expiryDate);
       data.content = content;
+      data.shelfNo = data.shelfNo;
+      data.dosage = data.dosage;
+      data.weight = Number(data.weight);
       // console.log(data);
       if (editingId) {
         await updateProductById(editingId, data);
@@ -517,6 +523,34 @@ export default function ProductForm({
                 />
               </CardContent>
             </Card>
+            <Card>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
+                <TextInput
+                  register={register}
+                  errors={errors}
+                  label="Shelf Number"
+                  name="shelfNo"
+                  type="text"
+                />
+                <TextInput
+                  register={register}
+                  errors={errors}
+                  label="Dosage"
+                  name="dosage"
+                  type="text"
+                />
+                <TextInput
+                  register={register}
+                  errors={errors}
+                  label="Weight"
+                  name="weight"
+                  type="number"
+                  unit="g"
+                />
+              </div>
+            </CardContent>
+          </Card>
             <Card>
               <CardContent>
                 <div className="grid grid-cols-1 gap-3 pt-3">

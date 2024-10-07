@@ -153,20 +153,7 @@ export default async function page({
                 {/* Add to Cart */}
                 <AddToCartButton product={product as Product} />
               </div>
-              <div className="flex  space-x-4">
-                <div className="">
-                  <Link
-                    href="#"
-                    className="bg-pink-50 flex flex-col py-3 border px-6 rounded"
-                  >
-                    <span className="text-pink-800 font-bold">
-                      Call us for Bulk Purchases:
-                    </span>{" "}
-                    <span className="text-slate-900">+237 699 78 30 99</span>
-                  </Link>
-                </div>
-                <ShareProduct productUrl={url} />
-              </div>
+              
             </div>
           </div>
           <div className="col-span-full md:col-span-3">
@@ -207,7 +194,7 @@ export default async function page({
                       </h3>
                       <p>
                         For details about return shipping options, please visit
-                        - MMA Return Policy
+                        - Karen Pharmacy Return Policy
                       </p>
                     </div>
                   </div>

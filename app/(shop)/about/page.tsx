@@ -3,9 +3,9 @@ import React from "react";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "About MMA",
+  title: "About Karen Pharmacy",
   description:
-    "Stockiy is a 3 in 1 system that offers POS, Ecommerce and Inventory Mgt system",
+    "Karen Pharmacy: Your trusted partner in health. We offer quality medications, expert care, and a wide range of health products to serve our community in Douala, Cameroon.",
   alternates: {
     canonical: "/about",
     languages: {
