@@ -16,7 +16,7 @@ export default async function page() {
         model="product"
       />
       {/* <CustomDataTable categories={categories} /> */}
-      <DataTable columns={columns} data={products} />
+      <DataTable columns={columns} data={products as IProduct[]} />
     </div>
   );
 }
