@@ -3,6 +3,7 @@
 import {
   CategoryProps,
   ExcelCategoryProps,
+  IProduct,
   ProductProps,
   ProductResult,
 } from "@/types/types";
@@ -50,22 +51,28 @@ export async function createProduct(data: ProductProps) {
     };
   }
 }
-export async function getAllProducts() {
+export async function getAllProducts(): Promise<IProduct[]> {
   try {
     const products = await prisma.product.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
       include: {
-        subCategory: true,
+        subCategory: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            categoryId: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
         reviews: true,
       },
     });
 
-    return products;
+    return products as IProduct[];
   } catch (error) {
-    console.log(error);
-    return null;
+    console.error('Error fetching products:', error);
+    return [];
   }
 }
 export async function getProductsWithSales() {

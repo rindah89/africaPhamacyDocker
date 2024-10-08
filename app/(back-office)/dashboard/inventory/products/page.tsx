@@ -3,9 +3,11 @@ import TableHeader from "@/components/dashboard/Tables/TableHeader";
 import React from "react";
 import { columns } from "./columns";
 import { getAllProducts } from "@/actions/products";
+import { IProduct } from "@/types/types";
 
-export default async function page() {
-  const products = (await getAllProducts()) || [];
+export default async function Page() {
+  const products: IProduct[] = await getAllProducts();
+  
   return (
     <div>
       <TableHeader
@@ -15,8 +17,7 @@ export default async function page() {
         data={products}
         model="product"
       />
-      {/* <CustomDataTable categories={categories} /> */}
-      <DataTable columns={columns} data={products as IProduct[]} />
+      <DataTable columns={columns} data={products} />
     </div>
   );
 }
