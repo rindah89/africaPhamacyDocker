@@ -174,9 +174,6 @@ export default function ProductForm({
       expiryDate: convertIsoToDateString(initialData?.expiryDate ?? new Date()),
       batchNumber: initialData?.batchNumber,
       isFeatured: initialData?.isFeatured,
-      shelfNo: initialData?.shelfNo,
-      dosage: initialData?.dosage,
-      weight: initialData?.weight,
     },
   });
   // console.log(productImages);
@@ -204,9 +201,7 @@ export default function ProductForm({
       data.productCode = barcode;
       data.expiryDate = convertDateToIso(data.expiryDate);
       data.content = content;
-      data.shelfNo = data.shelfNo;
-      data.dosage = data.dosage;
-      data.weight = Number(data.weight);
+      
       // console.log(data);
       if (editingId) {
         await updateProductById(editingId, data);
