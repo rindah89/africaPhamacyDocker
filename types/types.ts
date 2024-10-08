@@ -141,9 +141,6 @@ export type ProductProps = {
   status: boolean;
   productImages: string[];
   productDetails: string;
-  shelfNo?: string;  // Optional shelf number
-  dosage?: string;   // Optional dosage information
-  weight?: number;   // Optional weight of the product
 };
 
 export interface RoleProps {
@@ -252,8 +249,6 @@ export interface IPurchaseOrder extends PrismaPurchaseOrder {
   items: PurchaseOrderItem[];
 }
 export interface IProduct extends PrismaProduct {
-  shelfNo: string;
-  dosage: string;
   subCategory: SubCategory;
 }
 export interface SalesProduct extends PrismaProduct {
@@ -268,8 +263,6 @@ export interface ISubCategory extends PrismaSubCategory {
 export interface ILineOrder extends PrismaLineOrder {
   lineOrderItems: LineOrderItem[];
 }
-
-
 export type ProductResult = {
   id: string;
   name: string;
@@ -278,14 +271,7 @@ export type ProductResult = {
   productCost: number;
   productPrice: number;
   productThumbnail: string;
-  shelfNo?: string | null;  // Added optional shelf number
-  dosage?: string | null;   // Added optional dosage information
-  weight?: number | null;   // Added optional weight
-  productCode: string;      // Added product code for better identification
-  expiryDate: string;       // Added expiry date which could be crucial for pharmacy products
-  status: boolean;    
 };
-
 export interface FeedbackProps {
   title: string;
   message: string;

@@ -1,16 +1,18 @@
 "use client";
 
 import { Checkbox } from "@/components/ui/checkbox";
+
 import DateColumn from "@/components/DataTableColumns/DateColumn";
 import ImageColumn from "@/components/DataTableColumns/ImageColumn";
+
 import { ColumnDef } from "@tanstack/react-table";
+
 import ActionColumn from "@/components/DataTableColumns/ActionColumn";
 import SortableColumn from "@/components/DataTableColumns/SortableColumn";
 import StatusColumn from "@/components/DataTableColumns/StatusColumn";
-import { IProduct } from "@/types/types";  // Make sure this path is correct
+import { IProduct } from "@/types/types";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-
 export const columns: ColumnDef<IProduct>[] = [
   {
     id: "select",
@@ -34,6 +36,7 @@ export const columns: ColumnDef<IProduct>[] = [
     enableSorting: false,
     enableHiding: false,
   },
+
   {
     accessorKey: "productThumbnail",
     header: "Product Image",
@@ -50,7 +53,8 @@ export const columns: ColumnDef<IProduct>[] = [
     header: "Sub Category",
     cell: ({ row }) => {
       const product = row.original;
-      return <h2>{product.subCategory.title}</h2>;
+      const subCategory = product.subCategory.title;
+      return <h2>{subCategory}</h2>;
     },
   },
   {
@@ -58,6 +62,7 @@ export const columns: ColumnDef<IProduct>[] = [
     header: "Stock",
     cell: ({ row }) => {
       const product = row.original;
+
       return <h2>{product.stockQty}</h2>;
     },
   },
@@ -67,22 +72,25 @@ export const columns: ColumnDef<IProduct>[] = [
     cell: ({ row }) => <StatusColumn row={row} accessorKey="status" />,
   },
   {
-    accessorKey: "shelfNo",
-    header: "Shelf No",
+    accessorKey: "subCategory",
+    header: "View",
     cell: ({ row }) => {
       const product = row.original;
-      return <h2>{product.shelfNo || 'N/A'}</h2>;
+      return (
+        <Button asChild variant={"outline"} size={"sm"}>
+          <Link href={`/dashboard/inventory/products/${product.id}`}>
+            View{" "}
+          </Link>
+        </Button>
+      );
     },
   },
+
   {
-    accessorKey: "dosage",
-    header: "Dosage",
-    cell: ({ row }) => {
-      const product = row.original;
-      return <h2>{product.dosage || 'N/A'}</h2>;
-    },
+    accessorKey: "createdAt",
+    header: "Date Created",
+    cell: ({ row }) => <DateColumn row={row} accessorKey="createdAt" />,
   },
-  
   {
     id: "actions",
     cell: ({ row }) => {
@@ -95,20 +103,6 @@ export const columns: ColumnDef<IProduct>[] = [
           editEndpoint={`products/update/${product.id}`}
           id={product.id}
         />
-      );
-    },
-  },
-  {
-    accessorKey: "id",
-    header: "View",
-    cell: ({ row }) => {
-      const product = row.original;
-      return (
-        <Button asChild variant={"outline"} size={"sm"}>
-          <Link href={`/dashboard/inventory/products/${product.id}`}>
-            View
-          </Link>
-        </Button>
       );
     },
   },
