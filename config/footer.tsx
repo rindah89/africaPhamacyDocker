@@ -19,34 +19,5 @@ export const footer = {
       icon: MapPin,
     },
   ],
-  navigation: [
-   
-    {
-      title: "Karen Pharmacy",
-      links: [
-        {
-          title: "About Us",
-          path: "/about-us",
-        },
-        {
-          title: "Careers",
-          path: "/careers",
-        },
-        {
-          title: "Community",
-          path: "/community",
-        },
-        {
-          title: "Contact Us",
-          path: "/contact-us",
-        },
-        {
-          title: "Blogs",
-          path: "/blogs",
-        },
-      ],
-    },
-    
-    
-  ],
+
 };

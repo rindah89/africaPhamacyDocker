@@ -55,25 +55,8 @@ export default function Footer() {
             <span>PantherAI -</span>
             <span>All Rights Reserved</span>
           </div>
-          <div className="flex items-center space-x-2 space-y-1 flex-wrap">
-            <Link href="#">Terms and Conditions</Link>
-            <Link href="#">Privacy Policy</Link>
-            <Link href="#">Cookie Policy</Link>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="#">
-              <Facebook className="w-4 h-4" />
-            </Link>
-            <Link href="#">
-              <Instagram className="w-4 h-4" />
-            </Link>
-            <Link href="#">
-              <Twitter className="w-4 h-4" />
-            </Link>
-            <Link href="#">
-              <Youtube className="w-4 h-4" />
-            </Link>
-          </div>
+         
+          
         </div>
       </div>
     </footer>
