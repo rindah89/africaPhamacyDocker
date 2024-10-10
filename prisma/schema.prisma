@@ -153,6 +153,7 @@ model Product {
   isFeatured       Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  barcode String? @unique
 
   // Relationships
   subCategory   SubCategory @relation(fields: [subCategoryId], references: [id])

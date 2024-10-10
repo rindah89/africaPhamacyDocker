@@ -31,22 +31,7 @@ export default function Footer() {
               })}
             </div>
           </div>
-          {footer.navigation.map((item, i) => {
-            return (
-              <div key={i} className="col-span-full lg:col-span-2">
-                <h2 className="font-semibold text-base">{item.title}</h2>
-                <div className="flex flex-col gap-3 py-2">
-                  {item.links.map((link, i) => {
-                    return (
-                      <Link key={i} className="text-xs" href={link.path}>
-                        {link.title}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+          
         </div>
         <div className="py-3 flex justify-between items-center space-y-1 flex-wrap text-xs">
           <div className="flex items-center space-x-2 ">

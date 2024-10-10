@@ -3,7 +3,7 @@
 import { Category, Product } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import Item from "./Item";
 import OrderItem from "./OrderItem";
@@ -24,18 +24,20 @@ type Customer = {
   email: string;
 };
 
-type PointOfSaleProps = {
+interface PointOfSaleProps {
   categories: Category[];
   products: Product[];
   customers: Customer[];
   selectedCatId: string;
-};
+  getProductByBarcode: (barcode: string) => Promise<Product | null>;
+}
 
 export default function PointOfSale({
-  categories,
-  selectedCatId,
-  products,
   customers,
+  categories,
+  products,
+  selectedCatId,
+  getProductByBarcode
 }: PointOfSaleProps) {
   const initialCustomerId = "66f315c039c6f3090b648c54";
   const initialCustomer = customers.find(
@@ -55,6 +57,8 @@ export default function PointOfSale({
   const tax = (taxPercent * Number(subTotal)) / 100;
   const totalSum = (Number(subTotal) + tax).toLocaleString('fr-CM');
   const dispatch = useAppDispatch();
+
+  const [barcodeInput, setBarcodeInput] = useState('');
 
   async function handleCreateOrder() {
     if (!selectedCustomer.value) {
@@ -98,6 +102,22 @@ export default function PointOfSale({
     dispatch(removeAllProductsFromOrderLine());
     setSuccess(false);
   }
+
+  const handleBarcodeInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const barcode = e.target.value;
+    setBarcodeInput(barcode);
+
+    if (barcode.length >= 8) { // Assuming barcodes are at least 8 characters long
+      const product = await getProductByBarcode(barcode);
+      if (product) {
+        // Add the product to the cart or update quantity if already in cart
+        // This logic depends on how you're managing the cart state
+        // For example:
+        // addToCart(product);
+        setBarcodeInput('');
+      }
+    }
+  };
 
   return (
     <div className="grid grid-cols-12 divide-x-2 divide-gray-200">
@@ -255,6 +275,15 @@ export default function PointOfSale({
             )}
           </div>
         )}
+      </div>
+      <div className="col-span-full md:col-span-3 px-3">
+        <input
+          type="text"
+          value={barcodeInput}
+          onChange={handleBarcodeInput}
+          placeholder="Scan barcode"
+          className="w-full p-2 border rounded"
+        />
       </div>
     </div>
   );
