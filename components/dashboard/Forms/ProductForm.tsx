@@ -518,34 +518,7 @@ export default function ProductForm({
                 />
               </CardContent>
             </Card>
-            <Card>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
-                <TextInput
-                  register={register}
-                  errors={errors}
-                  label="Shelf Number"
-                  name="shelfNo"
-                  type="text"
-                />
-                <TextInput
-                  register={register}
-                  errors={errors}
-                  label="Dosage"
-                  name="dosage"
-                  type="text"
-                />
-                <TextInput
-                  register={register}
-                  errors={errors}
-                  label="Weight"
-                  name="weight"
-                  type="number"
-                  unit="g"
-                />
-              </div>
-            </CardContent>
-          </Card>
+            
             <Card>
               <CardContent>
                 <div className="grid grid-cols-1 gap-3 pt-3">

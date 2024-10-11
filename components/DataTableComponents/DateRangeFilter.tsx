@@ -7,10 +7,10 @@ import {
   filterByToday,
   filterByYesterday,
 } from "@/lib/dateFilters";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Select from "react-tailwindcss-select";
 import { SelectValue } from "react-tailwindcss-select/dist/components/type";
-import { addDays, format } from "date-fns";
+import { addDays, format, startOfYear } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+
 export default function DateRangeFilter({
   data,
   onFilter,
@@ -32,20 +33,35 @@ export default function DateRangeFilter({
   setIsSearch: any;
   className?: string;
 }) {
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from: new Date(2024, 0, 20),
-    to: addDays(new Date(2024, 0, 20), 20),
+  const [date, setDate] = useState<DateRange | undefined>(() => {
+    const now = new Date();
+    return {
+      from: startOfYear(now),
+      to: now,
+    };
   });
-  // console.log(date);
-  const handleChange = (selectedDate: any) => {
-    console.log(selectedDate);
+
+  useEffect(() => {
+    // Apply initial filter when component mounts
+    if (date?.from && date?.to) {
+      const startDate = format(date.from, 'yyyy-MM-dd');
+      const endDate = format(date.to, 'yyyy-MM-dd');
+      const filteredData = filterByDateRange(data, startDate, endDate);
+      onFilter(filteredData);
+    }
+  }, [data, date?.from, date?.to, onFilter]);
+
+  const handleChange = (selectedDate: DateRange | undefined) => {
     setDate(selectedDate);
     setIsSearch(false);
-    const startDate = selectedDate.from;
-    const endDate = selectedDate.to;
-    const filteredData = filterByDateRange(data, startDate, endDate);
-    onFilter(filteredData);
+    if (selectedDate?.from && selectedDate?.to) {
+      const startDate = format(selectedDate.from, 'yyyy-MM-dd');
+      const endDate = format(selectedDate.to, 'yyyy-MM-dd');
+      const filteredData = filterByDateRange(data, startDate, endDate);
+      onFilter(filteredData);
+    }
   };
+
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>
@@ -79,7 +95,7 @@ export default function DateRangeFilter({
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-            onSelect={(value) => handleChange(value)}
+            onSelect={handleChange}
             numberOfMonths={2}
           />
         </PopoverContent>

@@ -59,14 +59,9 @@ export default function HorizontalProduct({
         </h2>
         <div className="flex items-center space-x-2">
           <p className="font-semibold text-[1.5rem]">{product.productPrice.toLocaleString('fr-CM')} FCFA</p>
-          <s className="text-muted-foreground">{product.productCost.toLocaleString('fr-CM')} FCFA</s>
-          <p className="bg-pink-50 w-14 h-8 flex items-center justify-center rounded-full text-pink-600 text-sm">
-            -10%
-          </p>
+        
         </div>
-        <p className="text-sm text-green-600 font-semibold">
-              You save {(product.productPrice - product.productCost).toLocaleString('fr-CM')}. FCFA
-        </p>
+       
         {product?.reviews && product.reviews.length > 0 && (
           <div className="flex space-x-2 items-center">
             <div className="flex items-center space-x-1 text-orange-500">

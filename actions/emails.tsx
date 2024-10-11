@@ -19,9 +19,9 @@ export async function inviteUser(data: InviteEmailTemplateProps) {
   } = data;
   try {
     const res = await resend.emails.send({
-      from: "Karen Pharmacy <jb@jazzafricaadventures.com>",
+      from: "MMA <jb@jazzafricaadventures.com>",
       to: loginEmail,
-      subject: `Join Karen Pharmacy Inventory Management System as${role}`,
+      subject: `Join MMA Inventory Management System as${role}`,
       react: (
         <InviteEmailTemplate
           firstName={firstName}
@@ -92,7 +92,7 @@ export async function sendPasswordResetToken(email: string) {
       },
     });
     const res = await resend.emails.send({
-      from: "Karen Pharmacy <jb@jazzafricaadventures.com>",
+      from: "MMA <jb@jazzafricaadventures.com>",
       to: email,
       subject: `Reset Token`,
       react: <PasswordRest token={token} />,

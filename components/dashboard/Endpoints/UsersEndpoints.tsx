@@ -50,7 +50,6 @@ export default async function UsersEndpoints() {
         "canViewBanners": false,
         "canViewUnits": false,
         "canViewProducts": false,
-        "canViewWarehouses": false,
         "canViewSuppliers": false,
         "createdAt": "2024-06-10T03:55:14.087Z",
         "updatedAt": "2024-06-10T03:55:14.087Z"
@@ -96,7 +95,6 @@ export default async function UsersEndpoints() {
         "canViewBanners": false,
         "canViewUnits": false,
         "canViewProducts": false,
-        "canViewWarehouses": false,
         "canViewSuppliers": false,
         "createdAt": "2024-06-10T03:55:14.087Z",
         "updatedAt": "2024-06-10T03:55:14.087Z"

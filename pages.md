@@ -35,7 +35,6 @@ MODULES
 - Category
 - Units
 - Brand
-- Warehouse
 
 5. ADJUSTMENT
 

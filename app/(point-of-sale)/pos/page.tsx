@@ -1,6 +1,6 @@
 import { getAllCategories } from "@/actions/category";
 import { getAllCustomers } from "@/actions/customer";
-import { getProductsByCategoryId, getProductByBarcode } from "@/actions/products";
+import { getProductsByCategoryId} from "@/actions/products";
 import { getAllSubCategories } from "@/actions/sub-category";
 import { getAllUsers } from "@/actions/users";
 import AuthorizePageWrapper from "@/components/dashboard/Auth/AuthorizePageWrapper";
@@ -36,7 +36,6 @@ export default async function page({
           categories={allCategories}
           products={products}
           selectedCatId={cat as string}
-          getProductByBarcode={getProductByBarcode}
         />
       </div>
     </AuthorizePageWrapper>

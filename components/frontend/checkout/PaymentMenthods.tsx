@@ -41,9 +41,7 @@ export default function PaymentMethods() {
   const personalDetails = useAppSelector(
     (state) => state.checkout.personalDetails
   );
-  const shippingAddress = useAppSelector(
-    (state) => state.checkout.shippingAddress
-  );
+  
   const paymentMethod = useAppSelector((state) => state.checkout.paymentMethod);
   const dispatch = useAppDispatch();
   const [loading, setLoading] = useState(false);
@@ -53,12 +51,12 @@ export default function PaymentMethods() {
     e.preventDefault();
     const method: string = selected.method;
     const data = {
-      method,
+      id: method,
+      name: method,
     };
     dispatch(setPaymentMethod(data));
     const checkoutData = {
       ...personalDetails,
-      ...shippingAddress,
       method,
     };
     console.log(checkoutData);

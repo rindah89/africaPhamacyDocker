@@ -41,7 +41,7 @@ export function HelpMenu() {
     {
       name: "POS",
       icon: Presentation,
-      href: "/dashboard/pos",
+      href: "/pos",
     },
   ];
   const assistanceLinks = [
@@ -58,12 +58,12 @@ export function HelpMenu() {
     {
       name: "Send an Email",
       icon: Mail,
-      href: "/dashboard/pos",
+      href: "/pos",
     },
     {
-      name: "Talk to Us - 256 784 143 872",
+      name: "Talk to Us - 237 691 232 678",
       icon: PhoneCall,
-      href: "/dashboard/pos",
+      href: "/pos",
     },
   ];
   return (

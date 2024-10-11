@@ -41,7 +41,6 @@ import { createBulkCategories } from "@/actions/category";
 import toast from "react-hot-toast";
 import exportDataToExcel from "@/lib/exportDataToExcel";
 import { createBulkBrands } from "@/actions/brand";
-import { createBulkWarehouses } from "@/actions/warehouse";
 import { createBulkSuppliers } from "@/actions/supplier";
 import { createBulkUnits } from "@/actions/unit";
 import { createBulkProducts } from "@/actions/products";
@@ -73,9 +72,7 @@ export default function TableHeader({
     excelDownload = "/Categories.xlsx";
   } else if (model === "brand") {
     excelDownload = "/Brands.xlsx";
-  } else if (model === "warehouse") {
-    excelDownload = "/Warehouses.xlsx";
-  } else if (model === "supplier") {
+  }  else if (model === "supplier") {
     excelDownload = "/Suppliers.xlsx";
   } else if (model === "unit") {
     excelDownload = "/Units.xlsx";
@@ -161,23 +158,7 @@ export default function TableHeader({
               });
               await createBulkBrands(brands);
               // console.log(brands);
-            } else if (model === "warehouse") {
-              const warehouses = json.map((item: any) => {
-                return {
-                  name: item.name,
-                  slug: generateSlug(item.name),
-                  logo: item.logo,
-                  country: item.country,
-                  city: item.city,
-                  phone: item.phone,
-                  email: item.email,
-                  zipCode: item.zipCode,
-                  contactPerson: item.contactPerson,
-                  status: true,
-                };
-              });
-              await createBulkWarehouses(warehouses);
-              // console.log(warehouses);
+            
             } else if (model === "supplier") {
               const suppliers = json.map((item: any) => {
                 return {
@@ -213,7 +194,6 @@ export default function TableHeader({
                   slug: generateSlug(item.name),
                   productCode: item.productCode,
                   stockQty: item.stockQty,
-                  warehouseId: item.warehouseId,
                   brandId: item.brandId,
                   supplierId: item.supplierId,
                   categoryId: item.categoryId,

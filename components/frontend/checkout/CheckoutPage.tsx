@@ -4,7 +4,6 @@ import { BaggageClaim, ChevronRight, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import React from "react";
 import PersonalDetailsForm from "./PersonalDetailsForm";
-import ShippingAddressForm from "./ShippingAddressForm";
 import OrderSummary from "./OrderSummary";
 import PaymentMethods from "./PaymentMenthods";
 import { useAppSelector } from "@/redux/hooks/hooks";
@@ -22,11 +21,9 @@ export default function CheckoutPage({ session }: { session: Session }) {
   function displayActiveForm() {
     if (activeStep === 1) {
       return <PersonalDetailsForm session={session} />;
-    } else if (activeStep === 2) {
-      return <ShippingAddressForm />;
-    } else if (activeStep === 3) {
+    }else if (activeStep === 2) {
       return <OrderSummary />;
-    } else if (activeStep === 4) {
+    } else if (activeStep === 3) {
       return <PaymentMethods />;
     }
   }

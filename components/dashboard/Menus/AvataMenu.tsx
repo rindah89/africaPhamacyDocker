@@ -55,7 +55,7 @@ export function AvatarMenuButton({ session }: { session: Session }) {
     {
       name: "POS",
       icon: Presentation,
-      href: "/dashboard/pos",
+      href: "/pos",
     },
   ];
   const assistanceLinks = [
@@ -72,12 +72,12 @@ export function AvatarMenuButton({ session }: { session: Session }) {
     {
       name: "Send an Email at rindah@pantherai.io",
       icon: Mail,
-      href: "/dashboard/pos",
+      href: "/pos",
     },
     {
       name: "Talk to Us - 00237 691 262 678",
       icon: PhoneCall,
-      href: "/dashboard/pos",
+      href: "/pos",
     },
   ];
   return (

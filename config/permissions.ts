@@ -80,10 +80,7 @@ export const permissions = [
     display: "Products",
     name: "canViewProducts",
   },
-  {
-    display: "Warehouses",
-    name: "canViewWarehouses",
-  },
+  
   {
     display: "Suppliers",
     name: "canViewSuppliers",
@@ -112,7 +109,6 @@ export const permissionsObj = {
   canViewBanners: "canViewBanners",
   canViewUnits: "canViewUnits",
   canViewProducts: "canViewProducts",
-  canViewWarehouses: "canViewWarehouses",
   canViewSuppliers: "canViewSuppliers",
 } as const;
 

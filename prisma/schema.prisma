@@ -90,23 +90,7 @@ model Unit {
   updatedAt    DateTime  @updatedAt
 }
 
-// Warehouse model
-model Warehouse {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  name          String
-  slug          String   @unique
-  country       String
-  city          String
-  phone         String
-  logo          String
-  contactPerson String
-  email         String
-  status        Boolean
-  zipCode       String
-  // products Product[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
+
 
 // Supplier model
 model Supplier {
@@ -202,7 +186,6 @@ model Role {
   canViewBanners   Boolean @default(false)
   canViewUnits   Boolean @default(false)
   canViewProducts   Boolean @default(false)  
-  canViewWarehouses   Boolean @default(false)
   canViewSuppliers   Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -270,6 +253,7 @@ model LineOrder {
   orderType String?
   source String  @default("pos")
   status       OrderStatus @default(DELIVERED)
+  paymentMethod PaymentMethod @default(NONE)
 // ECOMMERCE
 // Personal Details
   firstName     String?
@@ -283,7 +267,6 @@ model LineOrder {
   apartment     String?
   state     String?
   zipCode       String?
-  paymentMethod String?
 
 
   // Relationships
@@ -293,22 +276,32 @@ model LineOrder {
   updatedAt    DateTime @updatedAt
 }
 
+enum PaymentMethod {
+  NONE
+  CASH
+  MOBILE_MONEY
+  ORANGE_MONEY
+  INSURANCE
+}
+
 model Sale {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  orderId      String   @db.ObjectId
-  productId    String   @db.ObjectId
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  orderId      String       @db.ObjectId
+  productId    String       @db.ObjectId
   qty          Int
   salePrice    Float
   productName  String
   productImage String
   customerName String
   customerEmail String? 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  paymentMethod PaymentMethod? // Updated to use PaymentMethod enum
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
   // Relationships
   product   Product   @relation(fields: [productId], references: [id])
   lineOrder LineOrder @relation(fields: [orderId], references: [id])
 }
+
 model Address {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
   street     String

@@ -78,7 +78,7 @@ export async function getAnalytics() {
       {
         title: "Total Revenue",
         count: salesSummary.totalRevenue,
-        countUnit: "CFA ",
+        countUnit: " ",
         detailLink: "/dashboard/sales",
         icon: DollarSign,
       },

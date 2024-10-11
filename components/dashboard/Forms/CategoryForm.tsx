@@ -144,7 +144,7 @@ export default function CategoryForm({
             <CardHeader>
               <CardTitle>Category Title</CardTitle>
               <CardDescription>
-                Lipsum dolor sit amet, consectetur adipiscing elit
+                 Enter the category title
               </CardDescription>
             </CardHeader>
             <CardContent>

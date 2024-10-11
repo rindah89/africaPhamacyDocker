@@ -91,18 +91,7 @@ export type UnitProps = {
   title: string;
   abbreviation: string;
 };
-export type WarehouseProps = {
-  name: string;
-  slug: string;
-  logo: string;
-  country: string;
-  city: string;
-  phone: string;
-  email: string;
-  zipCode: string;
-  contactPerson: string;
-  status: boolean;
-};
+
 export type SupplierProps = {
   name: string;
   imageUrl: string;
@@ -213,10 +202,7 @@ export interface RoleProps {
   canAddProducts: boolean;
   canEditProducts: boolean;
   canDeleteProducts: boolean;
-  canViewWarehouses: boolean;
-  canAddWarehouses: boolean;
-  canEditWarehouses: boolean;
-  canDeleteWarehouses: boolean;
+  
   canViewSuppliers: boolean;
   canAddSuppliers: boolean;
   canEditSuppliers: boolean;
@@ -282,7 +268,6 @@ export type CheckoutProductProps = {};
 //RELATIONSHIPS
 /**
  * Category => one to Many =>category has Many Products
- * warehouse=> many to Many =>warehouse has many products  and product can be many warehouses
  * brand =>one to many => a brand has many products
  * unit => one to Many => a unit has many products
  * supplier => one to Many => a unit has many products

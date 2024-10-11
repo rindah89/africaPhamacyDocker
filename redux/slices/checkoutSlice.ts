@@ -8,22 +8,14 @@ export interface PersonalDetails {
   phone: string;
 }
 
-export interface ShippingAddress {
-  streetAddress: string;
-  apartment: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-}
 export interface PaymentMethod {
-  method: string;
+  id: string;
+  name: string;
 }
 
 export interface CheckoutState {
   personalDetails: PersonalDetails;
-  shippingAddress: ShippingAddress;
-  paymentMethod: PaymentMethod;
+  paymentMethod: PaymentMethod | null;
 }
 
 // Load state from localStorage
@@ -39,6 +31,7 @@ const loadState = (): CheckoutState | undefined => {
     return undefined;
   }
 };
+
 // Save state to localStorage
 const saveState = (state: CheckoutState) => {
   try {
@@ -48,6 +41,7 @@ const saveState = (state: CheckoutState) => {
     console.error("Could not save state", err);
   }
 };
+
 const initialState: CheckoutState = loadState() || {
   personalDetails: {
     firstName: "",
@@ -55,17 +49,7 @@ const initialState: CheckoutState = loadState() || {
     email: "",
     phone: "",
   },
-  shippingAddress: {
-    streetAddress: "",
-    apartment: "",
-    city: "",
-    state: "",
-    zipCode: "",
-    country: "",
-  },
-  paymentMethod: {
-    method: "",
-  },
+  paymentMethod: null,
 };
 
 const checkoutInfoState = createSlice({
@@ -76,17 +60,16 @@ const checkoutInfoState = createSlice({
       state.personalDetails = action.payload;
       saveState(state);
     },
-    setShippingAddress: (state, action: PayloadAction<ShippingAddress>) => {
-      state.shippingAddress = action.payload;
-      saveState(state);
-    },
     setPaymentMethod: (state, action: PayloadAction<PaymentMethod>) => {
       state.paymentMethod = action.payload;
+      saveState(state);
+    },
+    clearPaymentMethod: (state) => {
+      state.paymentMethod = null;
       saveState(state);
     },
   },
 });
 
-export const { setPersonalDetails, setShippingAddress, setPaymentMethod } =
-  checkoutInfoState.actions;
+export const { setPersonalDetails, setPaymentMethod, clearPaymentMethod } = checkoutInfoState.actions;
 export default checkoutInfoState.reducer;

@@ -114,7 +114,7 @@ export default function BrandForm({ editingId, initialData }: BrandFormProps) {
             <CardHeader>
               <CardTitle>Brand Title</CardTitle>
               <CardDescription>
-                Lipsum dolor sit amet, consectetur adipiscing elit
+                Enter the brand title
               </CardDescription>
             </CardHeader>
             <CardContent>

@@ -880,15 +880,3 @@ export async function getBestSellingProducts(productCount: number) {
     console.log(error);
   }
 }
-
-export async function getProductByBarcode(barcode: string): Promise<Product | null> {
-  try {
-    const product = await prisma.product.findUnique({
-      where: { barcode: barcode },
-    });
-    return product;
-  } catch (error) {
-    console.error('Error fetching product by barcode:', error);
-    return null;
-  }
-}

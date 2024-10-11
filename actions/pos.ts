@@ -114,7 +114,7 @@ export async function createLineOrder(
           orderAmount,
           orderType,
           source,
-          status: source === "pos" ? "DELIVERED" : "PROCESSING",
+          status: source === "pos" ? "PENDING" : "PROCESSING",
         },
       });
 

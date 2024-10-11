@@ -3,7 +3,6 @@ import { getAllCategories } from "@/actions/category";
 import { getAllSubCategories } from "@/actions/sub-category";
 import { getAllSuppliers } from "@/actions/supplier";
 import { getAllUnits } from "@/actions/unit";
-import { getAllWarehouses } from "@/actions/warehouse";
 import ProductForm from "@/components/dashboard/Forms/ProductForm";
 
 export default async function page() {

@@ -26,6 +26,7 @@ import { getNormalDate } from "@/lib/getNormalDate";
 import PurchaseOrderStatus from "@/components/frontend/orders/PurchaseOrderStatus";
 import { IPurchaseOrder } from "@/types/types";
 import { useReactToPrint } from "react-to-print";
+
 export default function PurchaseDetails({
   purchase,
 }: {
@@ -39,6 +40,7 @@ export default function PurchaseDetails({
   const supplier = purchase?.supplier;
   const totalPrice =
     items?.reduce((acc, item) => acc + item.unitCost * item.quantity, 0) ?? 0;
+
   return (
     <div>
       <div className="flex justify-between items-center pb-4 border-b ">
@@ -138,12 +140,6 @@ export default function PurchaseDetails({
                       <TableBody className="">
                         <TableRow>
                           <TableCell className="font-medium">
-                            Order Tax :{" "}
-                          </TableCell>
-                          <TableCell>{purchase?.tax?.toLocaleString('fr-CM') ?? '0'} FCFA</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell className="font-medium">
                             Discount :{" "}
                           </TableCell>
                           <TableCell>{purchase?.discount?.toLocaleString('fr-CM') ?? '0'} FCFA</TableCell>
@@ -168,7 +164,7 @@ export default function PurchaseDetails({
                           <TableCell className="font-bold">
                             Balance :{" "}
                           </TableCell>
-                          <TableCell>${purchase!.balanceAmount}</TableCell>
+                          <TableCell>{purchase!.balanceAmount}</TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>

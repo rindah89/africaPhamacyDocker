@@ -18,7 +18,6 @@ import {
   CategoryProps,
   SelectOption,
   SupplierProps,
-  WarehouseProps,
 } from "@/types/types";
 
 import TextInput from "@/components/global/FormInputs/TextInput";
@@ -33,8 +32,7 @@ import {
   Options,
   SelectValue,
 } from "react-tailwindcss-select/dist/components/type";
-import { Supplier, Warehouse } from "@prisma/client";
-import { createWarehouse, updateWarehouseById } from "@/actions/warehouse";
+import { Supplier } from "@prisma/client";
 import { createSupplier, updateSupplierById } from "@/actions/supplier";
 import FormFooter from "./FormFooter";
 type SupplierFormProps = {
@@ -59,9 +57,6 @@ export default function SupplierForm({
       email: initialData?.email,
       address: initialData?.address,
       city: initialData?.city,
-      state: initialData?.state,
-      postalCode: initialData?.postalCode,
-      country: initialData?.country,
     },
   });
 
@@ -140,8 +135,7 @@ export default function SupplierForm({
             <CardHeader>
               <CardTitle>Supplier Name</CardTitle>
               <CardDescription>
-                Lipsum dolor sit amet, consectetur adipiscing elit
-              </CardDescription>
+Enter supplier information              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-6">
@@ -171,20 +165,6 @@ export default function SupplierForm({
                   <TextInput
                     register={register}
                     errors={errors}
-                    label="Country"
-                    name="country"
-                  />
-                  <TextInput
-                    register={register}
-                    errors={errors}
-                    label="City"
-                    name="city"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <TextInput
-                    register={register}
-                    errors={errors}
                     label="Phone"
                     name="phone"
                   />
@@ -206,8 +186,8 @@ export default function SupplierForm({
                   <TextInput
                     register={register}
                     errors={errors}
-                    label="State"
-                    name="state"
+                    label="City"
+                    name="city"
                   />
                 </div>
               </div>
@@ -239,18 +219,6 @@ export default function SupplierForm({
               setImageUrl={setImageUrl}
               endpoint="supplierImage"
             />
-            <Card>
-              <CardContent>
-                <div className="grid gap-3">
-                  <TextInput
-                    register={register}
-                    errors={errors}
-                    label="Postal Code"
-                    name="postalCode"
-                  />
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>

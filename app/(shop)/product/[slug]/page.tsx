@@ -9,7 +9,7 @@ import ProductImageGallery, {
 } from "@/components/frontend/ProductImageGallery";
 import AddToCartButton from "@/components/frontend/listings/AddToCartButton";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, RefreshCw, Truck } from "lucide-react";
+import { Minus, Plus, RefreshCw, Store, Truck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
@@ -143,7 +143,6 @@ export default async function page({
                   <h2 className="text-2xl font-semibold">
                     <FormattedAmount amount={product?.productPrice ?? 0} showSymbol={true} />
                   </h2>
-                  <s><FormattedAmount amount={product?.productCost ?? 0} showSymbol={false} /></s>
                 </div>
                 <p className="text-muted-foreground">
                   Stock : {product?.stockQty} items
@@ -159,28 +158,16 @@ export default async function page({
           <div className="col-span-full md:col-span-3">
             <div className="rounded shadow p-4">
               <h2 className="pb-2 border-b font-bold text-xl">
-                Delivery and Returns
+                In-Store Pickup and Returns
               </h2>
               <div className="pt-2 space-y-3">
                 <div className="flex space-x-2">
-                  <Truck className="w-6 h-6 flex-shrink-0" />
-                  <div className=" space-y-1">
-                    <h2 className="font-semibold">Delivery</h2>
+                  <Store className="w-6 h-6 flex-shrink-0" />
+                  <div className="space-y-1">
+                    <h2 className="font-semibold">In-Store Pickup</h2>
                     <div className="text-xs space-y-2">
-                      <p>Estimated delivery time 1-9 business days</p>
-                      <p>Express Delivery Available</p>
-
-                      <p>
-                        For Same-Day-Delivery: Please place your order before
-                        11AM
-                      </p>
-
-                      <p>
-                        Next-Day-Delivery: Orders placed after 11AM will be
-                        delievered the next day
-                      </p>
-
-                      <p>Note: Availability may vary by location</p>
+                      <p>Orders are available for pickup at our pharmacy location.</p>
+                      <p>Please ensure to bring your order confirmation and valid ID.</p>
                     </div>
                   </div>
                 </div>
@@ -190,10 +177,10 @@ export default async function page({
                     <h2 className="font-semibold">Return Policy</h2>
                     <div className="text-xs space-y-2">
                       <h3 className="font-semibold">
-                        Guaranteed 7-Day Return Policy
+                        In-Store Return Policy
                       </h3>
                       <p>
-                        For details about return shipping options, please visit
+                        For details about in-store returns, please visit
                         - Karen Pharmacy Return Policy
                       </p>
                     </div>

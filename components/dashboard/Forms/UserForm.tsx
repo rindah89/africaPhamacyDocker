@@ -18,7 +18,6 @@ import {
   CategoryProps,
   SelectOption,
   UserProps,
-  WarehouseProps,
 } from "@/types/types";
 
 import TextInput from "@/components/global/FormInputs/TextInput";
@@ -33,8 +32,7 @@ import {
   Options,
   SelectValue,
 } from "react-tailwindcss-select/dist/components/type";
-import { Role, User, Warehouse } from "@prisma/client";
-import { createWarehouse, updateWarehouseById } from "@/actions/warehouse";
+import { Role, User } from "@prisma/client";
 import FormFooter from "./FormFooter";
 import FormSelectInput from "@/components/global/FormInputs/FormSelectInput";
 import { createUser, updateUserById } from "@/actions/users";

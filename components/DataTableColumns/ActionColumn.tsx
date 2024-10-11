@@ -25,7 +25,6 @@ import { deleteCategory } from "@/actions/category";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { deleteBrand } from "@/actions/brand";
-import { deleteWarehouse } from "@/actions/warehouse";
 import { deleteSupplier } from "@/actions/supplier";
 import { deleteUnit } from "@/actions/unit";
 import { deleteProduct } from "@/actions/products";
@@ -61,12 +60,6 @@ export default function ActionColumn({
         toast.success(`${model} Deleted Successfully`);
       } else if (model === "brand") {
         const res = await deleteBrand(id);
-        if (res?.ok) {
-          window.location.reload();
-        }
-        toast.success(`${model} Deleted Successfully`);
-      } else if (model === "warehouse") {
-        const res = await deleteWarehouse(id);
         if (res?.ok) {
           window.location.reload();
         }

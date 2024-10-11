@@ -20,6 +20,7 @@ import { useReactToPrint } from "react-to-print";
 import { getCurrentDateAndTime } from "@/lib/getCurrentDateTime";
 import { convertIsoToDateString } from "@/lib/covertDateToDateString";
 import OrderStatusBtn from "./OrderStatusBtn";
+import PaymentMethodBtn from "./PaymentMethodBtn";
 
 export default function OrderInvoice({ order }: { order: ILineOrder }) {
   const totalSum = order.lineOrderItems.reduce(
@@ -58,8 +59,7 @@ export default function OrderInvoice({ order }: { order: ILineOrder }) {
                 </h1>
                 <p className="mt-2 text-sm font-normal text-gray-600 dark:text-slate-300">
                   <span className="font-bold">Hello {order.firstName}</span>{" "}
-                  Your order #{order.orderNumber} has been confirmed and will be
-                  shipping in the next 24 hrs
+                  Your order #{order.orderNumber} has been confirmed. Thank you
                 </p>
               </div>
               <div className="py-4 text-xs">
@@ -70,20 +70,20 @@ export default function OrderInvoice({ order }: { order: ILineOrder }) {
                       <TableHead>Order No</TableHead>
                       <TableHead>P.Method</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Shipping Address</TableHead>
+                      {/* Removed Shipping Address column */}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     <TableRow>
                       <TableCell>{currentDate}</TableCell>
                       <TableCell>#{order.orderNumber}</TableCell>
-                      <TableCell>{order.paymentMethod}</TableCell>
+                      <TableCell>
+                        <PaymentMethodBtn order={order} />
+                      </TableCell>
                       <TableCell>
                         <OrderStatusBtn order={order} />
                       </TableCell>
-                      <TableCell>
-                        {order.streetAddress}, {order.apartment}
-                      </TableCell>
+                      {/* Removed Shipping Address cell */}
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -118,14 +118,14 @@ export default function OrderInvoice({ order }: { order: ILineOrder }) {
                                   {item.name}
                                 </p>
                                 <p className="text-[11px] font-medium text-gray-500">
-                                  (({item.price}x{item.qty}).toLocaleString('fr-CM')) FCFA
+                                  ({item.price}x{item.qty}) 
                                 </p>
                               </div>
                             </div>
 
                             <div className="ml-auto">
                               <p className="text-sm font-bold text-right text-gray-900 dark:text-gray-300">
-                                {(item.price * item.qty).toLocaleString('fr-CM')} FCFA
+                                {(Number(item.price) * Number(item.qty))} FCFA
                               </p>
                             </div>
                           </li>
@@ -142,33 +142,16 @@ export default function OrderInvoice({ order }: { order: ILineOrder }) {
                       Sub total
                     </p>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                      {(totalSum).toLocaleString('fr-CM')} FCFA
+                      {Number(totalSum)} FCFA
                     </p>
                   </li>
-                  <li className="flex items-center justify-between">
-                    {/* <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                      Shipping Cost
-                    </p> */}
-                    {/* <p className="text-[13px] font-medium text-gray-500">
-                          The Order will be delivered in{" "}
-                          {order.shippingCost == 50
-                            ? "3"
-                            : order.shippingCost == 75
-                            ? "2"
-                            : "1"}{" "}
-                          days{" "}
-                        </p> */}
-                    {/* <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                      $20
-                     
-                    </p> */}
-                  </li>
+                  {/* Removed Shipping Cost section */}
                   <li className="flex items-center justify-between">
                     <p className="text-base font-medium text-gray-900 dark:text-white">
                       Total
                     </p>
                     <p className="text-base font-bold text-gray-900 dark:text-white">
-                      {(totalSum).toLocaleString('fr-CM')} FCFA
+                      {Number(totalSum)} FCFA
                     </p>
                   </li>
                 </ul>

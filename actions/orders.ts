@@ -4,6 +4,15 @@ import prisma from "@/lib/db";
 import { ICustomer, ILineOrder, OrderCustomer } from "@/types/types";
 import { OrderStatus } from "@prisma/client";
 
+// Define the PaymentMethod enum here as well
+enum PaymentMethod {
+  NONE = "NONE",
+  CASH = "CASH",
+  MOBILE_MONEY = "MOBILE_MONEY",
+  ORANGE_MONEY = "ORANGE_MONEY",
+  INSURANCE = "INSURANCE"
+}
+
 export async function getOrderById(id: string) {
   try {
     const order = await prisma.lineOrder.findUnique({
@@ -180,5 +189,23 @@ export async function getCustomersWithOrders() {
     return customersWithDetails;
   } catch (error) {
     console.log(error);
+  }
+}
+
+export type PaymentMethodData = {
+  paymentMethod: PaymentMethod;
+};
+
+export async function changeOrderPaymentMethodById(orderId: string, data: PaymentMethodData) {
+  try {
+    const updatedOrder = await prisma.lineOrder.update({
+      where: { id: orderId },
+      data: { paymentMethod: data.paymentMethod },
+    });
+
+    return { status: 200, data: updatedOrder };
+  } catch (error) {
+    console.error("Error updating order payment method:", error);
+    return { status: 500, error: "Failed to update order payment method" };
   }
 }

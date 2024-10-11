@@ -95,11 +95,7 @@ export const sidebarLinks: ISidebarLink[] = [
         href: "/dashboard/inventory/products",
         access: "canViewProducts",
       },
-      {
-        title: "Warehouse",
-        href: "/dashboard/inventory/warehouse",
-        access: "canViewWarehouses",
-      },
+     
       {
         title: "Suppliers",
         href: "/dashboard/inventory/suppliers",

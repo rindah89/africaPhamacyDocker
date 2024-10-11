@@ -13,7 +13,7 @@ export default function FormattedAmount({
 }) {
   return (
     <h2 className={cn("font-bold", className)}>
-           {formatMoney(amount)}
+           {formatMoney(Number(amount))}
 
       {showSymbol && "  FCFA"}
     </h2>

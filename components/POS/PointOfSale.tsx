@@ -3,7 +3,7 @@
 import { Category, Product } from "@prisma/client";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "../ui/button";
 import Item from "./Item";
 import OrderItem from "./OrderItem";
@@ -29,7 +29,6 @@ interface PointOfSaleProps {
   products: Product[];
   customers: Customer[];
   selectedCatId: string;
-  getProductByBarcode: (barcode: string) => Promise<Product | null>;
 }
 
 export default function PointOfSale({
@@ -37,9 +36,8 @@ export default function PointOfSale({
   categories,
   products,
   selectedCatId,
-  getProductByBarcode
 }: PointOfSaleProps) {
-  const initialCustomerId = "66f315c039c6f3090b648c54";
+  const initialCustomerId = "6708677a078944327c4629e5";
   const initialCustomer = customers.find(
     (item: Customer) => item.value === initialCustomerId
   );
@@ -50,15 +48,15 @@ export default function PointOfSale({
   const [processing, setProcessing] = useState(false);
   const [success, setSuccess] = useState(false);
   const orderLineItems = useAppSelector((state) => state.pos.products);
-  const subTotal = orderLineItems
-    .reduce((total, item) => total + item.price * item.qty, 0)
-    ;
-  const taxPercent = 10;
-  const tax = (taxPercent * Number(subTotal)) / 100;
-  const totalSum = (Number(subTotal) + tax).toLocaleString('fr-CM');
-  const dispatch = useAppDispatch();
+  
+  // Raw number calculations for backend
+  const subTotal = orderLineItems.reduce((total, item) => total + item.price * item.qty, 0);
+  
+  // Localized display values
+  const totalSumDisplay = (subTotal).toLocaleString('fr-CM'); // For frontend display
+  const subTotalDisplay = subTotal.toLocaleString('fr-CM');
 
-  const [barcodeInput, setBarcodeInput] = useState('');
+  const dispatch = useAppDispatch();
 
   async function handleCreateOrder() {
     if (!selectedCustomer.value) {
@@ -78,10 +76,13 @@ export default function PointOfSale({
       customerEmail: customer.email,
     };
     const orderItems = orderLineItems;
-    const orderAmount = +totalSum;
+    
+    // Use raw numeric value for backend processing
+    const orderAmount = subTotal; // No localization
+
     const newOrder = {
       orderItems,
-      orderAmount,
+      orderAmount, // Send raw numbers
       orderType: "Sale",
       source: "pos",
     };
@@ -102,22 +103,6 @@ export default function PointOfSale({
     dispatch(removeAllProductsFromOrderLine());
     setSuccess(false);
   }
-
-  const handleBarcodeInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const barcode = e.target.value;
-    setBarcodeInput(barcode);
-
-    if (barcode.length >= 8) { // Assuming barcodes are at least 8 characters long
-      const product = await getProductByBarcode(barcode);
-      if (product) {
-        // Add the product to the cart or update quantity if already in cart
-        // This logic depends on how you're managing the cart state
-        // For example:
-        // addToCart(product);
-        setBarcodeInput('');
-      }
-    }
-  };
 
   return (
     <div className="grid grid-cols-12 divide-x-2 divide-gray-200">
@@ -230,21 +215,16 @@ export default function PointOfSale({
               </div>
               <div className="flex items-center justify-between text-sm">
                 <p className="text-muted-foreground">Subtotal</p>
-                <p className="font-medium">{subTotal.toLocaleString('fr-CM')}</p>
+                <p className="font-medium">{subTotalDisplay}</p> {/* Use localized display */}
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <p className="text-muted-foreground">Tax</p>
-                <p className="font-medium">
-                  {taxPercent}% - ({tax.toLocaleString('fr-CM')})
-                </p>
-              </div>
+              
             </div>
             <div className="flex items-center justify-between">
               <h2 className="scroll-m-20 pb-2 text-base font-semibold tracking-tight first:mt-0 py-3 text-muted-foreground">
                 Total
               </h2>
               <h2 className="scroll-m-20 pb-2 text-base font-semibold tracking-tight first:mt-0 py-3 text-muted-foreground">
-                {totalSum}
+                {totalSumDisplay} {/* Use localized display */}
               </h2>
             </div>
             {processing ? (
@@ -275,15 +255,6 @@ export default function PointOfSale({
             )}
           </div>
         )}
-      </div>
-      <div className="col-span-full md:col-span-3 px-3">
-        <input
-          type="text"
-          value={barcodeInput}
-          onChange={handleBarcodeInput}
-          placeholder="Scan barcode"
-          className="w-full p-2 border rounded"
-        />
       </div>
     </div>
   );
