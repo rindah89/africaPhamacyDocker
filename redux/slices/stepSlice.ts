@@ -18,14 +18,10 @@ const initialState: StepState = {
     },
     {
       step: 2,
-      name: "Shipping Address",
-    },
-    {
-      step: 3,
       name: "Order Summary",
     },
     {
-      step: 4,
+      step: 3,
       name: "Payment Method",
     },
   ],
