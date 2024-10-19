@@ -26,7 +26,7 @@ export default async function page() {
   const suppliers = allSuppliers.map((item) => {
     return {
       label: item.name,
-    value: item.id,
+      value: item.id,
     };
   });
   const units = allUnits.map((item) => {

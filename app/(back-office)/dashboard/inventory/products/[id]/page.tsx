@@ -102,9 +102,9 @@ export default async function page({
               <div className="border-b flex items-center space-x-2 justify-between py-4">
                 <div className="flex items-center space-x-2">
                   <h2 className="text-2xl font-semibold">
-                    {product?.productPrice.toLocaleString('fr-CM', { style: 'currency', currency: 'XAF' })}
+                    ${product?.productPrice}
                   </h2>
-                  <s>{product?.productCost.toLocaleString('fr-CM', { style: 'currency', currency: 'XAF' })}</s>
+                  <s>${product?.productCost}</s>
                 </div>
                 <p className="text-muted-foreground">
                   Stock : {product?.stockQty} items
@@ -114,7 +114,20 @@ export default async function page({
                 {/* Add to Cart */}
                 <AddToCartButton product={product as Product} />
               </div>
-              
+              <div className="flex  space-x-4">
+                <div className="">
+                  <Link
+                    href="#"
+                    className="bg-pink-50 flex flex-col py-3 border px-6 rounded"
+                  >
+                    <span className="text-pink-800 font-bold">
+                      Call us for Bulk Purchases:
+                    </span>{" "}
+                    <span className="text-slate-900">07080635700</span>
+                  </Link>
+                </div>
+                <ShareProduct productUrl={url} />
+              </div>
             </div>
           </div>
         </div>
