@@ -7,7 +7,7 @@ import { NotificationStatus, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 // Define the PaymentMethod type based on the Prisma schema
-type PaymentMethod = Prisma.LineOrderScalarFieldEnum
+type PaymentMethod = Prisma.LineOrderCreateInput['paymentMethod']
 
 interface OrderLineItem {
   id: string;
