@@ -35,9 +35,10 @@ export async function getAllSubCategories() {
       },
     });
 
+    console.log("Fetched categories:", categories); // Add this line
     return categories;
   } catch (error) {
-    console.log(error);
+    console.error("Error fetching subcategories:", error); // Change to console.error
     return null;
   }
 }
