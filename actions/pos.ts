@@ -3,8 +3,11 @@
 import prisma from "@/lib/db";
 import { generateOrderNumber } from "@/lib/generateOrderNumber";
 import { ILineOrder } from "@/types/types";
-import { NotificationStatus } from "@prisma/client";
+import { NotificationStatus, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+
+// Define the PaymentMethod type based on the Prisma schema
+type PaymentMethod = Prisma.LineOrderScalarFieldEnum
 
 interface OrderLineItem {
   id: string;
@@ -28,19 +31,22 @@ interface CustomerData {
   state?: string;
   zipCode?: string;
   country?: string;
-  method?: string;
+  method?: PaymentMethod;
 }
+
 interface NewOrderProps {
   orderItems: OrderLineItem[];
   orderAmount: number;
   orderType: string;
   source: string;
 }
+
 type NotificationProps = {
   message: string;
   status?: NotificationStatus;
   statusText: string;
 };
+
 export async function createNotification(data: NotificationProps) {
   try {
     const newNot = await prisma.notification.create({
@@ -52,6 +58,7 @@ export async function createNotification(data: NotificationProps) {
     console.log(error);
   }
 }
+
 export async function updateNotificationStatusById(id: string) {
   try {
     const updatedNot = await prisma.notification.update({
@@ -68,6 +75,7 @@ export async function updateNotificationStatusById(id: string) {
     console.log(error);
   }
 }
+
 export async function getNotifications() {
   try {
     const notifications = await prisma.notification.findMany({
@@ -83,6 +91,7 @@ export async function getNotifications() {
     console.log(error);
   }
 }
+
 export async function createLineOrder(
   newOrder: NewOrderProps,
   customerData: CustomerData
@@ -108,7 +117,7 @@ export async function createLineOrder(
           state: customerData.state,
           zipCode: customerData.zipCode,
           country: customerData.country,
-          paymentMethod: customerData.method,
+          paymentMethod: customerData.method ?? 'NONE' as PaymentMethod,
           // payment Method
           orderNumber: generateOrderNumber(),
           orderAmount,
@@ -188,7 +197,6 @@ export async function createLineOrder(
           throw new Error(`Failed to create sale for product ID: ${item.id}`);
         }
       }
-      // console.log(savedLineOrder);
       revalidatePath("/dashboard/sales");
       return lineOrder.id;
     });
@@ -201,7 +209,6 @@ export async function createLineOrder(
         lineOrderItems: true,
       },
     });
-    // console.log(savedLineOrder);
     return savedLineOrder as ILineOrder;
   } catch (error) {
     console.error("Transaction error:", error);
