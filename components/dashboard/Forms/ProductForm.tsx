@@ -127,7 +127,11 @@ export default function ProductForm({
     useState<any>(initialTaxMethod);
   const [showBarcode, setShowBarcode] = useState(false);
   const initialProductCode = initialData?.productCode ?? "";
+  
+  
   const [barcode, setBarcode] = useState<string>(initialProductCode);
+  
+  
   const componentRef = useRef(null);
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
@@ -201,7 +205,6 @@ export default function ProductForm({
       data.productCode = barcode;
       data.expiryDate = convertDateToIso(data.expiryDate);
       data.content = content;
-      
       // console.log(data);
       if (editingId) {
         await updateProductById(editingId, data);
@@ -518,7 +521,6 @@ export default function ProductForm({
                 />
               </CardContent>
             </Card>
-            
             <Card>
               <CardContent>
                 <div className="grid grid-cols-1 gap-3 pt-3">
