@@ -52,64 +52,61 @@ export function ReceiptPrint({ setSuccess }: { setSuccess: any }) {
         <Button className="w-full">Print Receipt</Button>
       </DrawerTrigger>
       <DrawerContent>
-        <div className="mx-auto w-full max-w-md">
+        <div className="mx-auto w-full max-w-[200px]">
           <div className="" ref={componentRef}>
-            <DrawerHeader>
-              <DrawerTitle className="uppercase tracking-widest text-center">
+            <DrawerHeader className="p-2">
+              <DrawerTitle className="uppercase tracking-widest text-center text-[12px]">
                 Karen Pharmacy
               </DrawerTitle>
-              <div className="flex items-center justify-center space-x-2 border-b pb-2">
-                <p className="text-xs">City: Bojongo - Douala</p>
-                <p className="text-xs">Tel: +237 675 708 688</p>
+              <div className="flex flex-col items-center justify-center border-b pb-1">
+                <p className="text-[8px]">City: Bojongo - Douala</p>
+                <p className="text-[8px]">Tel: +237 675 708 688</p>
               </div>
-              <h1 className="uppercase tracking-widest text-center">RECEIPT</h1>
-              <div className="flex items-center justify-between text-xs border-b pb-1">
+              <h1 className="uppercase tracking-widest text-center text-[10px] my-1">RECEIPT</h1>
+              <div className="flex items-center justify-between text-[8px] border-b pb-1">
                 <p>Date: {currentDate}</p>
                 <p>Time: {currentTime}</p>
               </div>
             </DrawerHeader>
-            <div className="px-4 pb-0 text-center">
+            <div className="px-1 pb-0 text-center">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-1/2 text-left">Item</TableHead>
-                    <TableHead className="w-1/4 text-center">Qty</TableHead>
-                    <TableHead className="w-1/4 text-right">Amount</TableHead>
+                    <TableHead className="w-1/2 text-left text-[8px] py-1">Item</TableHead>
+                    <TableHead className="w-1/4 text-center text-[8px] py-1">Qty</TableHead>
+                    <TableHead className="w-1/4 text-right text-[8px] py-1">Amount</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {orderLineItems.map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell className="font-medium max-w-44 truncate text-left">
+                      <TableCell className="font-medium max-w-24 truncate text-left text-[8px] py-1">
                         {item.name}
                       </TableCell>
-                      <TableCell className="text-center">{item.qty}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-center text-[8px] py-1">{item.qty}</TableCell>
+                      <TableCell className="text-right text-[8px] py-1">
                         {item.price.toLocaleString("fr-CM")}
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
                 <TableFooter>
-                  {/* Empty row for space before total */}
                   <TableRow>
-                    <TableCell colSpan={3} className="py-2"></TableCell>
+                    <TableCell colSpan={3} className="py-1"></TableCell>
                   </TableRow>
-                  {/* Total row */}
                   <TableRow>
-                    <TableCell className="text-left font-bold">Total</TableCell>
-                    <TableCell></TableCell> {/* Empty cell to maintain alignment */}
-                    <TableCell className="text-right font-bold">
+                    <TableCell className="text-left font-bold text-[9px]">Total</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell className="text-right font-bold text-[9px]">
                       {totalSum}
                     </TableCell>
                   </TableRow>
                 </TableFooter>
               </Table>
             </div>
-            {/* Thank you message */}
-            <div className="pt-4 text-center border-t mt-4">
-              <p className="text-xs text-muted-foreground">Thank you for your purchase!</p>
-              <p className="text-xs text-muted-foreground">Merci pour votre achat !</p>
+            <div className="pt-2 text-center border-t mt-2">
+              <p className="text-[7px] text-muted-foreground">Thank you for your purchase!</p>
+              <p className="text-[7px] text-muted-foreground">Merci pour votre achat !</p>
             </div>
           </div>
           <DrawerFooter>

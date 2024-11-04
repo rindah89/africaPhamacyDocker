@@ -16,6 +16,7 @@ export default function Item({ item }: { item: Product }) {
   const [existing, setExisting] = useState(false);
   const orderLineItems = useAppSelector((state) => state.pos.products);
   const dispatch = useAppDispatch();
+
   function handleAdd() {
     const newOrderLineItem = {
       id: item.id,
@@ -27,14 +28,16 @@ export default function Item({ item }: { item: Product }) {
     };
     dispatch(addProductToOrderLine(newOrderLineItem));
   }
+
   const handleRemove = (productId: string) => {
     dispatch(removeProductFromOrderLine(productId));
   };
+
   useEffect(() => {
-    // Check if the product already exists in the cart
     const isExisting = orderLineItems.some((product) => product.id === item.id);
     setExisting(isExisting);
   }, [orderLineItems, item.id]);
+
   return (
     <div className="border p-2 rounded-md">
       <Image
@@ -47,9 +50,12 @@ export default function Item({ item }: { item: Product }) {
       <h2 className="font-semibold line-clamp-1">{item.name}</h2>
       <p className="line-clamp-2 text-xs">{item.productDetails}</p>
       <div className="flex items-center justify-between py-2">
-        <p className="text-blue-600 text-sm font-medium">
-          {item.productPrice.toLocaleString('fr-CM')} FCFA
-        </p>
+        <div>
+          <p className="text-blue-600 text-sm font-medium">
+            {item.productPrice.toLocaleString('fr-CM')} FCFA
+          </p>
+          <p className="text-xs text-gray-500">Code: {item.productCode}</p>
+        </div>
         <Button variant={"outline"} size={"sm"} className="">
           {item.stockQty} items
         </Button>
@@ -61,7 +67,7 @@ export default function Item({ item }: { item: Product }) {
           onClick={() => handleRemove(item.id)}
         >
           <Minus className="w-4 h-4 mr-2" />
-          <span> Remove Item</span>
+          <span>Remove Item</span>
         </Button>
       ) : (
         <Button onClick={handleAdd} className="w-full" variant={"outline"}>
@@ -72,3 +78,5 @@ export default function Item({ item }: { item: Product }) {
     </div>
   );
 }
+
+

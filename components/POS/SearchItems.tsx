@@ -1,42 +1,53 @@
-import { Search } from "lucide-react";
-import React, { useState } from "react";
+"use client";
 
-export default function SearchItems({
-  data,
-  onSearch,
-}: {
-  data: any[];
-  onSearch: any;
-}) {
+import { Product } from "@prisma/client";
+import React, { useState } from "react";
+import { Input } from "../ui/input";
+
+interface SearchItemsProps {
+  data: Product[];
+  onSearch: (results: Product[]) => void;
+  onBarcodeScan?: (product: Product | null) => void;
+}
+
+export default function SearchItems({ data, onSearch, onBarcodeScan }: SearchItemsProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-    const filteredData = data.filter((item: any) =>
-      Object.values(item).some(
-        (value: any) =>
-          value &&
-          value.toString().toLowerCase().includes(e.target.value.toLowerCase())
-      )
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    
+    // Filter results for normal search
+    const results = data.filter((item) =>
+      item.name.toLowerCase().includes(value.toLowerCase()) ||
+      item.productCode.toLowerCase().includes(value.toLowerCase())
     );
-    onSearch(filteredData);
+    onSearch(results);
   };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      // Check if this is a barcode scan (exact match with productCode)
+      const scannedProduct = data.find(p => p.productCode === searchTerm);
+      if (scannedProduct && onBarcodeScan) {
+        onBarcodeScan(scannedProduct);
+        setSearchTerm(''); // Clear input after scan
+        onSearch(data); // Reset search results
+      }
+    }
+  };
+
   return (
-    <div className="flex justify-between items-center gap-8">
-      <div className="mt-2 relative w-3/5">
-        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-          <Search className="text-slate-300 w-4 h-4" />
-        </div>
-        <input
-          id="search"
-          name="search"
-          type="text"
-          autoComplete="search"
-          value={searchTerm}
-          onChange={handleSearch}
-          className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 pl-8"
-        />
-      </div>
+    <div className="col-span-3 pb-4 px-4">
+      <Input
+        type="search"
+        placeholder="Search products or scan barcode..."
+        value={searchTerm}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        className="w-full"
+        autoFocus
+      />
     </div>
   );
 }

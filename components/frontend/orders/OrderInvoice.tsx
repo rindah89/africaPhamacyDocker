@@ -67,8 +67,11 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
               <div className="pt-16 pb-8 text-center sm:py-8">
                 <Logo />
                 <h1 className="mt-4 text-2xl font-bold text-green-700 dark:text-green-50">
-                  Order Confirmed
+                  Karen Pharmacy Invoice
                 </h1>
+                <p className="text-[10px] text-muted-foreground">
+                  City: Bojongo - Douala
+                </p>
                 <p className="mt-2 text-sm font-normal text-gray-600 dark:text-slate-300">
                   <span className="font-bold">Hello {order.firstName}</span>{" "}
                   Your order #{order.orderNumber} has been confirmed. Thank you
