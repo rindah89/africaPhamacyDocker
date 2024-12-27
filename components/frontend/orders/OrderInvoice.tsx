@@ -2,8 +2,7 @@
 import Logo from "@/components/global/Logo";
 import { ILineOrder } from "@/types/types";
 import Image from "next/image";
-import Link from "next/link";
-import React from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
@@ -15,8 +14,20 @@ import {
 import { Button } from "@/components/ui/button";
 import { useReactToPrint } from "react-to-print";
 import { convertIsoToDateString } from "@/lib/covertDateToDateString";
+import { numberToWords } from "@/lib/numberToWords";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function OrderInvoice({ order, readOnly = true }: { order: ILineOrder; readOnly?: boolean }) {
+  const [customerName, setCustomerName] = useState(order.firstName || "");
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const totalSum = order.lineOrderItems.reduce(
     (sum, item) => sum + item.price * item.qty,
     0
@@ -49,6 +60,11 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
     }
   };
 
+  const handlePrintWithName = () => {
+    setIsModalOpen(false);
+    handlePrint();
+  };
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="max-w-2xl mx-auto">
@@ -57,9 +73,32 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
           className="relative mt-4 overflow-hidden bg-white dark:bg-slate-700 rounded-lg shadow"
         >
           <div className="absolute top-4 right-4">
-            <Button onClick={handlePrint} size={"sm"} variant={"outline"}>
-              Download/Print
-            </Button>
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <DialogTrigger asChild>
+                <Button size={"sm"} variant={"outline"}>
+                  Download/Print
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Enter Customer Name</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="customerName">Customer Name</Label>
+                    <Input
+                      id="customerName"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Enter customer name"
+                    />
+                  </div>
+                  <Button onClick={handlePrintWithName}>
+                    Print Receipt
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="px-4 py-6 sm:px-8 sm:py-10">
@@ -70,14 +109,30 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
                   Karen Pharmacy Invoice
                 </h1>
                 <p className="text-[10px] text-muted-foreground">
+                  N0 4012/A/MINSANTE DU 09 JUIN 2024/ UIN: P095800234204H
+                </p>
+                <p className="text-[10px] text-muted-foreground">
                   City: Bojongo - Douala
                 </p>
-                <p className="mt-2 text-sm font-normal text-gray-600 dark:text-slate-300">
-                  <span className="font-bold">Hello {order.firstName}</span>{" "}
-                  Your order #{order.orderNumber} has been confirmed. Thank you
-                </p>
+                
+                <div className="mt-6 text-left space-y-1">
+                  <p className="text-sm font-normal text-gray-600 dark:text-slate-300">
+                    <span className="font-semibold">Date:</span> {currentDate}
+                  </p>
+                  <p className="text-sm font-normal text-gray-600 dark:text-slate-300">
+                    <span className="font-semibold">REF: Bill</span> #{order.orderNumber}
+                  </p>
+                  <p className="text-sm font-normal text-gray-600 dark:text-slate-300">
+                    <span className="font-semibold">Client:</span> {customerName}
+                  </p>
+                </div>
+
+                
               </div>
               <div className="py-4 text-xs">
+                <h2 className="mb-4 text-center font-semibold text-base">
+                  Purchase Invoice for Medications
+                </h2>
                 <Table className="text-xs">
                   <TableHeader>
                     <TableRow>
@@ -173,13 +228,16 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
                     </p>
                   </li>
                 </ul>
+                <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+                  <p className="italic">
+                    Amount in words: {numberToWords(Number(totalSum))} CFA Francs
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        <div className="py-3 text-right text-xs text-green-700">
-          <Link href="/orders">View All Orders</Link>
-        </div>
+      
       </div>
     </div>
   );
