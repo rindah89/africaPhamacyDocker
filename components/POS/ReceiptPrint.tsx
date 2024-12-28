@@ -24,7 +24,7 @@ import { getCurrentDateAndTime } from "@/lib/getCurrentDateTime";
 import { useReactToPrint } from "react-to-print";
 import { removeAllProductsFromOrderLine } from "@/redux/slices/pointOfSale";
 
-export function ReceiptPrint({ setSuccess }: { setSuccess: any }) {
+export function ReceiptPrint({ setSuccess, orderNumber }: { setSuccess: any; orderNumber?: string }) {
   const orderLineItems = useAppSelector((state) => state.pos.products);
   const subTotal1 = orderLineItems.reduce(
     (total, item) => total + item.price * item.qty,
@@ -56,10 +56,10 @@ export function ReceiptPrint({ setSuccess }: { setSuccess: any }) {
           <div className="" ref={componentRef}>
             <DrawerHeader className="p-2">
               <DrawerTitle className="uppercase tracking-widest text-center text-[16px]">
-                Karen Pharmacy
+                KAREN PHARMACY 
               </DrawerTitle>
               <div className="flex flex-col items-center justify-center border-b pb-1">
-                <p className="text-[12px]">City: Bojongo - Douala</p>
+                <p className="text-[12px]"> Bojongo - Douala</p>
                 <p className="text-[12px]">Tel: +237 675 708 688</p>
               </div>
               <h1 className="uppercase tracking-widest text-center text-[14px] my-1">RECEIPT</h1>
@@ -67,9 +67,14 @@ export function ReceiptPrint({ setSuccess }: { setSuccess: any }) {
                 <p>Date: {currentDate}</p>
                 <p>Time: {currentTime}</p>
               </div>
+              {orderNumber && (
+                <div className="text-[12px] py-1 border-b">
+                  <p>Order No: #{orderNumber}</p>
+                </div>
+              )}
             </DrawerHeader>
             <div className="px-1 pb-0 text-center">
-              <div className="space-y-3 border-b pb-2">
+              <div className="space-y-3 border-b pb-2 px-2">
                 {orderLineItems.map((item) => (
                   <div key={item.id} className="text-left">
                     <div className="font-medium text-[14px]">{item.name}</div>
@@ -81,14 +86,14 @@ export function ReceiptPrint({ setSuccess }: { setSuccess: any }) {
                 ))}
               </div>
               
-              <div className="mt-3 pt-2 flex justify-between items-center">
+              <div className="mt-3 pt-2 flex justify-between items-center px-2">
                 <span className="text-left font-bold text-[14px]">Total</span>
                 <span className="text-right font-bold text-[14px]">{totalSum} FCFA</span>
               </div>
             </div>
             <div className="pt-2 text-center border-t mt-2">
-              <p className="text-[10px] text-muted-foreground">Thank you for your purchase!</p>
-              <p className="text-[10px] text-muted-foreground">Merci pour votre achat !</p>
+              <p className="text-[12px] text-muted-foreground">Thank you for your purchase!</p>
+              <p className="text-[12px] text-muted-foreground">Merci pour votre achat !</p>
             </div>
           </div>
           <DrawerFooter>

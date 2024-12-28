@@ -66,13 +66,13 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto p-8">
       <div className="max-w-2xl mx-auto">
         <div
           ref={componentRef}
           className="relative mt-4 overflow-hidden bg-white dark:bg-slate-700 rounded-lg shadow"
         >
-          <div className="absolute top-4 right-4">
+          <div className="absolute top-4 right-4 print:hidden">
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogTrigger asChild>
                 <Button size={"sm"} variant={"outline"}>
@@ -106,13 +106,13 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
               <div className="pt-16 pb-8 text-center sm:py-8">
                 <Logo />
                 <h1 className="mt-4 text-2xl font-bold text-green-700 dark:text-green-50">
-                  Karen Pharmacy Invoice
+                  KAREN PHARMACY PURCHASE ORDER
                 </h1>
                 <p className="text-[10px] text-muted-foreground">
                   N0 4012/A/MINSANTE DU 09 JUIN 2024/ UIN: P095800234204H
                 </p>
                 <p className="text-[10px] text-muted-foreground">
-                  City: Bojongo - Douala
+                  Bojongo - Douala
                 </p>
                 
                 <div className="mt-6 text-left space-y-1">
@@ -131,14 +131,14 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
               </div>
               <div className="py-4 text-xs">
                 <h2 className="mb-4 text-center font-semibold text-base">
-                  Purchase Invoice for Medications
+                  Purchase Order for Medications
                 </h2>
                 <Table className="text-xs">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Order Date</TableHead>
                       <TableHead>Order No</TableHead>
-                      <TableHead>P.Method</TableHead>
+                      <TableHead>P. Method</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>

@@ -1,9 +1,13 @@
-export function generateOrderNumber(): string {
-  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let orderNumber = "";
-  for (let i = 0; i < 8; i++) {
-    const randomIndex = Math.floor(Math.random() * characters.length);
-    orderNumber += characters[randomIndex];
-  }
-  return orderNumber;
+import prisma from "./db";
+
+export async function generateOrderNumber(): Promise<string> {
+  // Get or create the order counter
+  const counter = await prisma.counter.upsert({
+    where: { name: 'orderNumber' },
+    update: { value: { increment: 1 } },
+    create: { name: 'orderNumber', value: 1 }
+  });
+
+  // Format the number with leading zeros (6 digits)
+  return String(counter.value).padStart(6, '0');
 }

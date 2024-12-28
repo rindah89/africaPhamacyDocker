@@ -99,6 +99,9 @@ export async function createLineOrder(
   const { orderItems, orderAmount, orderType, source } = newOrder;
   try {
     const lineOrderId = await prisma.$transaction(async (transaction) => {
+      // Generate order number first
+      const orderNumber = await generateOrderNumber();
+      
       // Create the Line Order
       const lineOrder = await transaction.lineOrder.create({
         data: {
@@ -117,9 +120,9 @@ export async function createLineOrder(
           state: customerData.state,
           zipCode: customerData.zipCode,
           country: customerData.country,
-          paymentMethod: customerData.method ?? 'NONE' as PaymentMethod,
+          paymentMethod: customerData.method ?? 'CASH' as PaymentMethod,
           // payment Method
-          orderNumber: generateOrderNumber(),
+          orderNumber,
           orderAmount,
           orderType,
           source,
