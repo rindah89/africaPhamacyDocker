@@ -216,7 +216,7 @@ export async function updatePurchaseOrderById(
             discount,
             supplierId,
             status,
-            refNo: generateOrderNumber(),
+            refNo: await generateOrderNumber(),
           },
         });
 
