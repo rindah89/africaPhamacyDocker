@@ -15,7 +15,7 @@ export async function createAdjustment(data: AdjustmentDataProps) {
       const adjustment = await transaction.adjustment.create({
         data: {
           reason,
-          refNo: generateOrderNumber(),
+          refNo: await generateOrderNumber(),
         },
       });
 

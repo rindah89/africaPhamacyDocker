@@ -34,7 +34,7 @@ export async function createPurchase(data: PurchaseOrderProps) {
           discount,
           supplierId,
           status,
-          refNo: generateOrderNumber(),
+          refNo: await generateOrderNumber(),
         },
       });
 
