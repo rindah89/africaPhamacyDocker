@@ -52,7 +52,7 @@ export function ReceiptPrint({ setSuccess, orderNumber }: { setSuccess: any; ord
         <Button className="w-full">Print Receipt</Button>
       </DrawerTrigger>
       <DrawerContent>
-        <div className="mx-auto w-9 max-w-[300px]">
+        <div className="mx-auto  max-w-[300px]">
           <div className="" ref={componentRef}>
             <DrawerHeader className="p-2">
               <DrawerTitle className="uppercase tracking-widest text-center text-[16px]">
@@ -63,7 +63,7 @@ export function ReceiptPrint({ setSuccess, orderNumber }: { setSuccess: any; ord
                 <p className="text-[12px]">Tel: +237 675 708 688</p>
               </div>
               <h1 className="uppercase tracking-widest text-center text-[14px] my-1">RECEIPT</h1>
-              <div className="flex flex-col justify-center text-[12px] border-b pb-1">
+              <div className="flex flex-col justify-center text-[10px] border-b pb-1">
                 <p>Date: {currentDate}</p>
                 <p>Time: {currentTime}</p>
               </div>

@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import prisma from "./db";
 
 export async function generateOrderNumber(): Promise<string> {
   // Get or create the order counter
