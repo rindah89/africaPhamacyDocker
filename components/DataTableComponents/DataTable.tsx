@@ -48,11 +48,13 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   tableTitle?: string;
+  initialSorting?: SortingState;
 }
 export default function DataTable<TData, TValue>({
   columns,
   data,
   tableTitle = "",
+  initialSorting = [],
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] = useState({});
@@ -61,13 +63,13 @@ export default function DataTable<TData, TValue>({
   );
   const [searchResults, setSearchResults] = useState(data);
   const [filteredData, setFilteredData] = useState(data);
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [isSearch, setIsSearch] = useState(true);
   // console.log(isSearch);
   const table = useReactTable({
     data: isSearch ? searchResults : filteredData,
     columns,
-    state: {
+    state: {  
       sorting,
       columnVisibility,
       rowSelection,

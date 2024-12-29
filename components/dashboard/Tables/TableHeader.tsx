@@ -1,6 +1,8 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import 'jspdf-autotable';
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ExcelCategoryProps, ProductProps, SelectOption } from "@/types/types";
@@ -14,6 +16,7 @@ import {
   PlusCircle,
   Search,
   X,
+  FileDown,
 } from "lucide-react";
 import Link from "next/link";
 import React, { useState } from "react";
@@ -51,7 +54,24 @@ type TableHeaderProps = {
   data: any;
   model: string;
   showImport?: boolean;
+  showPdfExport?: boolean;
 };
+function handleExportPDF(data: any[]) {
+  const doc = new jsPDF();
+  const tableColumn = ["Product Name", "Quantity", "Expiry Date"];
+  const tableRows = data.map((item) => [
+    item.name,
+    item.stockQty.toString(),
+    item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : "N/A",
+  ]);
+
+  doc.autoTable({
+    head: [tableColumn],
+    body: tableRows,
+  });
+
+  doc.save("inventory-report.pdf");
+}
 export default function TableHeader({
   title,
   href,
@@ -59,6 +79,7 @@ export default function TableHeader({
   data,
   model,
   showImport = true,
+  showPdfExport = false,
 }: TableHeaderProps) {
   const [status, setStatus] = useState<SelectValue>(null);
   const [date, setDate] = useState<SelectValue>(null);
@@ -235,12 +256,23 @@ export default function TableHeader({
     exportDataToExcel(data, filename);
   }
   return (
-    <div className=" mb-3">
+    <div className="mb-3">
       <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-600 py-3">
-        <h2 className="scroll-m-20  text-2xl font-semibold tracking-tight first:mt-0">
+        <h2 className="scroll-m-20 text-2xl font-semibold tracking-tight first:mt-0">
           {title}
         </h2>
         <div className="ml-auto flex items-center gap-2">
+          {showPdfExport && (
+            <Button
+              onClick={() => handleExportPDF(data)}
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1"
+            >
+              <FileDown className="h-3.5 w-3.5 mr-2" />
+              Export PDF
+            </Button>
+          )}
           <Button
             onClick={handleExportData}
             size="sm"
@@ -248,11 +280,8 @@ export default function TableHeader({
             className="h-8 gap-1"
           >
             <SiMicrosoftexcel className="h-3.5 w-3.5" />
-            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-              Export
-            </span>
+            Export Excel
           </Button>
-
           {showImport && (
             <Dialog>
               <DialogTrigger asChild>

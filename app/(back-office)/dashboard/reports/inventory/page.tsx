@@ -6,17 +6,27 @@ import { getAllProducts } from "@/actions/products";
 
 export default async function page() {
   const products = (await getAllProducts()) || [];
+  
+  // Sort products by name alphabetically
+  const sortedProducts = [...products].sort((a, b) => 
+    a.name.localeCompare(b.name)
+  );
+
   return (
     <div>
       <TableHeader
         title="Inventory Report"
         linkTitle="Add Product"
         href="/dashboard/inventory/products/new"
-        data={products}
+        data={sortedProducts}
         model="product"
+        showPdfExport={true}
       />
-      {/* <CustomDataTable categories={categories} /> */}
-      <DataTable columns={columns} data={products} />
+      <DataTable 
+        columns={columns} 
+        data={sortedProducts}
+        initialSorting={[{ id: "name", desc: false }]}
+      />
     </div>
   );
 }
