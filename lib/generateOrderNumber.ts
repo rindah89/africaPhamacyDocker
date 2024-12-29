@@ -1,13 +1,18 @@
-import prisma from "./db";
+import { prisma } from "@/lib/prisma";
 
 export async function generateOrderNumber(): Promise<string> {
   // Get or create the order counter
   const counter = await prisma.counter.upsert({
     where: { name: 'orderNumber' },
     update: { value: { increment: 1 } },
-    create: { name: 'orderNumber', value: 1 }
+    create: { 
+      name: 'orderNumber', 
+      value: 1 
+    }
   });
 
-  // Format the number with leading zeros (6 digits)
-  return String(counter.value).padStart(6, '0');
+  // Format the order number with leading zeros (e.g., ORD-000001)
+  const formattedNumber = `ORD-${counter.value.toString().padStart(6, '0')}`;
+  
+  return formattedNumber;
 }

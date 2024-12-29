@@ -63,7 +63,7 @@ export function ReceiptPrint({ setSuccess, orderNumber }: { setSuccess: any; ord
                 <p className="text-[12px]">Tel: +237 675 708 688</p>
               </div>
               <h1 className="uppercase tracking-widest text-center text-[14px] my-1">RECEIPT</h1>
-              <div className="flex items-center justify-between text-[12px] border-b pb-1">
+              <div className="flex flex-col justify-center text-[12px] border-b pb-1">
                 <p>Date: {currentDate}</p>
                 <p>Time: {currentTime}</p>
               </div>
@@ -77,8 +77,8 @@ export function ReceiptPrint({ setSuccess, orderNumber }: { setSuccess: any; ord
               <div className="space-y-3 border-b pb-2 px-2">
                 {orderLineItems.map((item) => (
                   <div key={item.id} className="text-left">
-                    <div className="font-medium text-[12px]">{item.name}</div>
-                    <div className="flex justify-between text-[12px]">
+                    <div className="font-medium text-[10px]">{item.name}</div>
+                    <div className="flex justify-between text-[10px]">
                       <span>Qty: {item.qty}</span>
                       <span>{item.price.toLocaleString("fr-CM")} FCFA</span>
                     </div>
@@ -87,13 +87,16 @@ export function ReceiptPrint({ setSuccess, orderNumber }: { setSuccess: any; ord
               </div>
               
               <div className="mt-3 pt-2 flex justify-between items-center px-2">
-                <span className="text-left font-bold text-[12px]">Total</span>
-                <span className="text-right font-bold text-[12px]">{totalSum} FCFA</span>
+                <span className="text-left font-bold text-[10px]">Total</span>
+                <div className="text-right font-bold text-[10px] flex flex-col items-end">
+                  <p>{totalSum}</p>
+                  <p>FCFA</p>
+                </div>
               </div>
             </div>
             <div className="pt-2 text-center border-t mt-2">
-              <p className="text-[10px] ">Thank you for your purchase!</p>
-              <p className="text-[10px] ">Merci pour votre achat !</p>
+              <p className="text-[9px] ">Thank you for your purchase!</p>
+              <p className="text-[9px] ">Merci pour votre achat !</p>
             </div>
           </div>
           <DrawerFooter>

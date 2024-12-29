@@ -425,9 +425,7 @@ model Review {
 }
 
 model Counter {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  name         String   @unique
-  value        Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  name  String @unique
+  value Int    @default(1)
 }
