@@ -99,8 +99,17 @@ export async function createLineOrder(
   const { orderItems, orderAmount, orderType, source } = newOrder;
   try {
     const lineOrderId = await prisma.$transaction(async (transaction) => {
-      // Generate order number first
-      const orderNumber = await generateOrderNumber();
+      // Generate order number within the transaction
+      const counter = await transaction.counter.upsert({
+        where: { name: 'orderNumber' },
+        update: { value: { increment: 1 } },
+        create: { 
+          name: 'orderNumber', 
+          value: 1 
+        }
+      });
+      
+      const orderNumber = `ORD-${counter.value.toString().padStart(6, '0')}`;
       
       // Create the Line Order
       const lineOrder = await transaction.lineOrder.create({
@@ -130,6 +139,7 @@ export async function createLineOrder(
         },
       });
 
+      // Process each order item within the same transaction
       for (const item of orderItems) {
         // Update Product stock quantity
         const updatedProduct = await transaction.product.update({
@@ -162,8 +172,8 @@ export async function createLineOrder(
             statusText,
           };
           await createNotification(newNotification);
-          // Send email
         }
+
         // Create Line Order Item
         const lineOrderItem = await transaction.lineOrderItem.create({
           data: {
@@ -200,6 +210,7 @@ export async function createLineOrder(
           throw new Error(`Failed to create sale for product ID: ${item.id}`);
         }
       }
+      
       revalidatePath("/dashboard/sales");
       return lineOrder.id;
     });
@@ -215,7 +226,7 @@ export async function createLineOrder(
     return savedLineOrder as ILineOrder;
   } catch (error) {
     console.error("Transaction error:", error);
-    throw error; // Propagate the error to the caller
+    throw error;
   }
 }
 

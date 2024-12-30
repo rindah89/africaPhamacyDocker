@@ -76,21 +76,20 @@ export function ReceiptPrint({ setSuccess, orderNumber }: { setSuccess: any; ord
             <div className="px-1 pb-0 text-center">
               <div className="space-y-3 border-b pb-2 px-2">
                 {orderLineItems.map((item) => (
-                  <div key={item.id} className="text-left">
-                    <div className="font-medium text-[10px]">{item.name}</div>
-                    <div className="flex justify-between text-[10px]">
+                  <div key={item.id} className="text-left mb-2">
+                    <div className="font-medium text-[10px] whitespace-normal break-words mb-1 mx-4">{item.name}</div>
+                    <div className="flex justify-between text-[10px] mx-4">
                       <span>Qty: {item.qty}</span>
-                      <span>{item.price.toLocaleString("fr-CM")} FCFA</span>
+                      <span>{item.price.toLocaleString("fr-CM")} F</span>
                     </div>
                   </div>
                 ))}
               </div>
               
-              <div className="mt-3 pt-2 flex justify-between items-center px-2">
-                <span className="text-left font-bold text-[10px]">Total</span>
-                <div className="text-right font-bold text-[10px] flex flex-col items-end">
-                  <p>{totalSum}</p>
-                  <p>FCFA</p>
+              <div className="mt-3 pt-2 flex justify-between items-center px-2 pb-2">
+                <span className="text-left font-bold text-[12px] ml-4">Total</span>
+                <div className="text-right font-bold text-[12px] flex flex-col items-end mr-4">
+                  <p className="whitespace-nowrap">{totalSum} F</p>
                 </div>
               </div>
             </div>
