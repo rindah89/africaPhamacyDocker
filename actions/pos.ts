@@ -1,7 +1,6 @@
 "use server";
 
 import prisma from "@/lib/db";
-import { generateOrderNumber } from "@/lib/generateOrderNumber";
 import { ILineOrder } from "@/types/types";
 import { NotificationStatus, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -99,17 +98,14 @@ export async function createLineOrder(
   const { orderItems, orderAmount, orderType, source } = newOrder;
   try {
     const lineOrderId = await prisma.$transaction(async (transaction) => {
-      // Generate order number within the transaction
+      // Generate order number using Counter model
       const counter = await transaction.counter.upsert({
         where: { name: 'orderNumber' },
         update: { value: { increment: 1 } },
-        create: { 
-          name: 'orderNumber', 
-          value: 1 
-        }
+        create: { name: 'orderNumber', value: 1 }
       });
       
-      const orderNumber = `ORD-${counter.value.toString().padStart(6, '0')}`;
+      const orderNumber = `ORD${counter.value.toString().padStart(6, '0')}`;
       
       // Create the Line Order
       const lineOrder = await transaction.lineOrder.create({
@@ -130,7 +126,6 @@ export async function createLineOrder(
           zipCode: customerData.zipCode,
           country: customerData.country,
           paymentMethod: customerData.method ?? 'CASH' as PaymentMethod,
-          // payment Method
           orderNumber,
           orderAmount,
           orderType,
@@ -139,7 +134,7 @@ export async function createLineOrder(
         },
       });
 
-      // Process each order item within the same transaction
+      // Process each order item
       for (const item of orderItems) {
         // Update Product stock quantity
         const updatedProduct = await transaction.product.update({

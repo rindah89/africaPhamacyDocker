@@ -17,13 +17,15 @@ interface CartState {
 
 // Safely retrieve cart items from localStorage
 const getInitialCartItems = (): CartItem[] => {
-  try {
-    const storedCart = localStorage.getItem("cart");
-    if (storedCart) {
-      return JSON.parse(storedCart);
+  if (typeof window !== 'undefined') {
+    try {
+      const storedCart = localStorage.getItem("cart");
+      if (storedCart) {
+        return JSON.parse(storedCart);
+      }
+    } catch (error) {
+      console.error("Failed to parse cart items from localStorage", error);
     }
-  } catch (error) {
-    console.error("Failed to parse cart items from localStorage", error);
   }
   return [];
 };
@@ -31,9 +33,13 @@ const getInitialCartItems = (): CartItem[] => {
 const initialState: CartState = {
   cartItems: getInitialCartItems(),
 };
+
 const saveItemsToLocalStorage = (items: CartItem[]) => {
-  localStorage.setItem("cart", JSON.stringify(items));
+  if (typeof window !== 'undefined') {
+    localStorage.setItem("cart", JSON.stringify(items));
+  }
 };
+
 const cartSlice = createSlice({
   name: "cart",
   initialState,

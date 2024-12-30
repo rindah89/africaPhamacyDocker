@@ -16,22 +16,29 @@ interface OrderLineItems {
 }
 
 const getInitialOrderLineItems = (): OrderLineItem[] => {
-  try {
-    const storedItems = localStorage.getItem("posItems");
-    if (storedItems) {
-      return JSON.parse(storedItems);
+  if (typeof window !== 'undefined') {
+    try {
+      const storedItems = localStorage.getItem("posItems");
+      if (storedItems) {
+        return JSON.parse(storedItems);
+      }
+    } catch (error) {
+      console.error("Failed to parse cart items from localStorage", error);
     }
-  } catch (error) {
-    console.error("Failed to parse cart items from localStorage", error);
   }
   return [];
 };
+
 const initialState: OrderLineItems = {
   products: getInitialOrderLineItems(),
 };
+
 const saveItemsToLocalStorage = (items: OrderLineItem[]) => {
-  localStorage.setItem("posItems", JSON.stringify(items));
+  if (typeof window !== 'undefined') {
+    localStorage.setItem("posItems", JSON.stringify(items));
+  }
 };
+
 const pointOfSaleSlice = createSlice({
   name: "products",
   initialState,

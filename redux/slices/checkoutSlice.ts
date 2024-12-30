@@ -1,5 +1,4 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { useSession } from "next-auth/react";
 
 export interface PersonalDetails {
   firstName: string;
@@ -20,25 +19,30 @@ export interface CheckoutState {
 
 // Load state from localStorage
 const loadState = (): CheckoutState | undefined => {
-  try {
-    const checkoutInfo = localStorage.getItem("checkoutState");
-    if (checkoutInfo === null) {
+  if (typeof window !== 'undefined') {
+    try {
+      const checkoutInfo = localStorage.getItem("checkoutState");
+      if (checkoutInfo === null) {
+        return undefined;
+      }
+      return JSON.parse(checkoutInfo);
+    } catch (err) {
+      console.error("Could not load state", err);
       return undefined;
     }
-    return JSON.parse(checkoutInfo);
-  } catch (err) {
-    console.error("Could not load state", err);
-    return undefined;
   }
+  return undefined;
 };
 
 // Save state to localStorage
 const saveState = (state: CheckoutState) => {
-  try {
-    const checkoutInfo = JSON.stringify(state);
-    localStorage.setItem("checkoutState", checkoutInfo);
-  } catch (err) {
-    console.error("Could not save state", err);
+  if (typeof window !== 'undefined') {
+    try {
+      const checkoutInfo = JSON.stringify(state);
+      localStorage.setItem("checkoutState", checkoutInfo);
+    } catch (err) {
+      console.error("Could not save state", err);
+    }
   }
 };
 

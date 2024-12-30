@@ -5,7 +5,6 @@ import prisma from "@/lib/db";
 import { NotificationStatus, PurchaseOrderStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./pos";
-import { generateOrderNumber } from "../lib/generateOrderNumber";
 import { PurchaseOrderProps } from "@/types/types";
 
 export async function createPurchase(data: PurchaseOrderProps) {
@@ -23,6 +22,15 @@ export async function createPurchase(data: PurchaseOrderProps) {
 
   try {
     const purchaseOrderId = await prisma.$transaction(async (transaction) => {
+      // Generate purchase order number
+      const counter = await transaction.counter.upsert({
+        where: { name: 'purchaseNumber' },
+        update: { value: { increment: 1 } },
+        create: { name: 'purchaseNumber', value: 1 }
+      });
+      
+      const refNo = `PO${counter.value.toString().padStart(6, '0')}`;
+      
       // Create the Purchase
       const purchase = await transaction.purchaseOrder.create({
         data: {
@@ -34,7 +42,7 @@ export async function createPurchase(data: PurchaseOrderProps) {
           discount,
           supplierId,
           status,
-          refNo: await generateOrderNumber(),
+          refNo,
         },
       });
 
@@ -216,7 +224,6 @@ export async function updatePurchaseOrderById(
             discount,
             supplierId,
             status,
-            refNo: await generateOrderNumber(),
           },
         });
 
