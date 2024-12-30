@@ -5,17 +5,25 @@ import prisma from "@/lib/db";
 import { NotificationStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./pos";
-import { generateOrderNumber } from "../lib/generateOrderNumber";
 
 export async function createAdjustment(data: AdjustmentDataProps) {
   const { reason, items } = data;
   try {
     const adjustmentId = await prisma.$transaction(async (transaction) => {
+      // Generate adjustment reference number
+      const counter = await transaction.counter.upsert({
+        where: { name: 'adjustmentNumber' },
+        update: { value: { increment: 1 } },
+        create: { name: 'adjustmentNumber', value: 1 }
+      });
+      
+      const refNo = `ADJ${counter.value.toString().padStart(6, '0')}`;
+      
       // Create the adjustment
       const adjustment = await transaction.adjustment.create({
         data: {
           reason,
-          refNo: await generateOrderNumber(),
+          refNo,
         },
       });
 
