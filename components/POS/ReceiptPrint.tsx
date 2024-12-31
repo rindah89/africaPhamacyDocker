@@ -15,6 +15,7 @@ import { getCurrentDateAndTime } from "@/lib/getCurrentDateTime";
 import { useReactToPrint } from "react-to-print";
 import { removeAllProductsFromOrderLine } from "@/redux/slices/pointOfSale";
 import { OrderLineItem } from "@/redux/slices/pointOfSale";
+import toast from "react-hot-toast";
 
 interface ReceiptPrintProps {
   setSuccess: (value: boolean) => void;
@@ -37,14 +38,20 @@ export function ReceiptPrint({ setSuccess, orderNumber, orderItems }: ReceiptPri
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
     onBeforeGetContent: () => {
-      // Validate data before printing
-      if (!orderItems || orderItems.length === 0) {
-        throw new Error("No items to print");
+      try {
+        // Validate data before printing
+        if (!orderItems || orderItems.length === 0) {
+          toast.error("No items to print");
+          return Promise.reject(new Error("No items to print"));
+        }
+        return Promise.resolve();
+      } catch (error) {
+        console.error("Printing failed:", error);
+        toast.error("Failed to print receipt. Please try again.");
+        return Promise.reject(error);
       }
-      return Promise.resolve();
     },
-    onError: (error) => {
-      console.error("Printing failed:", error);
+    onPrintError: () => {
       toast.error("Failed to print receipt. Please try again.");
     }
   });
