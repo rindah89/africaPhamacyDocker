@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/db";
+import { generateOrderNumber } from "@/lib/generateOrderNumbers";
 import { ILineOrder } from "@/types/types";
 import { NotificationStatus, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -98,44 +99,6 @@ export async function createLineOrder(
   const { orderItems, orderAmount, orderType, source } = newOrder;
   try {
     const lineOrderId = await prisma.$transaction(async (transaction) => {
-      // Generate order number with format: KP-YYYY-MM-XXXXX
-      const date = new Date();
-      const year = date.getFullYear();
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      
-      // Function to generate a random 5-digit number
-      const generateRandomNumber = () => 
-        Math.floor(10000 + Math.random() * 90000).toString();
-      
-      // Generate initial order number
-      let randomNumber = generateRandomNumber();
-      let orderNumber = `KP-${year}-${month}-${randomNumber}`;
-      let isUnique = false;
-      let attempts = 0;
-      const maxAttempts = 3;
-      
-      // Try to ensure uniqueness
-      while (!isUnique && attempts < maxAttempts) {
-        // Check if this order number already exists
-        const existingOrder = await transaction.lineOrder.findUnique({
-          where: { orderNumber },
-        });
-        
-        if (!existingOrder) {
-          isUnique = true;
-        } else {
-          attempts++;
-          if (attempts < maxAttempts) {
-            randomNumber = generateRandomNumber();
-            orderNumber = `KP-${year}-${month}-${randomNumber}`;
-          }
-        }
-      }
-      
-      if (!isUnique) {
-        throw new Error('Failed to generate unique order number after multiple attempts');
-      }
-      
       // Create the Line Order
       const lineOrder = await transaction.lineOrder.create({
         data: {
@@ -154,8 +117,9 @@ export async function createLineOrder(
           state: customerData.state,
           zipCode: customerData.zipCode,
           country: customerData.country,
-          paymentMethod: customerData.method ?? 'CASH' as PaymentMethod,
-          orderNumber,
+          paymentMethod: customerData.method ?? 'NONE' as PaymentMethod,
+          // payment Method
+          orderNumber: generateOrderNumber(),
           orderAmount,
           orderType,
           source,
@@ -163,7 +127,6 @@ export async function createLineOrder(
         },
       });
 
-      // Process each order item
       for (const item of orderItems) {
         // Update Product stock quantity
         const updatedProduct = await transaction.product.update({
@@ -196,8 +159,8 @@ export async function createLineOrder(
             statusText,
           };
           await createNotification(newNotification);
+          // Send email
         }
-
         // Create Line Order Item
         const lineOrderItem = await transaction.lineOrderItem.create({
           data: {
@@ -234,7 +197,6 @@ export async function createLineOrder(
           throw new Error(`Failed to create sale for product ID: ${item.id}`);
         }
       }
-      
       revalidatePath("/dashboard/sales");
       return lineOrder.id;
     });
@@ -250,7 +212,7 @@ export async function createLineOrder(
     return savedLineOrder as ILineOrder;
   } catch (error) {
     console.error("Transaction error:", error);
-    throw error;
+    throw error; // Propagate the error to the caller
   }
 }
 

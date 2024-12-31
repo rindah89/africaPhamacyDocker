@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "remove-counter": "ts-node scripts/removeCounter.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.1.0",

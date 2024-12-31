@@ -249,8 +249,7 @@ model LineOrder {
   customerId   String   @db.ObjectId
   customerName String
   
-  // Format: KP-YYYY-MM-XXXXX (e.g., KP-2024-03-00001)
-  orderNumber  String   @unique
+  orderNumber  String @unique
   customerEmail String?
   orderAmount Int?
   orderType String?
@@ -423,10 +422,4 @@ model Review {
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-}
-
-model Counter {
-  id    String @id @default(auto()) @map("_id") @db.ObjectId
-  name  String @unique
-  value Int    @default(1)
 }

@@ -43,9 +43,13 @@ export default function Item({ item }: { item: Product }) {
       <Image
         width={200}
         height={200}
-        alt=""
-        src={item.productImages[0] ?? "/placeholder.svg"}
+        alt={item.name || "Product image"}
+        src={item.productImages[0] || "/placeholder.svg"}
         className="w-full object-cover h-28 rounded-md mr-2"
+        onError={(e) => {
+          const target = e.target as HTMLImageElement;
+          target.src = "/placeholder.svg";
+        }}
       />
       <h2 className="font-semibold line-clamp-1">{item.name}</h2>
       <p className="line-clamp-2 text-xs">{item.productDetails}</p>

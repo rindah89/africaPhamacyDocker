@@ -2,6 +2,15 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Drawer,
   DrawerClose,
   DrawerContent,
@@ -10,114 +19,100 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import { useAppDispatch } from "@/redux/hooks/hooks";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks/hooks";
 import { getCurrentDateAndTime } from "@/lib/getCurrentDateTime";
 import { useReactToPrint } from "react-to-print";
 import { removeAllProductsFromOrderLine } from "@/redux/slices/pointOfSale";
-import { OrderLineItem } from "@/redux/slices/pointOfSale";
-import toast from "react-hot-toast";
 
-interface ReceiptPrintProps {
-  setSuccess: (value: boolean) => void;
-  orderNumber?: string;
-  orderItems: OrderLineItem[];
-}
-
-export function ReceiptPrint({ setSuccess, orderNumber, orderItems }: ReceiptPrintProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const componentRef = React.useRef<HTMLDivElement>(null);
-  const dispatch = useAppDispatch();
-  
-  const { currentDate, currentTime } = getCurrentDateAndTime();
-  
-  const subTotal1 = orderItems.reduce(
+export function ReceiptPrint({ setSuccess }: { setSuccess: any }) {
+  const orderLineItems = useAppSelector((state) => state.pos.products);
+  const subTotal1 = orderLineItems.reduce(
     (total, item) => total + item.price * item.qty,
     0
   );
   const subTotal = Number(subTotal1).toLocaleString("fr-CM");
-  const totalSum = subTotal;
+  const totalSum = subTotal; // Using subTotal directly as total
 
+  const { currentDate, currentTime } = getCurrentDateAndTime();
+  const componentRef = React.useRef(null);
+  const dispatch = useAppDispatch();
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
-    onBeforeGetContent: () => {
-      if (!orderItems || orderItems.length === 0) {
-        toast.error("No items to print");
-        return Promise.reject(new Error("No items to print"));
-      }
-      return Promise.resolve();
-    },
-    onAfterPrint: () => {
-      setIsOpen(false);
-      clearOrder();
-    }
   });
 
-  const clearOrder = React.useCallback(() => {
-    try {
-      dispatch(removeAllProductsFromOrderLine());
-      setSuccess(false);
-    } catch (error) {
-      console.error("Error clearing order:", error);
-      toast.error("Failed to clear order");
-    }
-  }, [dispatch, setSuccess]);
+  function clearOrder() {
+    // Clear the order and reset success state
+    dispatch(removeAllProductsFromOrderLine());
+    setSuccess(false);
+  }
 
   return (
-    <Drawer open={isOpen} onOpenChange={setIsOpen}>
+    <Drawer>
       <DrawerTrigger asChild>
-        <Button className="w-full" onClick={() => setIsOpen(true)}>Print Receipt</Button>
+        <Button className="w-full">Print Receipt</Button>
       </DrawerTrigger>
       <DrawerContent>
-        <div className="mx-auto max-w-[300px]">
-          <div ref={componentRef}>
+        <div className="mx-auto w-full max-w-[200px]">
+          <div className="" ref={componentRef}>
             <DrawerHeader className="p-2">
-              <DrawerTitle className="uppercase tracking-widest text-center text-[16px]">
-                KAREN PHARMACY 
+              <DrawerTitle className="uppercase tracking-widest text-center text-[12px]">
+                Karen Pharmacy
               </DrawerTitle>
               <div className="flex flex-col items-center justify-center border-b pb-1">
-                <p className="text-[12px]"> Bojongo - Douala</p>
-                <p className="text-[12px]">Tel: +237 675 708 688</p>
+                <p className="text-[8px]">Bojongo - Douala</p>
+                <p className="text-[8px]">Tel: +237 675 708 688</p>
               </div>
-              <h1 className="uppercase tracking-widest text-center text-[14px] my-1">RECEIPT</h1>
-              <div className="flex flex-col justify-center text-[10px] border-b pb-1">
+              <h1 className="uppercase tracking-widest text-center text-[10px] my-1">RECEIPT</h1>
+              <div className="flex items-center justify-between text-[8px] border-b pb-1">
                 <p>Date: {currentDate}</p>
                 <p>Time: {currentTime}</p>
               </div>
-              {orderNumber && (
-                <div className="text-[10px] py-1 border-b">
-                  <p>Order No: #{orderNumber}</p>
-                </div>
-              )}
             </DrawerHeader>
             <div className="px-1 pb-0 text-center">
-              <div className="space-y-3 border-b pb-2 px-2">
-                {orderItems.map((item) => (
-                  <div key={item.id} className="text-left mb-2">
-                    <div className="font-medium text-[10px] whitespace-normal break-words mb-1 mx-4">{item.name}</div>
-                    <div className="flex justify-between text-[10px] mx-4">
-                      <span>Qty: {item.qty}</span>
-                      <span>{item.price.toLocaleString("fr-CM")} F</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="mt-3 pt-2 flex justify-between items-center px-2 pb-2">
-                <span className="text-left font-bold text-[12px] ml-4">Total</span>
-                <div className="text-right font-bold text-[12px] flex flex-col items-end mr-4">
-                  <p className="whitespace-nowrap">{totalSum} F</p>
-                </div>
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-1/2 text-left text-[8px] py-1">Item</TableHead>
+                    <TableHead className="w-1/4 text-center text-[8px] py-1">Qty</TableHead>
+                    <TableHead className="w-1/4 text-right text-[8px] py-1">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orderLineItems.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium max-w-24 truncate text-left text-[8px] py-1">
+                        {item.name}
+                      </TableCell>
+                      <TableCell className="text-center text-[8px] py-1">{item.qty}</TableCell>
+                      <TableCell className="text-right text-[8px] py-1">
+                        {item.price.toLocaleString("fr-CM")}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow>
+                    <TableCell colSpan={3} className="py-1"></TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="text-left font-bold text-[9px]">Total</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell className="text-right font-bold text-[9px]">
+                      {totalSum}
+                    </TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
             </div>
             <div className="pt-2 text-center border-t mt-2">
-              <p className="text-[9px]">Thank you for your purchase!</p>
-              <p className="text-[9px]">Merci pour votre achat !</p>
+              <p className="text-[7px] text-muted-foreground">Thank you for your purchase!</p>
+              <p className="text-[7px] text-muted-foreground">Merci pour votre achat !</p>
             </div>
           </div>
           <DrawerFooter>
             <Button onClick={handlePrint}>Print</Button>
             <DrawerClose asChild>
-              <Button variant="outline" onClick={() => setIsOpen(false)}>
+              <Button onClick={clearOrder} variant="outline">
                 Close
               </Button>
             </DrawerClose>

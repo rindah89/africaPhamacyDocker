@@ -102,8 +102,6 @@ export default function PointOfSale({
 
   const [barcodeInput, setBarcodeInput] = useState('');
 
-  const [orderNumber, setOrderNumber] = useState<string>("");
-
   
 
   // Raw number calculations for backend
@@ -230,8 +228,6 @@ export default function PointOfSale({
 
       if (res) {
 
-        setOrderNumber(res.orderNumber);
-
         toast.success("Order Created Successfully");
 
         setSuccess(true);
@@ -257,8 +253,6 @@ export default function PointOfSale({
     dispatch(removeAllProductsFromOrderLine());
 
     setSuccess(false);
-
-    setOrderNumber("");
 
   }
 
@@ -558,17 +552,27 @@ export default function PointOfSale({
 
             )}
 
-            {success && (
+            {success && orderLineItems.length > 0 && (
 
-              <ReceiptPrint
+              <div className="flex items-center space-x-2">
 
-                setSuccess={setSuccess}
+                <Button
 
-                orderNumber={orderNumber}
+                  variant={"outline"}
 
-                orderItems={orderLineItems}
+                  className="w-full"
 
-              />
+                  onClick={clearOrder}
+
+                >
+
+                  Clear Order
+
+                </Button>
+
+                <ReceiptPrint setSuccess={setSuccess} />
+
+              </div>
 
             )}
 
@@ -583,5 +587,4 @@ export default function PointOfSale({
   );
 
 }
-
 
