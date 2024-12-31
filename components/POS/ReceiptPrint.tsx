@@ -82,9 +82,9 @@ export function ReceiptPrint({ setSuccess }: { setSuccess: any }) {
                 {orderLineItems.map((item) => (
                   <div key={item.id} className="text-left">
                     <div className="font-medium text-[10px] whitespace-normal break-words">{item.name}</div>
-                    <div className="flex justify-between text-[10px]">
+                    <div className="flex justify-between text-[10px] mr-2">
                       <span>Qty: {item.qty}</span>
-                      <span>{item.price.toLocaleString("fr-CM")} F</span>
+                      <span>{item.price.toLocaleString("fr-CM")} Fcfa</span>
                     </div>
                   </div>
                 ))}
@@ -92,7 +92,7 @@ export function ReceiptPrint({ setSuccess }: { setSuccess: any }) {
               
               <div className="mt-2 pt-1 flex justify-between items-center">
                 <span className="text-left font-bold text-[10px]">Total</span>
-                <span className="text-right font-bold text-[10px]">{totalSum} F</span>
+                <span className="text-right font-bold text-[10px] mr-2">{totalSum} Fcfa</span>
               </div>
             </div>
             <div className="pt-2 text-center border-t mt-1">
