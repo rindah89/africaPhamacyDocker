@@ -24,6 +24,12 @@ interface ReceiptPrintProps {
 }
 
 export function ReceiptPrint({ setSuccess, orderNumber, orderItems }: ReceiptPrintProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const componentRef = React.useRef<HTMLDivElement>(null);
+  const dispatch = useAppDispatch();
+  
+  const { currentDate, currentTime } = getCurrentDateAndTime();
+  
   const subTotal1 = orderItems.reduce(
     (total, item) => total + item.price * item.qty,
     0
@@ -31,32 +37,22 @@ export function ReceiptPrint({ setSuccess, orderNumber, orderItems }: ReceiptPri
   const subTotal = Number(subTotal1).toLocaleString("fr-CM");
   const totalSum = subTotal;
 
-  const { currentDate, currentTime } = getCurrentDateAndTime();
-  const componentRef = React.useRef(null);
-  const dispatch = useAppDispatch();
-  
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
     onBeforeGetContent: () => {
-      try {
-        // Validate data before printing
-        if (!orderItems || orderItems.length === 0) {
-          toast.error("No items to print");
-          return Promise.reject(new Error("No items to print"));
-        }
-        return Promise.resolve();
-      } catch (error) {
-        console.error("Printing failed:", error);
-        toast.error("Failed to print receipt. Please try again.");
-        return Promise.reject(error);
+      if (!orderItems || orderItems.length === 0) {
+        toast.error("No items to print");
+        return Promise.reject(new Error("No items to print"));
       }
+      return Promise.resolve();
     },
-    onPrintError: () => {
-      toast.error("Failed to print receipt. Please try again.");
+    onAfterPrint: () => {
+      setIsOpen(false);
+      clearOrder();
     }
   });
 
-  function clearOrder() {
+  const clearOrder = React.useCallback(() => {
     try {
       dispatch(removeAllProductsFromOrderLine());
       setSuccess(false);
@@ -64,16 +60,16 @@ export function ReceiptPrint({ setSuccess, orderNumber, orderItems }: ReceiptPri
       console.error("Error clearing order:", error);
       toast.error("Failed to clear order");
     }
-  }
+  }, [dispatch, setSuccess]);
 
   return (
-    <Drawer>
+    <Drawer open={isOpen} onOpenChange={setIsOpen}>
       <DrawerTrigger asChild>
-        <Button className="w-full">Print Receipt</Button>
+        <Button className="w-full" onClick={() => setIsOpen(true)}>Print Receipt</Button>
       </DrawerTrigger>
       <DrawerContent>
         <div className="mx-auto max-w-[300px]">
-          <div className="" ref={componentRef}>
+          <div ref={componentRef}>
             <DrawerHeader className="p-2">
               <DrawerTitle className="uppercase tracking-widest text-center text-[16px]">
                 KAREN PHARMACY 
@@ -114,14 +110,14 @@ export function ReceiptPrint({ setSuccess, orderNumber, orderItems }: ReceiptPri
               </div>
             </div>
             <div className="pt-2 text-center border-t mt-2">
-              <p className="text-[9px] ">Thank you for your purchase!</p>
-              <p className="text-[9px] ">Merci pour votre achat !</p>
+              <p className="text-[9px]">Thank you for your purchase!</p>
+              <p className="text-[9px]">Merci pour votre achat !</p>
             </div>
           </div>
           <DrawerFooter>
             <Button onClick={handlePrint}>Print</Button>
             <DrawerClose asChild>
-              <Button onClick={clearOrder} variant="outline">
+              <Button variant="outline" onClick={() => setIsOpen(false)}>
                 Close
               </Button>
             </DrawerClose>
