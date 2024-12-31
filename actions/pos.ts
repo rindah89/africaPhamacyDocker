@@ -107,16 +107,15 @@ export async function createLineOrder(
       const generateRandomNumber = () => 
         Math.floor(10000 + Math.random() * 90000).toString();
       
-      // Try to generate a unique order number (max 3 attempts)
-      let orderNumber: string;
+      // Generate initial order number
+      let randomNumber = generateRandomNumber();
+      let orderNumber = `KP-${year}-${month}-${randomNumber}`;
       let isUnique = false;
       let attempts = 0;
       const maxAttempts = 3;
       
+      // Try to ensure uniqueness
       while (!isUnique && attempts < maxAttempts) {
-        const randomNumber = generateRandomNumber();
-        orderNumber = `KP-${year}-${month}-${randomNumber}`;
-        
         // Check if this order number already exists
         const existingOrder = await transaction.lineOrder.findUnique({
           where: { orderNumber },
@@ -126,6 +125,10 @@ export async function createLineOrder(
           isUnique = true;
         } else {
           attempts++;
+          if (attempts < maxAttempts) {
+            randomNumber = generateRandomNumber();
+            orderNumber = `KP-${year}-${month}-${randomNumber}`;
+          }
         }
       }
       
