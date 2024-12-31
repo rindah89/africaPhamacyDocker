@@ -2,15 +2,6 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Drawer,
   DrawerClose,
   DrawerContent,
@@ -19,31 +10,53 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import { useAppDispatch, useAppSelector } from "@/redux/hooks/hooks";
+import { useAppDispatch } from "@/redux/hooks/hooks";
 import { getCurrentDateAndTime } from "@/lib/getCurrentDateTime";
 import { useReactToPrint } from "react-to-print";
 import { removeAllProductsFromOrderLine } from "@/redux/slices/pointOfSale";
+import { OrderLineItem } from "@/redux/slices/pointOfSale";
 
-export function ReceiptPrint({ setSuccess, orderNumber }: { setSuccess: any; orderNumber?: string }) {
-  const orderLineItems = useAppSelector((state) => state.pos.products);
-  const subTotal1 = orderLineItems.reduce(
+interface ReceiptPrintProps {
+  setSuccess: (value: boolean) => void;
+  orderNumber?: string;
+  orderItems: OrderLineItem[];
+}
+
+export function ReceiptPrint({ setSuccess, orderNumber, orderItems }: ReceiptPrintProps) {
+  const subTotal1 = orderItems.reduce(
     (total, item) => total + item.price * item.qty,
     0
   );
   const subTotal = Number(subTotal1).toLocaleString("fr-CM");
-  const totalSum = subTotal; // Using subTotal directly as total
+  const totalSum = subTotal;
 
   const { currentDate, currentTime } = getCurrentDateAndTime();
   const componentRef = React.useRef(null);
   const dispatch = useAppDispatch();
+  
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
+    onBeforeGetContent: () => {
+      // Validate data before printing
+      if (!orderItems || orderItems.length === 0) {
+        throw new Error("No items to print");
+      }
+      return Promise.resolve();
+    },
+    onError: (error) => {
+      console.error("Printing failed:", error);
+      toast.error("Failed to print receipt. Please try again.");
+    }
   });
 
   function clearOrder() {
-    // Clear the order and reset success state
-    dispatch(removeAllProductsFromOrderLine());
-    setSuccess(false);
+    try {
+      dispatch(removeAllProductsFromOrderLine());
+      setSuccess(false);
+    } catch (error) {
+      console.error("Error clearing order:", error);
+      toast.error("Failed to clear order");
+    }
   }
 
   return (
@@ -52,7 +65,7 @@ export function ReceiptPrint({ setSuccess, orderNumber }: { setSuccess: any; ord
         <Button className="w-full">Print Receipt</Button>
       </DrawerTrigger>
       <DrawerContent>
-        <div className="mx-auto  max-w-[300px]">
+        <div className="mx-auto max-w-[300px]">
           <div className="" ref={componentRef}>
             <DrawerHeader className="p-2">
               <DrawerTitle className="uppercase tracking-widest text-center text-[16px]">
@@ -75,7 +88,7 @@ export function ReceiptPrint({ setSuccess, orderNumber }: { setSuccess: any; ord
             </DrawerHeader>
             <div className="px-1 pb-0 text-center">
               <div className="space-y-3 border-b pb-2 px-2">
-                {orderLineItems.map((item) => (
+                {orderItems.map((item) => (
                   <div key={item.id} className="text-left mb-2">
                     <div className="font-medium text-[10px] whitespace-normal break-words mb-1 mx-4">{item.name}</div>
                     <div className="flex justify-between text-[10px] mx-4">

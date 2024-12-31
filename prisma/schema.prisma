@@ -249,7 +249,8 @@ model LineOrder {
   customerId   String   @db.ObjectId
   customerName String
   
-  orderNumber  String @unique
+  // Format: KP-YYYY-MM-XXXXX (e.g., KP-2024-03-00001)
+  orderNumber  String   @unique
   customerEmail String?
   orderAmount Int?
   orderType String?

@@ -98,14 +98,40 @@ export async function createLineOrder(
   const { orderItems, orderAmount, orderType, source } = newOrder;
   try {
     const lineOrderId = await prisma.$transaction(async (transaction) => {
-      // Generate order number using Counter model
-      const counter = await transaction.counter.upsert({
-        where: { name: 'orderNumber' },
-        update: { value: { increment: 1 } },
-        create: { name: 'orderNumber', value: 1 }
-      });
+      // Generate order number with format: KP-YYYY-MM-XXXXX
+      const date = new Date();
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
       
-      const orderNumber = `ORD${counter.value.toString().padStart(6, '0')}`;
+      // Function to generate a random 5-digit number
+      const generateRandomNumber = () => 
+        Math.floor(10000 + Math.random() * 90000).toString();
+      
+      // Try to generate a unique order number (max 3 attempts)
+      let orderNumber: string;
+      let isUnique = false;
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (!isUnique && attempts < maxAttempts) {
+        const randomNumber = generateRandomNumber();
+        orderNumber = `KP-${year}-${month}-${randomNumber}`;
+        
+        // Check if this order number already exists
+        const existingOrder = await transaction.lineOrder.findUnique({
+          where: { orderNumber },
+        });
+        
+        if (!existingOrder) {
+          isUnique = true;
+        } else {
+          attempts++;
+        }
+      }
+      
+      if (!isUnique) {
+        throw new Error('Failed to generate unique order number after multiple attempts');
+      }
       
       // Create the Line Order
       const lineOrder = await transaction.lineOrder.create({

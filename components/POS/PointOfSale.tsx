@@ -558,27 +558,17 @@ export default function PointOfSale({
 
             )}
 
-            {success && orderLineItems.length > 0 && (
+            {success && (
 
-              <div className="flex items-center space-x-2">
+              <ReceiptPrint
 
-                <Button
+                setSuccess={setSuccess}
 
-                  variant={"outline"}
+                orderNumber={orderNumber}
 
-                  className="w-full"
+                orderItems={orderLineItems}
 
-                  onClick={clearOrder}
-
-                >
-
-                  Clear Order
-
-                </Button>
-
-                <ReceiptPrint setSuccess={setSuccess} orderNumber={orderNumber} />
-
-              </div>
+              />
 
             )}
 
