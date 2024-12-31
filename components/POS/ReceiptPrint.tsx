@@ -62,8 +62,8 @@ export function ReceiptPrint({ setSuccess }: { setSuccess: any }) {
       </DrawerTrigger>
       <DrawerContent>
         <div className="mx-auto w-full max-w-[200px]">
-          <div ref={componentRef}>
-            <DrawerHeader className="p-2">
+          <div ref={componentRef} className="px-4">
+            <DrawerHeader className="p-0 py-2">
               <DrawerTitle className="uppercase tracking-widest text-center text-[14px]">
                 KAREN PHARMACY
               </DrawerTitle>
@@ -72,17 +72,17 @@ export function ReceiptPrint({ setSuccess }: { setSuccess: any }) {
                 <p className="text-[10px]">Tel: +237 675 708 688</p>
               </div>
               <h1 className="uppercase tracking-widest text-center text-[12px] my-1">RECEIPT</h1>
-              <div className="flex flex-col justify-center text-[10px] border-b pb-1">
+              <div className="flex flex-col items-center text-[10px] border-b pb-1">
                 <p>Date: {currentDate}</p>
                 <p>Time: {currentTime}</p>
               </div>
             </DrawerHeader>
-            <div className="px-1 pb-0 text-center">
+            <div className="py-1 text-center">
               <div className="space-y-2 border-b pb-2">
                 {orderLineItems.map((item) => (
-                  <div key={item.id} className="text-left mb-1">
-                    <div className="font-medium text-[10px] whitespace-normal break-words mb-1 mx-2">{item.name}</div>
-                    <div className="flex justify-between text-[10px] mx-2">
+                  <div key={item.id} className="text-left">
+                    <div className="font-medium text-[10px] whitespace-normal break-words">{item.name}</div>
+                    <div className="flex justify-between text-[10px]">
                       <span>Qty: {item.qty}</span>
                       <span>{item.price.toLocaleString("fr-CM")} F</span>
                     </div>
@@ -90,14 +90,12 @@ export function ReceiptPrint({ setSuccess }: { setSuccess: any }) {
                 ))}
               </div>
               
-              <div className="mt-2 pt-2 flex justify-between items-center pb-2">
-                <span className="text-left font-bold text-[10px] ml-2">Total</span>
-                <div className="text-right font-bold text-[10px] flex flex-col items-end mr-2">
-                  <p className="whitespace-nowrap">{totalSum} F</p>
-                </div>
+              <div className="mt-2 pt-1 flex justify-between items-center">
+                <span className="text-left font-bold text-[10px]">Total</span>
+                <span className="text-right font-bold text-[10px]">{totalSum} F</span>
               </div>
             </div>
-            <div className="pt-2 text-center border-t mt-2">
+            <div className="pt-2 text-center border-t mt-1">
               <p className="text-[8px]">Thank you for your purchase!</p>
               <p className="text-[8px]">Merci pour votre achat !</p>
             </div>
