@@ -128,6 +128,43 @@ export async function createLineOrder(
       });
 
       for (const item of orderItems) {
+        // Find available batches for the product, ordered by expiry date
+        const availableBatches = await transaction.productBatch.findMany({
+          where: {
+            productId: item.id,
+            status: true,
+            quantity: {
+              gt: 0
+            }
+          },
+          orderBy: {
+            expiryDate: 'asc'
+          }
+        });
+
+        let remainingQty = item.qty;
+        
+        // Deduct quantities from batches
+        for (const batch of availableBatches) {
+          if (remainingQty <= 0) break;
+          
+          const deductionQty = Math.min(batch.quantity, remainingQty);
+          await transaction.productBatch.update({
+            where: { id: batch.id },
+            data: {
+              quantity: {
+                decrement: deductionQty
+              }
+            }
+          });
+          
+          remainingQty -= deductionQty;
+        }
+
+        if (remainingQty > 0) {
+          throw new Error(`Insufficient batch quantity for product: ${item.name}`);
+        }
+
         // Update Product stock quantity
         const updatedProduct = await transaction.product.update({
           where: { id: item.id },

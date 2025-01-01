@@ -123,13 +123,22 @@ export type ProductProps = {
   productTax: number;
   productThumbnail: string;
   taxMethod: string;
-  batchNumber: string;
   content?: string;
-  expiryDate: string;
   isFeatured: boolean;
   status: boolean;
   productImages: string[];
   productDetails: string;
+};
+
+export type ProductBatchProps = {
+  batchNumber: string;
+  quantity: number;
+  expiryDate: string;
+  manufactureDate?: string;
+  costPerUnit: number;
+  notes?: string;
+  status: boolean;
+  productId: string;
 };
 
 export interface RoleProps {

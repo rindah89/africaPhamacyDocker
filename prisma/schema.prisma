@@ -135,8 +135,6 @@ model Product {
   productThumbnail String
   productDetails   String
   content           String?
-  batchNumber      String
-  expiryDate       DateTime
   isFeatured       Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -148,6 +146,7 @@ model Product {
   adjustments      AdjustmentItem[]
   purchaseOrders   PurchaseOrderItem[]
   reviews  Review[]
+  batches  ProductBatch[]
 
   brand         Brand           @relation(fields: [brandId], references: [id])
   brandId       String          @db.ObjectId
@@ -157,6 +156,26 @@ model Product {
   supplierId    String          @db.ObjectId
   lineOrderItems LineOrderItem[]
   sales          Sale[]
+}
+
+// New model for managing product batches
+model ProductBatch {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  batchNumber   String
+  quantity      Int
+  expiryDate    DateTime
+  manufactureDate DateTime?
+  costPerUnit   Float
+  notes         String?
+  status        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relationship with Product
+  product       Product   @relation(fields: [productId], references: [id])
+  productId     String    @db.ObjectId
+
+  @@unique([productId, batchNumber])
 }
 
 model Role {

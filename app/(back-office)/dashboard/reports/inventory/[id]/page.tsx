@@ -102,13 +102,20 @@ export default async function page({
               <div className="border-b flex items-center space-x-2 justify-between py-4">
                 <div className="flex items-center space-x-2">
                   <h2 className="text-2xl font-semibold">
-                          {product?.productPrice.toLocaleString('fr-CM', { style: 'currency', currency: 'XAF' })}
-                        </h2>
-                        <s>{product?.productCost.toLocaleString('fr-CM', { style: 'currency', currency: 'XAF' })}</s>
-                    </div>
-                <p className="text-muted-foreground">
-                  Stock : {product?.stockQty} items
-                </p>
+                    {product?.productPrice.toLocaleString('fr-CM', { style: 'currency', currency: 'XAF' })}
+                  </h2>
+                  <s>{product?.productCost.toLocaleString('fr-CM', { style: 'currency', currency: 'XAF' })}</s>
+                </div>
+                <div className="flex items-center gap-4">
+                  <p className="text-muted-foreground">
+                    Stock: {product?.stockQty} items
+                  </p>
+                  <Button asChild variant="outline">
+                    <Link href={`/dashboard/inventory/batches/new?productId=${product?.id}`}>
+                      Add Batch
+                    </Link>
+                  </Button>
+                </div>
               </div>
               <div className="py-4">
                 {/* Add to Cart */}
