@@ -18,6 +18,10 @@ export default function Item({ item }: { item: Product }) {
   const dispatch = useAppDispatch();
 
   function handleAdd() {
+    if (item.stockQty <= 0) {
+      toast.error("This item is out of stock");
+      return;
+    }
     const newOrderLineItem = {
       id: item.id,
       name: item.name,
@@ -39,7 +43,7 @@ export default function Item({ item }: { item: Product }) {
   }, [orderLineItems, item.id]);
 
   return (
-    <div className="border p-2 rounded-md">
+    <div className={`border p-2 rounded-md ${item.stockQty <= 0 ? 'opacity-75' : ''}`}>
       <Image
         width={200}
         height={200}
@@ -60,7 +64,7 @@ export default function Item({ item }: { item: Product }) {
           </p>
           <p className="text-xs text-gray-500">Code: {item.productCode}</p>
         </div>
-        <Button variant={"outline"} size={"sm"} className="">
+        <Button variant={"outline"} size={"sm"} className={item.stockQty <= 0 ? "text-red-500" : ""}>
           {item.stockQty} items
         </Button>
       </div>
@@ -74,9 +78,14 @@ export default function Item({ item }: { item: Product }) {
           <span>Remove Item</span>
         </Button>
       ) : (
-        <Button onClick={handleAdd} className="w-full" variant={"outline"}>
+        <Button 
+          onClick={handleAdd} 
+          className="w-full" 
+          variant={item.stockQty <= 0 ? "secondary" : "outline"}
+          disabled={item.stockQty <= 0}
+        >
           <Plus className="mr-2 w-4 h-4" />
-          <span>Add to Order line</span>
+          <span>{item.stockQty <= 0 ? "Out of Stock" : "Add to Order line"}</span>
         </Button>
       )}
     </div>

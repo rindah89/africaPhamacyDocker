@@ -15,8 +15,6 @@ export default async function page({
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
   const { cat = "all" } = searchParams;
-  console.log(cat);
-  // const allSubCategories = (await getAllSubCategories()) || [];
   const allCategories = (await getAllCategories()) || [];
   const products = (await getProductsByCategoryId(cat as string)) || [];
   const allCustomers = (await getAllUsers()) || [];
@@ -27,7 +25,7 @@ export default async function page({
       email: item.email,
     };
   });
-  // console.log(products);
+
   return (
     <AuthorizePageWrapper requiredPermission={permissionsObj.canViewPos}>
       <div className="">

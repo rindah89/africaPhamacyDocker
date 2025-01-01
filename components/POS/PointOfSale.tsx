@@ -375,17 +375,9 @@ export default function PointOfSale({
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 py-6 px-4">
-
               {searchResults.map((item) => {
-
-                return (
-
-                  item.stockQty > 0 && <Item item={item} key={item.id} />
-
-                );
-
+                return <Item item={item} key={item.id} />;
               })}
-
             </div>
 
           </div>

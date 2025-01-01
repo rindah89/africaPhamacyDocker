@@ -32,7 +32,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { DataTablePagination } from "./DataTablePagination";
 
@@ -49,12 +49,15 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   tableTitle?: string;
   initialSorting?: SortingState;
+  onSelectionChange?: (selectedRows: TData[]) => void;
 }
+
 export default function DataTable<TData, TValue>({
   columns,
   data,
   tableTitle = "",
   initialSorting = [],
+  onSelectionChange,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] = useState({});
@@ -65,7 +68,17 @@ export default function DataTable<TData, TValue>({
   const [filteredData, setFilteredData] = useState(data);
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [isSearch, setIsSearch] = useState(true);
-  // console.log(isSearch);
+
+  // Update selected rows when selection changes
+  useEffect(() => {
+    if (onSelectionChange) {
+      const selectedRows = Object.keys(rowSelection).map(
+        (index) => (isSearch ? searchResults : filteredData)[parseInt(index)]
+      );
+      onSelectionChange(selectedRows);
+    }
+  }, [rowSelection, isSearch, searchResults, filteredData, onSelectionChange]);
+
   const table = useReactTable({
     data: isSearch ? searchResults : filteredData,
     columns,
@@ -87,7 +100,7 @@ export default function DataTable<TData, TValue>({
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
-  // console.log(searchResults);
+
   return (
     <div className="space-y-4">
       {tableTitle && (

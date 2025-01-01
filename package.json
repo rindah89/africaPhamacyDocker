@@ -61,6 +61,7 @@
     "novel": "^0.1.22",
     "nuka-carousel": "^7.0.0",
     "react": "^18",
+    "react-barcode": "^1.5.3",
     "react-code-blocks": "^0.1.6",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18",

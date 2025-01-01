@@ -2,6 +2,8 @@ import DataTable from "@/components/DataTableComponents/DataTable";
 import TableHeader from "@/components/dashboard/Tables/TableHeader";
 import { columns } from "./columns";
 import prisma from "@/lib/db";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default async function BatchesPage() {
   // Fetch all batches with their associated product information
@@ -21,14 +23,21 @@ export default async function BatchesPage() {
 
   return (
     <div>
-      <TableHeader
-        title="Product Batches"
-        linkTitle="Add Batch"
-        href="/dashboard/inventory/batches/new"
-        data={batches}
-        model="batch"
-        showPdfExport={true}
-      />
+      <div className="flex justify-between items-center mb-4">
+        <TableHeader
+          title="Product Batches"
+          linkTitle="Add Batch"
+          href="/dashboard/inventory/batches/new"
+          data={batches}
+          model="batch"
+          showPdfExport={true}
+        />
+        <Link href="/dashboard/inventory/batches/print-barcodes">
+          <Button variant="outline">
+            Print Barcodes
+          </Button>
+        </Link>
+      </div>
       <DataTable 
         columns={columns} 
         data={batches}
