@@ -47,9 +47,9 @@ export default function BatchForm({ productId, products, editingId, initialData 
       batchNumber: initialData?.batchNumber || "",
       quantity: initialData?.quantity || 0,
       expiryDate: initialData?.expiryDate || "",
-      manufactureDate: initialData?.manufactureDate || "",
+      deliveryDate: initialData?.deliveryDate || "",
       costPerUnit: initialData?.costPerUnit || 0,
-      notes: initialData?.notes || "",
+      notes: initialData?.notes || "Batch received in good condition",
       status: initialData?.status || true,
       productId: productId || "",
     },
@@ -135,8 +135,8 @@ export default function BatchForm({ productId, products, editingId, initialData 
                 <TextInput
                   register={register}
                   errors={errors}
-                  label="Manufacture Date"
-                  name="manufactureDate"
+                  label="Delivery Date"
+                  name="deliveryDate"
                   type="date"
                 />
                 <TextInput

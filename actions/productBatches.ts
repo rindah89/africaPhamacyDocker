@@ -11,7 +11,7 @@ export async function createProductBatch(data: ProductBatchProps) {
         batchNumber: data.batchNumber,
         quantity: data.quantity,
         expiryDate: new Date(data.expiryDate),
-        manufactureDate: data.manufactureDate ? new Date(data.manufactureDate) : undefined,
+        deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : undefined,
         costPerUnit: data.costPerUnit,
         notes: data.notes,
         status: data.status,
@@ -71,7 +71,7 @@ export async function updateProductBatch(id: string, data: Partial<ProductBatchP
       data: {
         quantity: data.quantity,
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
-        manufactureDate: data.manufactureDate ? new Date(data.manufactureDate) : undefined,
+        deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : undefined,
         costPerUnit: data.costPerUnit,
         notes: data.notes,
         status: data.status,

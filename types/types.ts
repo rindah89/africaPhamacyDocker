@@ -134,7 +134,7 @@ export type ProductBatchProps = {
   batchNumber: string;
   quantity: number;
   expiryDate: string;
-  manufactureDate?: string;
+  deliveryDate?: string;
   costPerUnit: number;
   notes?: string;
   status: boolean;
