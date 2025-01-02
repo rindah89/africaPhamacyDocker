@@ -167,7 +167,7 @@ export default function ProductForm({
   } = useForm<ProductProps>({
     defaultValues: {
       name: initialData?.name,
-      stockQty: initialData?.stockQty,
+      stockQty: initialData ? initialData.stockQty : 0,
       productCost: initialData?.productCost,
       productPrice: initialData?.productPrice,
       supplierPrice: initialData?.supplierPrice,
@@ -175,8 +175,6 @@ export default function ProductForm({
       productTax: initialData?.productTax,
       taxMethod: initialData?.taxMethod,
       productDetails: initialData?.productDetails,
-      expiryDate: convertIsoToDateString(initialData?.expiryDate ?? new Date()),
-      batchNumber: initialData?.batchNumber,
       isFeatured: initialData?.isFeatured,
     },
   });
@@ -185,6 +183,7 @@ export default function ProductForm({
     try {
       if (!barcode) {
         toast.error("Please generate the Barcode");
+        return;
       }
       setLoading(true);
       data.slug = generateSlug(data.name);
@@ -201,32 +200,23 @@ export default function ProductForm({
       data.supplierPrice = Number(data.supplierPrice);
       data.productPrice = Number(data.productPrice);
       data.productTax = Number(data.productTax);
-      data.stockQty = Number(data.stockQty);
+      data.stockQty = editingId ? Number(data.stockQty) : 0;
       data.productCode = barcode;
-      data.expiryDate = convertDateToIso(data.expiryDate);
       data.content = content;
-      // console.log(data);
+
       if (editingId) {
         await updateProductById(editingId, data);
         setLoading(false);
-        // Toast
         toast.success("Updated Successfully!");
-        //reset
         reset();
-        //route
         router.push("/dashboard/inventory/products");
       } else {
-        // console.log(data);
         const res = await createProduct(data);
-        // console.log(res);
         if (res.success && res.error == null) {
           setLoading(false);
-          // Toast
           toast.success("Product Successfully Created!");
-          //reset
           reset();
-          //route
-          // router.push("/dashboard/inventory/products");
+          router.push("/dashboard/inventory/products");
         } else {
           toast.error("Something went wrong, Please try again");
           console.log(res.error);
@@ -298,13 +288,6 @@ export default function ProductForm({
           <Card>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
-                <TextInput
-                  register={register}
-                  errors={errors}
-                  label="Product Expiry Date"
-                  name="expiryDate"
-                  type="date"
-                />
                 <FormSelectInput
                   label="Suppliers"
                   options={suppliers}
@@ -362,12 +345,6 @@ export default function ProductForm({
           <Card>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3">
-                <TextInput
-                  register={register}
-                  errors={errors}
-                  label="Product Batch Number"
-                  name="batchNumber"
-                />
                 <div className="relative flex gap-x-3">
                   <div className="flex h-6 items-center">
                     <input
@@ -477,20 +454,11 @@ export default function ProductForm({
                           <div className="grid place-items-center gap-4 py-4">
                             <div
                               ref={componentRef}
-                              // className="grid grid-cols-3 gap-4"
                             >
                               <ReactBarcode
                                 value={barcode}
                                 options={{ format: "CODE128" }}
                               />
-                              {/* {Array.from({ length: 24 }).map((_, index) => (
-                                <div key={index} className="barcode">
-                                  <ReactBarcode
-                                    value={barcode}
-                                    options={{ format: "CODE128" }}
-                                  />
-                                </div>
-                              ))} */}
                             </div>
                           </div>
                           <DialogFooter>
@@ -512,13 +480,15 @@ export default function ProductForm({
                     )}
                   </div>
                 </div>
-                <TextInput
-                  register={register}
-                  errors={errors}
-                  label="Product Stock Qty"
-                  name="stockQty"
-                  type="number"
-                />
+                {editingId && (
+                  <TextInput
+                    register={register}
+                    errors={errors}
+                    label="Product Stock Qty"
+                    name="stockQty"
+                    type="number"
+                  />
+                )}
               </CardContent>
             </Card>
             <Card>
