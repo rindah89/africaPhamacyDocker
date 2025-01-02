@@ -12,13 +12,19 @@ export async function createProductBatch(data: ProductBatchProps) {
       throw new Error("Invalid quantity value");
     }
 
+    // Ensure costPerUnit is a valid float
+    const costPerUnit = parseFloat(String(data.costPerUnit));
+    if (isNaN(costPerUnit)) {
+      throw new Error("Invalid cost per unit value");
+    }
+
     const newBatch = await prisma.productBatch.create({
       data: {
         batchNumber: data.batchNumber,
         quantity: quantity,
         expiryDate: new Date(data.expiryDate),
         deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : undefined,
-        costPerUnit: data.costPerUnit,
+        costPerUnit: costPerUnit,
         notes: data.notes,
         status: data.status,
         productId: data.productId,
