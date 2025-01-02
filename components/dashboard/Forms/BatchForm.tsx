@@ -70,11 +70,18 @@ export default function BatchForm({ productId, products, editingId, initialData 
       if (res) {
         setLoading(false);
         toast.success("Batch Successfully Created!");
-        reset();
-        if (productId) {
-          router.push(`/dashboard/inventory/products/${productId}`);
-        } else {
-          router.push("/dashboard/inventory/batches");
+        reset({
+          batchNumber: "",
+          quantity: 0,
+          expiryDate: "",
+          deliveryDate: "",
+          costPerUnit: 0,
+          notes: "Batch received in good condition",
+          status: true,
+          productId: "",
+        });
+        if (!productId) {
+          setSelectedProduct(undefined);
         }
       } else {
         toast.error("Something went wrong, Please try again");

@@ -9,7 +9,7 @@ export async function createProductBatch(data: ProductBatchProps) {
     const newBatch = await prisma.productBatch.create({
       data: {
         batchNumber: data.batchNumber,
-        quantity: data.quantity,
+        quantity: Number(data.quantity),
         expiryDate: new Date(data.expiryDate),
         deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : undefined,
         costPerUnit: data.costPerUnit,
@@ -24,7 +24,7 @@ export async function createProductBatch(data: ProductBatchProps) {
       where: { id: data.productId },
       data: {
         stockQty: {
-          increment: data.quantity
+          increment: Number(data.quantity)
         }
       }
     });
@@ -131,6 +131,31 @@ export async function deleteProductBatch(id: string) {
     return deletedBatch;
   } catch (error) {
     console.error("Error deleting product batch:", error);
+    throw error;
+  }
+}
+
+export async function fixNullBatchNumbers() {
+  try {
+    // Find all ProductBatch records
+    const batches = await prisma.productBatch.findMany();
+    
+    // Update any batch with null batchNumber
+    for (const batch of batches) {
+      if (!batch.batchNumber) {
+        await prisma.productBatch.update({
+          where: { id: batch.id },
+          data: {
+            batchNumber: `BATCH-${batch.id}`, // Generate a default batch number using the record's ID
+          },
+        });
+      }
+    }
+    
+    revalidatePath("/dashboard/inventory/products");
+    return { success: true, message: "Fixed null batch numbers" };
+  } catch (error) {
+    console.error("Error fixing batch numbers:", error);
     throw error;
   }
 } 
