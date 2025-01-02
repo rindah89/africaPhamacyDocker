@@ -6,10 +6,16 @@ import { revalidatePath } from "next/cache";
 
 export async function createProductBatch(data: ProductBatchProps) {
   try {
+    // Ensure quantity is a valid number and convert to integer
+    const quantity = parseInt(String(data.quantity), 10);
+    if (isNaN(quantity)) {
+      throw new Error("Invalid quantity value");
+    }
+
     const newBatch = await prisma.productBatch.create({
       data: {
         batchNumber: data.batchNumber,
-        quantity: Number(data.quantity),
+        quantity: quantity,
         expiryDate: new Date(data.expiryDate),
         deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : undefined,
         costPerUnit: data.costPerUnit,
@@ -24,7 +30,7 @@ export async function createProductBatch(data: ProductBatchProps) {
       where: { id: data.productId },
       data: {
         stockQty: {
-          increment: Number(data.quantity)
+          increment: quantity
         }
       }
     });
