@@ -13,17 +13,18 @@ interface BarcodeItemProps {
 }
 
 const BarcodeItem = ({ productName, price, batchNumber, expiryDate }: BarcodeItemProps) => (
-  <div className="w-[150px] p-2 text-center text-xs border border-dashed border-gray-200 m-1">
-    <div className="mb-1 font-semibold truncate">{productName}</div>
+  <div className="w-[120px] p-1 text-center text-[8px] border border-dashed border-gray-200 m-0.5">
+    <div className="mb-0.5 font-semibold truncate">{productName}</div>
     <Barcode 
       value={batchNumber}
-      width={1}
-      height={30}
-      fontSize={8}
-      margin={2}
+      width={0.8}
+      height={20}
+      fontSize={6}
+      margin={1}
       displayValue={true}
+      textMargin={1}
     />
-    <div className="mt-1">
+    <div className="mt-0.5">
       <div>{formatMoney(price)}</div>
       <div>Exp: {format(expiryDate, 'MM/dd/yyyy')}</div>
     </div>
@@ -42,7 +43,7 @@ const BarcodeSheet = ({ selectedBatches }: BarcodeSheetProps) => {
     pageStyle: `
       @page {
         size: A4;
-        margin: 10mm;
+        margin: 5mm;
       }
       @media print {
         body {
@@ -75,7 +76,7 @@ const BarcodeSheet = ({ selectedBatches }: BarcodeSheetProps) => {
       </Button>
 
       <div ref={componentRef}>
-        <div className="grid grid-cols-5 gap-0 justify-items-center p-4">
+        <div className="grid grid-cols-6 gap-0 justify-items-center p-2">
           {barcodeItems.map((batch) => (
             <BarcodeItem
               key={batch.uniqueKey}

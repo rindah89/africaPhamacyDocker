@@ -164,7 +164,7 @@ model ProductBatch {
   batchNumber   String
   quantity      Int
   expiryDate    DateTime
-  manufactureDate DateTime?
+  deliveryDate  DateTime?
   costPerUnit   Float
   notes         String?
   status        Boolean   @default(true)

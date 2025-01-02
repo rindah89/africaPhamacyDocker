@@ -46,9 +46,9 @@ export default function BatchForm({ productId, batch, products }: BatchFormProps
       batchNumber: batch?.batchNumber || "",
       quantity: batch?.quantity || 0,
       expiryDate: batch?.expiryDate ? new Date(batch.expiryDate).toISOString().split('T')[0] : "",
-      manufactureDate: batch?.manufactureDate ? new Date(batch.manufactureDate).toISOString().split('T')[0] : "",
+      deliveryDate: batch?.deliveryDate ? new Date(batch.deliveryDate).toISOString().split('T')[0] : "",
       costPerUnit: batch?.costPerUnit || 0,
-      notes: batch?.notes || undefined,
+      notes: batch?.notes || "Batch received in good condition",
       status: batch?.status ?? true,
     }
   });
@@ -67,7 +67,7 @@ export default function BatchForm({ productId, batch, products }: BatchFormProps
         costPerUnit: parseFloat(data.costPerUnit),
         productId: selectedProduct.value,
         expiryDate: new Date(data.expiryDate),
-        manufactureDate: data.manufactureDate ? new Date(data.manufactureDate) : null,
+        deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : null,
         notes: data.notes || null,
       };
 
@@ -149,8 +149,8 @@ export default function BatchForm({ productId, batch, products }: BatchFormProps
                 <TextInput
                   register={register}
                   errors={errors}
-                  label="Manufacture Date"
-                  name="manufactureDate"
+                  label="Delivery Date"
+                  name="deliveryDate"
                   type="date"
                 />
                 <TextInput
