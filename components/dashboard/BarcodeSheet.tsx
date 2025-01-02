@@ -8,28 +8,40 @@ import { formatMoney } from '@/lib/formatMoney';
 interface BarcodeItemProps {
   productName: string;
   price: number;
-  batchNumber: string;
-  expiryDate: Date;
+  productCode: string;
+  deliveryDate?: Date | null;
+  supplierName?: string;
 }
 
-const BarcodeItem = ({ productName, price, batchNumber, expiryDate }: BarcodeItemProps) => (
-  <div className="w-[120px] p-1 text-center text-[8px] border border-dashed border-gray-200 m-0.5">
-    <div className="mb-0.5 font-semibold truncate">{productName}</div>
-    <Barcode 
-      value={batchNumber}
-      width={0.8}
-      height={20}
-      fontSize={6}
-      margin={1}
-      displayValue={true}
-      textMargin={1}
-    />
-    <div className="mt-0.5">
-      <div>{formatMoney(price)}</div>
-      <div>Exp: {format(expiryDate, 'MM/dd/yyyy')}</div>
+const BarcodeItem = ({ productName, price, productCode, deliveryDate, supplierName }: BarcodeItemProps) => {
+  const formatDeliveryDate = (date: Date | null | undefined, supplierName?: string) => {
+    if (!date) return 'N/A';
+    const supplierInitial = supplierName ? supplierName.charAt(0).toUpperCase() : '';
+    return `K${supplierInitial}-${format(date, 'MM/dd/yyyy')}`;
+  };
+
+  return (
+    <div className="w-[110px] p-1 text-center text-[8px] border border-dashed border-gray-200 m-0.5">
+      <div className="mb-0.5 font-semibold truncate">{productName}</div>
+      <div className="mb-0.5 truncate">{supplierName || ''}</div>
+      <div className="flex items-center justify-between">
+        <div className="w-[75%]">
+          <Barcode 
+            value={productCode}
+            width={0.5}
+            height={10}
+            fontSize={6}
+            margin={0}
+            displayValue={false}
+            textMargin={1}
+          />
+        </div>
+        <div className="w-[25%] text-right pr-1">{formatMoney(price)}</div>
+      </div>
+      <div className="mt-0.5">{formatDeliveryDate(deliveryDate, supplierName)}</div>
     </div>
-  </div>
-);
+  );
+};
 
 interface BarcodeSheetProps {
   selectedBatches: any[];
@@ -65,6 +77,17 @@ const BarcodeSheet = ({ selectedBatches }: BarcodeSheetProps) => {
     }))
   );
 
+  // Create a grid of 27 rows x 7 columns
+  const rows = [];
+  for (let i = 0; i < Math.min(barcodeItems.length, 27 * 7); i += 7) {
+    rows.push(barcodeItems.slice(i, i + 7));
+  }
+
+  // Pad with empty cells if needed to maintain grid structure
+  while (rows.length < 27) {
+    rows.push(Array(7).fill(null));
+  }
+
   return (
     <div>
       <Button 
@@ -76,15 +99,24 @@ const BarcodeSheet = ({ selectedBatches }: BarcodeSheetProps) => {
       </Button>
 
       <div ref={componentRef}>
-        <div className="grid grid-cols-6 gap-0 justify-items-center p-2">
-          {barcodeItems.map((batch) => (
-            <BarcodeItem
-              key={batch.uniqueKey}
-              productName={batch.product.name}
-              price={batch.product.productPrice}
-              batchNumber={batch.batchNumber}
-              expiryDate={new Date(batch.expiryDate)}
-            />
+        <div className="flex flex-col gap-0">
+          {rows.map((row, rowIndex) => (
+            <div key={rowIndex} className="flex flex-row gap-0 justify-center">
+              {row.map((batch, colIndex) => (
+                batch ? (
+                  <BarcodeItem
+                    key={batch.uniqueKey}
+                    productName={batch.product.name}
+                    price={batch.product.productPrice}
+                    productCode={batch.product.productCode}
+                    deliveryDate={batch.deliveryDate ? new Date(batch.deliveryDate) : null}
+                    supplierName={batch.product.supplier?.name}
+                  />
+                ) : (
+                  <div key={`empty-${rowIndex}-${colIndex}`} className="w-[110px] p-1 m-0.5" />
+                )
+              ))}
+            </div>
           ))}
         </div>
       </div>

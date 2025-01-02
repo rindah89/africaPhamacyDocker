@@ -128,33 +128,49 @@ export default function PointOfSale({
 
     if (e.key === 'Enter') {
 
+      if (!barcodeInput || barcodeInput.trim() === '') {
+
+        toast.error('Please scan or enter a barcode');
+
+        return;
+
+      }
+
       const scannedProduct = products.find(p => p.productCode === barcodeInput);
 
       if (scannedProduct) {
 
-        const newOrderLineItem = {
+        if (scannedProduct.stockQty <= 0) {
 
-          id: scannedProduct.id,
+          toast.error(`${scannedProduct.name} is out of stock`);
 
-          name: scannedProduct.name,
+        } else {
 
-          price: scannedProduct.productPrice,
+          const newOrderLineItem = {
 
-          qty: 1,
+            id: scannedProduct.id,
 
-          productThumbnail: scannedProduct.productThumbnail,
+            name: scannedProduct.name,
 
-          stock: scannedProduct.stockQty,
+            price: scannedProduct.productPrice,
 
-        };
+            qty: 1,
 
-        dispatch(addProductToOrderLine(newOrderLineItem));
+            productThumbnail: scannedProduct.productThumbnail,
 
-        toast.success(`Added ${scannedProduct.name}`);
+            stock: scannedProduct.stockQty,
+
+          };
+
+          dispatch(addProductToOrderLine(newOrderLineItem));
+
+          toast.success(`Added ${scannedProduct.name}`);
+
+        }
 
       } else {
 
-        toast.error('Product not found');
+        toast.error(`Invalid barcode: ${barcodeInput} - Product not found`);
 
       }
 
