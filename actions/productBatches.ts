@@ -4,36 +4,19 @@ import { ProductBatchProps } from "@/types/types";
 import prisma from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
-export async function createProductBatch(data: ProductBatchProps) {
+export async function createProductBatch(data: any) {
   try {
-    const newBatch = await prisma.productBatch.create({
+    const batch = await prisma.productBatch.create({
       data: {
-        batchNumber: data.batchNumber,
-        quantity: data.quantity,
+        ...data,
         expiryDate: new Date(data.expiryDate),
-        deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : undefined,
-        costPerUnit: data.costPerUnit,
-        notes: data.notes,
-        status: data.status,
-        productId: data.productId,
+        deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : null,
       },
     });
-
-    // Update the total stock quantity of the product
-    await prisma.product.update({
-      where: { id: data.productId },
-      data: {
-        stockQty: {
-          increment: data.quantity
-        }
-      }
-    });
-
-    revalidatePath("/dashboard/inventory/products");
-    return newBatch;
+    return batch;
   } catch (error) {
     console.error("Error creating product batch:", error);
-    throw error;
+    return null;
   }
 }
 

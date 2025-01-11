@@ -6,7 +6,7 @@ import { Option, Options } from "react-tailwindcss-select/dist/components/type";
 type FormSelectInputProps = {
   options: Options;
   label: string;
-  option: Option;
+  option: Option | null | undefined;
   setOption: any;
   href?: string;
   className?: string;

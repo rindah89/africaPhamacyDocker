@@ -133,12 +133,17 @@ export type ProductProps = {
 export type ProductBatchProps = {
   batchNumber: string;
   quantity: number;
-  expiryDate: string;
-  deliveryDate?: string;
+  expiryDate: Date;
+  deliveryDate?: Date | null;
   costPerUnit: number;
-  notes?: string;
+  notes?: string | null;
   status: boolean;
   productId: string;
+};
+
+export type ProductBatchFormData = Omit<ProductBatchProps, 'expiryDate' | 'deliveryDate'> & {
+  expiryDate: string;
+  deliveryDate?: string | null;
 };
 
 export interface RoleProps {

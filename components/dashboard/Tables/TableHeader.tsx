@@ -1,6 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import * as XLSX from "xlsx";
+import { exportToPDF } from "@/app/(back-office)/dashboard/reports/inventory/columns";
 import jsPDF from "jspdf";
 import 'jspdf-autotable';
 
@@ -56,22 +57,6 @@ type TableHeaderProps = {
   showImport?: boolean;
   showPdfExport?: boolean;
 };
-function handleExportPDF(data: any[]) {
-  const doc = new jsPDF();
-  const tableColumn = ["Product Name", "Quantity", "Expiry Date"];
-  const tableRows = data.map((item) => [
-    item.name,
-    item.stockQty.toString(),
-    item.expiryDate ? new Date(item.expiryDate).toLocaleDateString() : "N/A",
-  ]);
-
-  doc.autoTable({
-    head: [tableColumn],
-    body: tableRows,
-  });
-
-  doc.save("inventory-report.pdf");
-}
 export default function TableHeader({
   title,
   href,
@@ -256,64 +241,201 @@ export default function TableHeader({
     exportDataToExcel(data, filename);
   }
   return (
-    <div className="mb-3">
-      <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-600 py-3">
-        <h2 className="scroll-m-20 text-2xl font-semibold tracking-tight first:mt-0">
-          {title}
-        </h2>
-        <div className="ml-auto flex items-center gap-2">
-          {showPdfExport && (
-            <Button
-              onClick={() => handleExportPDF(data)}
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1"
-            >
-              <FileDown className="h-3.5 w-3.5 mr-2" />
-              Export PDF
-            </Button>
-          )}
+    <div className="flex items-center justify-between space-x-2 py-4">
+      <div className="flex items-center flex-1 space-x-2">
+        <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
+      </div>
+      <div className="flex items-center space-x-2">
+        {showPdfExport && (
           <Button
-            onClick={handleExportData}
-            size="sm"
             variant="outline"
-            className="h-8 gap-1"
+            size="sm"
+            onClick={() => exportToPDF(data)}
+            className="h-8 px-2 lg:px-3"
           >
-            <SiMicrosoftexcel className="h-3.5 w-3.5" />
-            Export Excel
+            PDF
+            <FileDown className="ml-2 h-4 w-4" />
           </Button>
-          {showImport && (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button
-                  onClick={() => setUploadSuccess(false)}
-                  size="sm"
-                  variant="outline"
-                  className="h-8 gap-1"
-                >
-                  <RiFileExcel2Line className="h-3.5 w-3.5" />
-                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                    Import
-                  </span>
-                </Button>
-              </DialogTrigger>
-              {loading ? (
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Excel Upload</DialogTitle>
-                    <DialogDescription className="text-xs">
-                      You can Bring all your Data from excel, Please Download
-                      the Sample file First to Make Sure you have Data Columns
-                      Named Correctly
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="h-60 w-full rounded-md border flex items-center justify-center">
-                    <Button disabled className="items-center">
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Syncing Data Please wait ...
+        )}
+        <Button
+          onClick={handleExportData}
+          size="sm"
+          variant="outline"
+          className="h-8 gap-1"
+        >
+          <SiMicrosoftexcel className="h-3.5 w-3.5" />
+          Export Excel
+        </Button>
+        {showImport && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button
+                onClick={() => setUploadSuccess(false)}
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1"
+              >
+                <RiFileExcel2Line className="h-3.5 w-3.5" />
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                  Import
+                </span>
+              </Button>
+            </DialogTrigger>
+            {loading ? (
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Excel Upload</DialogTitle>
+                  <DialogDescription className="text-xs">
+                    You can Bring all your Data from excel, Please Download
+                    the Sample file First to Make Sure you have Data Columns
+                    Named Correctly
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="h-60 w-full rounded-md border flex items-center justify-center">
+                  <Button disabled className="items-center">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Syncing Data Please wait ...
+                  </Button>
+                </div>
+                {!loading && (
+                  <DialogFooter className="justify-between ">
+                    {preview ? (
+                      <Button
+                        onClick={() => setPreview(false)}
+                        variant={"outline"}
+                        type="button"
+                      >
+                        Stop Preview
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={previewData}
+                        variant={"outline"}
+                        type="button"
+                      >
+                        Preview
+                      </Button>
+                    )}
+                    <Button onClick={saveData} type="button">
+                      Save Data
                     </Button>
-                  </div>
-                  {!loading && (
+                  </DialogFooter>
+                )}
+              </DialogContent>
+            ) : (
+              <>
+                {uploadSuccess ? (
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Excel Upload</DialogTitle>
+                      <DialogDescription className="text-xs">
+                        You can Bring all your Data from excel, Please
+                        Download the Sample file First to Make Sure you have
+                        Data Columns Required
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="h-72 w-full rounded-md border flex items-center justify-center flex-col">
+                      <div className="flex items-center justify-center w-24 h-24 bg-green-100 rounded-full">
+                        <Check />
+                      </div>
+                      <h2 className="text-xs pt-2 px-8 text-center">
+                        Data Synced Successfully. You can close the Window
+                      </h2>
+                    </div>
+
+                    <DialogFooter className="justify-between ">
+                      <DialogClose asChild>
+                        <Button
+                          onClick={() => window.location.reload()}
+                          type="button"
+                          variant="secondary"
+                        >
+                          Close
+                        </Button>
+                      </DialogClose>
+                    </DialogFooter>
+                  </DialogContent>
+                ) : (
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Excel Upload</DialogTitle>
+                      <DialogDescription className="text-xs">
+                        You can Bring all your Data from excel, Please
+                        Download the Sample file First to Make Sure you have
+                        Data Columns Required
+                      </DialogDescription>
+                    </DialogHeader>
+                    {preview && jsonData ? (
+                      <ScrollArea className="h-72 w-full rounded-md border">
+                        <div className="p-4">
+                          <pre>{jsonData}</pre>
+                        </div>
+                      </ScrollArea>
+                    ) : (
+                      <div className="grid gap-4 py-4">
+                        <Button asChild variant="outline">
+                          <Link href={excelDownload} download>
+                            Download {model} Sample Data
+                          </Link>
+                        </Button>
+
+                        <div className="flex items-center justify-center w-full">
+                          <label
+                            htmlFor="dropzone-file"
+                            className="flex lg:flex-col flex-row  items-center justify-center w-full h-16 lg:h-36 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
+                          >
+                            <div className="flex flex-row lg:flex-col items-center justify-center pt-5 pb-6 gap-4 lg:gap-0">
+                              <CloudUpload className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400" />
+
+                              <p className="lg:mb-2 text-sm text-gray-500 dark:text-gray-400">
+                                <span className="font-semibold">
+                                  Click to upload
+                                </span>{" "}
+                                <span className="hidden lg:inline">
+                                  {" "}
+                                  or drag and drop
+                                </span>
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Only Excel Files (.xlsx)
+                              </p>
+                            </div>
+                            <input
+                              id="dropzone-file"
+                              accept=".xls,.xlsx"
+                              type="file"
+                              className="hidden"
+                              onChange={(e) =>
+                                setExcelFile(
+                                  e.target.files ? e.target.files[0] : null
+                                )
+                              }
+                            />
+                          </label>
+                        </div>
+                        {excelFile && (
+                          <div className="flex items-center shadow-lg rounded-md lg:py-3 py-2 px-6 bg-slate-100 dark:bg-slate-800 justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 lg:w-14 lg:h-14 p-2 lg:p-4 bg-slate-300 dark:bg-slate-500 rounded flex items-center justify-center flex-shrink-0">
+                                <RiFileExcel2Line className="h-4 w-4" />
+                              </div>
+                              <div className="">
+                                <p className="text-sm font-semibold">
+                                  {excelFile.name}
+                                </p>
+                                <span className="text-xs">
+                                  {formatBytes(excelFile.size)}
+                                </span>
+                              </div>
+                            </div>
+                            <button onClick={() => setExcelFile(null)}>
+                              <X className="text-slate-600 w-5 h-5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <DialogFooter className="justify-between ">
                       {preview ? (
                         <Button
@@ -336,159 +458,20 @@ export default function TableHeader({
                         Save Data
                       </Button>
                     </DialogFooter>
-                  )}
-                </DialogContent>
-              ) : (
-                <>
-                  {uploadSuccess ? (
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>Excel Upload</DialogTitle>
-                        <DialogDescription className="text-xs">
-                          You can Bring all your Data from excel, Please
-                          Download the Sample file First to Make Sure you have
-                          Data Columns Required
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="h-72 w-full rounded-md border flex items-center justify-center flex-col">
-                        <div className="flex items-center justify-center w-24 h-24 bg-green-100 rounded-full">
-                          <Check />
-                        </div>
-                        <h2 className="text-xs pt-2 px-8 text-center">
-                          Data Synced Successfully. You can close the Window
-                        </h2>
-                      </div>
-
-                      <DialogFooter className="justify-between ">
-                        <DialogClose asChild>
-                          <Button
-                            onClick={() => window.location.reload()}
-                            type="button"
-                            variant="secondary"
-                          >
-                            Close
-                          </Button>
-                        </DialogClose>
-                      </DialogFooter>
-                    </DialogContent>
-                  ) : (
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>Excel Upload</DialogTitle>
-                        <DialogDescription className="text-xs">
-                          You can Bring all your Data from excel, Please
-                          Download the Sample file First to Make Sure you have
-                          Data Columns Required
-                        </DialogDescription>
-                      </DialogHeader>
-                      {preview && jsonData ? (
-                        <ScrollArea className="h-72 w-full rounded-md border">
-                          <div className="p-4">
-                            <pre>{jsonData}</pre>
-                          </div>
-                        </ScrollArea>
-                      ) : (
-                        <div className="grid gap-4 py-4">
-                          <Button asChild variant="outline">
-                            <Link href={excelDownload} download>
-                              Download {model} Sample Data
-                            </Link>
-                          </Button>
-
-                          <div className="flex items-center justify-center w-full">
-                            <label
-                              htmlFor="dropzone-file"
-                              className="flex lg:flex-col flex-row  items-center justify-center w-full h-16 lg:h-36 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
-                            >
-                              <div className="flex flex-row lg:flex-col items-center justify-center pt-5 pb-6 gap-4 lg:gap-0">
-                                <CloudUpload className="w-8 h-8 mb-4 text-gray-500 dark:text-gray-400" />
-
-                                <p className="lg:mb-2 text-sm text-gray-500 dark:text-gray-400">
-                                  <span className="font-semibold">
-                                    Click to upload
-                                  </span>{" "}
-                                  <span className="hidden lg:inline">
-                                    {" "}
-                                    or drag and drop
-                                  </span>
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  Only Excel Files (.xlsx)
-                                </p>
-                              </div>
-                              <input
-                                id="dropzone-file"
-                                accept=".xls,.xlsx"
-                                type="file"
-                                className="hidden"
-                                onChange={(e) =>
-                                  setExcelFile(
-                                    e.target.files ? e.target.files[0] : null
-                                  )
-                                }
-                              />
-                            </label>
-                          </div>
-                          {excelFile && (
-                            <div className="flex items-center shadow-lg rounded-md lg:py-3 py-2 px-6 bg-slate-100 dark:bg-slate-800 justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 lg:w-14 lg:h-14 p-2 lg:p-4 bg-slate-300 dark:bg-slate-500 rounded flex items-center justify-center flex-shrink-0">
-                                  <RiFileExcel2Line className="h-4 w-4" />
-                                </div>
-                                <div className="">
-                                  <p className="text-sm font-semibold">
-                                    {excelFile.name}
-                                  </p>
-                                  <span className="text-xs">
-                                    {formatBytes(excelFile.size)}
-                                  </span>
-                                </div>
-                              </div>
-                              <button onClick={() => setExcelFile(null)}>
-                                <X className="text-slate-600 w-5 h-5" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      <DialogFooter className="justify-between ">
-                        {preview ? (
-                          <Button
-                            onClick={() => setPreview(false)}
-                            variant={"outline"}
-                            type="button"
-                          >
-                            Stop Preview
-                          </Button>
-                        ) : (
-                          <Button
-                            onClick={previewData}
-                            variant={"outline"}
-                            type="button"
-                          >
-                            Preview
-                          </Button>
-                        )}
-                        <Button onClick={saveData} type="button">
-                          Save Data
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  )}
-                </>
-              )}
-            </Dialog>
-          )}
-          <Button size="sm" asChild className="h-8 gap-1">
-            <Link href={href}>
-              <PlusCircle className="h-3.5 w-3.5" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                {linkTitle}
-              </span>
-            </Link>
-          </Button>
-        </div>
+                  </DialogContent>
+                )}
+              </>
+            )}
+          </Dialog>
+        )}
+        <Button size="sm" asChild className="h-8 gap-1">
+          <Link href={href}>
+            <PlusCircle className="h-3.5 w-3.5" />
+            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+              {linkTitle}
+            </span>
+          </Link>
+        </Button>
       </div>
     </div>
   );

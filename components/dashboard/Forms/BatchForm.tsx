@@ -1,11 +1,12 @@
 "use client";
 
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import TextInput from "@/components/global/FormInputs/TextInput";
 import TextArea from "@/components/global/FormInputs/TextArea";
 import { useForm } from "react-hook-form";
-import { ProductBatchProps } from "@/types/types";
+import { Product, ProductBatch } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useState } from "react";
@@ -13,41 +14,49 @@ import FormHeader from "./FormHeader";
 import FormFooter from "./FormFooter";
 import { createProductBatch } from "@/actions/productBatches";
 import FormSelectInput from "@/components/global/FormInputs/FormSelectInput";
-import { Product } from "@prisma/client";
+import { Option } from "react-tailwindcss-select/dist/components/type";
 
 type BatchFormProps = {
   productId?: string;
   products: Product[];
   editingId?: string;
-  initialData?: ProductBatchProps;
+  initialData?: ProductBatch;
+  batch?: any;
 };
 
-export default function BatchForm({ productId, products, editingId, initialData }: BatchFormProps) {
+type BatchFormData = Omit<ProductBatch, 'expiryDate' | 'deliveryDate' | 'id' | 'createdAt' | 'updatedAt'> & {
+  expiryDate: string;
+  deliveryDate?: string | null;
+};
+
+export default function BatchForm({ productId, products, editingId, initialData, batch }: BatchFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const productOptions = products.map((product) => ({
     value: product.id,
     label: product.name,
+    price: product.productPrice
   }));
 
   const initialProductOption = productId 
     ? productOptions.find(opt => opt.value === productId)
     : undefined;
 
-  const [selectedProduct, setSelectedProduct] = useState(initialProductOption);
+  const [selectedProduct, setSelectedProduct] = useState<Option | undefined>(initialProductOption);
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
-  } = useForm<ProductBatchProps>({
+  } = useForm<BatchFormData>({
     defaultValues: {
       batchNumber: initialData?.batchNumber || "",
       quantity: initialData?.quantity || 0,
-      expiryDate: initialData?.expiryDate || "",
-      deliveryDate: initialData?.deliveryDate || "",
+      expiryDate: initialData?.expiryDate ? new Date(initialData.expiryDate).toISOString().split('T')[0] : "",
+      deliveryDate: initialData?.deliveryDate ? new Date(initialData.deliveryDate).toISOString().split('T')[0] : "",
       costPerUnit: initialData?.costPerUnit || 0,
       notes: initialData?.notes || "Batch received in good condition",
       status: initialData?.status || true,
@@ -55,7 +64,28 @@ export default function BatchForm({ productId, products, editingId, initialData 
     },
   });
 
-  async function saveBatch(data: ProductBatchProps) {
+  // Update costPerUnit when product is selected
+  const handleProductSelect = (option: Option | undefined) => {
+    setSelectedProduct(option);
+    if (option) {
+      const product = products.find(p => p.id === option.value);
+      if (product) {
+        setValue('costPerUnit', product.productPrice);
+      }
+    }
+  };
+
+  // If we have a productId but no initialData (new batch), set the cost to the product's price
+  React.useEffect(() => {
+    if (productId && !initialData) {
+      const product = products.find(p => p.id === productId);
+      if (product) {
+        setValue('costPerUnit', product.productPrice);
+      }
+    }
+  }, [productId, products, setValue, initialData]);
+
+  async function saveBatch(data: BatchFormData) {
     try {
       if (!selectedProduct) {
         toast.error("Please select a product");
@@ -104,7 +134,7 @@ export default function BatchForm({ productId, products, editingId, initialData 
                     label="Product"
                     options={productOptions}
                     option={selectedProduct}
-                    setOption={setSelectedProduct}
+                    setOption={handleProductSelect}
                     toolTipText="Add New Product"
                     href="/dashboard/inventory/products/new"
                   />
@@ -114,7 +144,6 @@ export default function BatchForm({ productId, products, editingId, initialData 
                   errors={errors}
                   label="Batch Number"
                   name="batchNumber"
-                  required
                 />
                 <TextInput
                   register={register}
@@ -122,7 +151,6 @@ export default function BatchForm({ productId, products, editingId, initialData 
                   label="Quantity"
                   name="quantity"
                   type="number"
-                  required
                 />
                 <TextInput
                   register={register}
@@ -130,7 +158,6 @@ export default function BatchForm({ productId, products, editingId, initialData 
                   label="Expiry Date"
                   name="expiryDate"
                   type="date"
-                  required
                 />
                 <TextInput
                   register={register}
@@ -145,7 +172,6 @@ export default function BatchForm({ productId, products, editingId, initialData 
                   label="Cost Per Unit"
                   name="costPerUnit"
                   type="number"
-                  required
                 />
                 <TextArea
                   register={register}

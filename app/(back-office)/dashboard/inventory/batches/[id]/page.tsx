@@ -43,7 +43,7 @@ export default async function EditBatchPage({
               Code: {batch.product.productCode}
             </p>
           </div>
-          <BatchForm batch={batch} products={products} />
+          <BatchForm editingId={id} initialData={batch} products={products} />
         </CardContent>
       </Card>
     </div>

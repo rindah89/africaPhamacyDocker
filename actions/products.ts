@@ -122,6 +122,16 @@ export async function getAllProducts() {
 
         reviews: true,
 
+        batches: {
+
+          where: {
+
+            status: true
+
+          }
+
+        }
+
       },
 
     });
