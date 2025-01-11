@@ -6,16 +6,6 @@ import { revalidatePath } from "next/cache";
 
 export async function createProductBatch(data: any) {
   try {
-<<<<<<< HEAD
-    const batch = await prisma.productBatch.create({
-      data: {
-        ...data,
-        expiryDate: new Date(data.expiryDate),
-        deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : null,
-      },
-    });
-    return batch;
-=======
     // Ensure quantity is a valid number and convert to integer
     const quantity = parseInt(String(data.quantity), 10);
     if (isNaN(quantity)) {
@@ -53,7 +43,6 @@ export async function createProductBatch(data: any) {
 
     revalidatePath("/dashboard/inventory/products");
     return newBatch;
->>>>>>> 4a5e9e3416b458be5fbcf4e4aec03958891e92d4
   } catch (error) {
     console.error("Error creating product batch:", error);
     return null;
