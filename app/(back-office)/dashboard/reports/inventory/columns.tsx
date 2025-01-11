@@ -1,24 +1,18 @@
 "use client";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import DateColumn from "@/components/DataTableColumns/DateColumn";
-import ImageColumn from "@/components/DataTableColumns/ImageColumn";
 import { ColumnDef } from "@tanstack/react-table";
 import ActionColumn from "@/components/DataTableColumns/ActionColumn";
 import SortableColumn from "@/components/DataTableColumns/SortableColumn";
-import StatusColumn from "@/components/DataTableColumns/StatusColumn";
 import { IProduct } from "@/types/types";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { formatMoney } from "@/lib/formatMoney";
-import { FileDown } from "lucide-react";
 import jsPDF from "jspdf";
 import 'jspdf-autotable';
 
 // Augment jsPDF type
 declare module 'jspdf' {
   interface jsPDF {
-    autoTable: (options: any) => jsPDF;
+    autoTable: (options: any) => any;
   }
 }
 
@@ -35,7 +29,7 @@ export const exportToPDF = (data: IProduct[]) => {
   const totalItems = data.reduce((sum, item) => sum + item.stockQty, 0);
   const totalCost = data.reduce((sum, item) => sum + (item.stockQty * item.supplierPrice), 0);
   const totalSelling = data.reduce((sum, item) => {
-    const sellingPrice = item.batches && item.batches.length > 0 ? item.batches[0].costPerUnit : item.productPrice;
+    const sellingPrice = item.productPrice;
     return sum + (item.stockQty * sellingPrice);
   }, 0);
   const totalProfit = totalSelling - totalCost;
@@ -44,10 +38,6 @@ export const exportToPDF = (data: IProduct[]) => {
   const formatCurrency = (value: number) => {
     return value.toLocaleString('en-US', { maximumFractionDigits: 0 }) + " FCFA";
   };
-
-  // Summary section
-  doc.setFontSize(12);
-  doc.text("Summary", 20, 45);
 
   // Summary table
   doc.autoTable({
@@ -67,7 +57,7 @@ export const exportToPDF = (data: IProduct[]) => {
 
   // Detailed Inventory section
   doc.setFontSize(12);
-  doc.text("Detailed Inventory", 20, doc.autoTable.previous.finalY + 20);
+  doc.text("Detailed Inventory", 20, 100);
 
   // Main inventory table
   const tableColumns = [
@@ -82,7 +72,7 @@ export const exportToPDF = (data: IProduct[]) => {
   ];
 
   const tableRows = data.map((item) => {
-    const sellingPrice = item.batches && item.batches.length > 0 ? item.batches[0].costPerUnit : item.productPrice;
+    const sellingPrice = item.productPrice;
     const stockValueCost = item.stockQty * item.supplierPrice;
     const stockValueSelling = item.stockQty * sellingPrice;
     return [
@@ -98,7 +88,7 @@ export const exportToPDF = (data: IProduct[]) => {
   });
 
   doc.autoTable({
-    startY: doc.autoTable.previous.finalY + 25,
+    startY: 120,
     head: [tableColumns],
     body: tableRows,
     theme: 'grid',
@@ -114,9 +104,9 @@ export const exportToPDF = (data: IProduct[]) => {
       6: { cellWidth: 'auto', halign: 'right' },
       7: { cellWidth: 'auto', halign: 'right' }
     },
-    didDrawPage: function(data) {
+    didDrawPage: function() {
       // Add page number at the bottom
-      const pageNumber = doc.internal.getCurrentPageInfo().pageNumber;
+      const pageNumber = (doc as any).internal.getNumberOfPages();
       doc.setFontSize(10);
       doc.text(
         `Page ${pageNumber}`,
@@ -154,11 +144,6 @@ export const columns: ColumnDef<IProduct>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "productThumbnail",
-    header: "Product Image",
-    cell: ({ row }) => <ImageColumn row={row} accessorKey="productThumbnail" />,
-  },
-  {
     accessorKey: "name",
     header: ({ column }) => (
       <SortableColumn column={column} title="Product Name" />
@@ -166,7 +151,7 @@ export const columns: ColumnDef<IProduct>[] = [
   },
   {
     accessorKey: "subCategory",
-    header: "Sub Category",
+    header: "Category",
     cell: ({ row }) => {
       const product = row.original;
       const subCategory = product.subCategory.title;
@@ -175,16 +160,14 @@ export const columns: ColumnDef<IProduct>[] = [
   },
   {
     accessorKey: "stockQty",
-    header: "Current Stock",
-    cell: ({ row }) => {
-      const product = row.original;
-      return <h2>{product.stockQty}</h2>;
-    },
+    header: ({ column }) => (
+      <SortableColumn column={column} title="Stock Qty" />
+    ),
   },
   {
     accessorKey: "supplierPrice",
     header: ({ column }) => (
-      <SortableColumn column={column} title="Cost Price" />
+      <SortableColumn column={column} title="Supplier Price" />
     ),
     cell: ({ row }) => {
       const product = row.original;
@@ -198,19 +181,42 @@ export const columns: ColumnDef<IProduct>[] = [
     ),
     cell: ({ row }) => {
       const product = row.original;
-      const sellingPrice = product.batches && product.batches.length > 0
-        ? product.batches[0].costPerUnit
-        : product.productPrice;
-      return <h2>{formatMoney(sellingPrice)}</h2>;
+      return <h2>{formatMoney(product.productPrice)}</h2>;
     },
   },
   {
-    accessorKey: "stockQty",
-    header: "Stock Value",
+    accessorKey: "stockValue",
+    header: ({ column }) => (
+      <SortableColumn column={column} title="Stock Value (Cost)" />
+    ),
     cell: ({ row }) => {
       const product = row.original;
-      const value = product.stockQty * product.productPrice;
-      return <h2>{formatMoney(value)}</h2>;
+      const stockValue = product.stockQty * product.supplierPrice;
+      return <h2>{formatMoney(stockValue)}</h2>;
+    },
+  },
+  {
+    accessorKey: "potentialValue",
+    header: ({ column }) => (
+      <SortableColumn column={column} title="Stock Value (Selling)" />
+    ),
+    cell: ({ row }) => {
+      const product = row.original;
+      const potentialValue = product.stockQty * product.productPrice;
+      return <h2>{formatMoney(potentialValue)}</h2>;
+    },
+  },
+  {
+    accessorKey: "potentialProfit",
+    header: ({ column }) => (
+      <SortableColumn column={column} title="Potential Profit" />
+    ),
+    cell: ({ row }) => {
+      const product = row.original;
+      const stockValue = product.stockQty * product.supplierPrice;
+      const potentialValue = product.stockQty * product.productPrice;
+      const potentialProfit = potentialValue - stockValue;
+      return <h2>{formatMoney(potentialProfit)}</h2>;
     },
   }
 ];

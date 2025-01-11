@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 
 export async function createProductBatch(data: any) {
   try {
+<<<<<<< HEAD
     const batch = await prisma.productBatch.create({
       data: {
         ...data,
@@ -14,6 +15,45 @@ export async function createProductBatch(data: any) {
       },
     });
     return batch;
+=======
+    // Ensure quantity is a valid number and convert to integer
+    const quantity = parseInt(String(data.quantity), 10);
+    if (isNaN(quantity)) {
+      throw new Error("Invalid quantity value");
+    }
+
+    // Ensure costPerUnit is a valid float
+    const costPerUnit = parseFloat(String(data.costPerUnit));
+    if (isNaN(costPerUnit)) {
+      throw new Error("Invalid cost per unit value");
+    }
+
+    const newBatch = await prisma.productBatch.create({
+      data: {
+        batchNumber: data.batchNumber,
+        quantity: quantity,
+        expiryDate: new Date(data.expiryDate),
+        deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : undefined,
+        costPerUnit: costPerUnit,
+        notes: data.notes,
+        status: data.status,
+        productId: data.productId,
+      },
+    });
+
+    // Update the total stock quantity of the product
+    await prisma.product.update({
+      where: { id: data.productId },
+      data: {
+        stockQty: {
+          increment: quantity
+        }
+      }
+    });
+
+    revalidatePath("/dashboard/inventory/products");
+    return newBatch;
+>>>>>>> 4a5e9e3416b458be5fbcf4e4aec03958891e92d4
   } catch (error) {
     console.error("Error creating product batch:", error);
     return null;
@@ -114,6 +154,31 @@ export async function deleteProductBatch(id: string) {
     return deletedBatch;
   } catch (error) {
     console.error("Error deleting product batch:", error);
+    throw error;
+  }
+}
+
+export async function fixNullBatchNumbers() {
+  try {
+    // Find all ProductBatch records
+    const batches = await prisma.productBatch.findMany();
+    
+    // Update any batch with null batchNumber
+    for (const batch of batches) {
+      if (!batch.batchNumber) {
+        await prisma.productBatch.update({
+          where: { id: batch.id },
+          data: {
+            batchNumber: `BATCH-${batch.id}`, // Generate a default batch number using the record's ID
+          },
+        });
+      }
+    }
+    
+    revalidatePath("/dashboard/inventory/products");
+    return { success: true, message: "Fixed null batch numbers" };
+  } catch (error) {
+    console.error("Error fixing batch numbers:", error);
     throw error;
   }
 } 
