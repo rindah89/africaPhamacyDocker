@@ -171,8 +171,8 @@ model ProductBatch {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  // Relationship with Product
-  product       Product   @relation(fields: [productId], references: [id])
+  // Relationship with Product - add onDelete: Cascade
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId     String    @db.ObjectId
 
   @@unique([productId, batchNumber])
