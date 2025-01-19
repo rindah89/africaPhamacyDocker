@@ -48,7 +48,7 @@ export default function Item({ item }: { item: Product }) {
         width={200}
         height={200}
         alt={item.name || "Product image"}
-        src={item.productImages[0] || "/placeholder.svg"}
+        src={item.productThumbnail || (item.productImages?.[0]) || "/placeholder.svg"}
         className="w-full object-cover h-28 rounded-md mr-2"
         onError={(e) => {
           const target = e.target as HTMLImageElement;

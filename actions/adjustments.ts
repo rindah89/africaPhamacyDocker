@@ -6,6 +6,20 @@ import { NotificationStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "./pos";
 
+interface AdjustmentItem {
+  productId: string;
+  productName: string;
+  currentStock: number;
+  quantity: number;
+  type: "Addition" | "Subtraction";
+  batchId?: string;
+}
+
+interface AdjustmentDataProps {
+  reason: string;
+  items: AdjustmentItem[];
+}
+
 export async function createAdjustment(data: AdjustmentDataProps) {
   const { reason, items } = data;
   try {
@@ -39,6 +53,67 @@ export async function createAdjustment(data: AdjustmentDataProps) {
             decrement: item.quantity,
           };
         }
+
+        // If it's a subtraction, we need to check and update the batch
+        if (item.type === "Subtraction" && item.batchId) {
+          const batch = await transaction.productBatch.findUnique({
+            where: { id: item.batchId }
+          });
+
+          if (!batch) {
+            throw new Error(`Batch not found for ID: ${item.batchId}`);
+          }
+
+          if (batch.quantity < item.quantity) {
+            throw new Error(`Insufficient quantity in batch ${batch.batchNumber}`);
+          }
+
+          // Update batch quantity
+          await transaction.productBatch.update({
+            where: { id: item.batchId },
+            data: {
+              quantity: {
+                decrement: item.quantity
+              }
+            }
+          });
+        } else if (item.type === "Addition") {
+          // For additions, create a new batch if no batch is specified
+          if (!item.batchId) {
+            const batchCounter = await transaction.counter.upsert({
+              where: { name: 'batchNumber' },
+              update: { value: { increment: 1 } },
+              create: { name: 'batchNumber', value: 1 }
+            });
+
+            const batchNumber = `BAT${batchCounter.value.toString().padStart(6, '0')}`;
+            
+            // Create new batch for addition
+            const newBatch = await transaction.productBatch.create({
+              data: {
+                batchNumber,
+                quantity: item.quantity,
+                expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Default 1 year expiry
+                costPerUnit: 0, // You might want to get this from somewhere
+                status: true,
+                productId: item.productId,
+              }
+            });
+            
+            item.batchId = newBatch.id;
+          } else {
+            // Update existing batch quantity
+            await transaction.productBatch.update({
+              where: { id: item.batchId },
+              data: {
+                quantity: {
+                  increment: item.quantity
+                }
+              }
+            });
+          }
+        }
+
         const updatedProduct = await transaction.product.update({
           where: { id: item.productId },
           data: {
@@ -69,8 +144,8 @@ export async function createAdjustment(data: AdjustmentDataProps) {
             statusText,
           };
           await createNotification(newNotification);
-          // Send email
         }
+
         // Create Adjustment Item
         const adjustmentItem = await transaction.adjustmentItem.create({
           data: {
@@ -80,6 +155,7 @@ export async function createAdjustment(data: AdjustmentDataProps) {
             currentStock: item.currentStock,
             quantity: item.quantity,
             type: item.type,
+            batchId: item.batchId,
           },
         });
 
@@ -87,7 +163,7 @@ export async function createAdjustment(data: AdjustmentDataProps) {
           throw new Error(`Failed to create adjustment`);
         }
       }
-      // console.log(savedLineOrder);
+
       revalidatePath("/dashboard/stock/adjustments");
       return adjustment.id;
     });
@@ -97,14 +173,18 @@ export async function createAdjustment(data: AdjustmentDataProps) {
         id: adjustmentId,
       },
       include: {
-        items: true,
+        items: {
+          include: {
+            batch: true
+          }
+        },
       },
     });
-    // console.log(savedLineOrder);
+
     return savedAdjustment;
   } catch (error) {
     console.error("Transaction error:", error);
-    throw error; // Propagate the error to the caller
+    throw error;
   }
 }
 
