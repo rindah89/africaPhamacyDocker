@@ -99,17 +99,14 @@ model Unit {
 model Supplier {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   name        String
-  imageUrl    String
-  companyName String    @unique
-  vatNumber   String
-  email       String    @unique
+  imageUrl    String?
+  companyName String?   @unique
+  vatNumber   String?
+  email       String?   @unique
   phone       String
-  address     String
-  city        String
-  state       String
-  postalCode  String
-  country     String
-  status      Boolean
+  address     String?
+  city        String?
+  status      Boolean?
   products    Product[]
   purchaseOrders PurchaseOrder[]
   createdAt   DateTime  @default(now())
