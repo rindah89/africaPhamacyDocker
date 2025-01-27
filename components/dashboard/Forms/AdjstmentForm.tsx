@@ -124,40 +124,64 @@ export default function AdjustmentForm({ products, initialData, editingId }: Adj
     }
   }, [selectedProduct]);
 
-  const handleAddProduct = () => {
-    if (!selectedProduct) {
-      toast.error("Please select a product");
-      return;
+  const handleProductSelect = async (selected: { value: string; label: string } | null) => {
+    console.log("AdjustmentForm handleProductSelect called with:", selected);
+    setSelectedProduct(selected);
+    
+    if (selected) {
+      const product = products.find((p) => p.id === selected.value);
+      console.log("Found product:", product);
+      if (!product) {
+        console.warn("No product found for value:", selected.value);
+        return;
+      }
+
+      const existingItem = items.find((item) => item.productId === product.id);
+      if (existingItem) {
+        console.log("Product already exists in items");
+        toast.error("Product already added");
+        setSelectedProduct(null);
+        return;
+      }
+
+      try {
+        console.log("Fetching batches for product:", product.id);
+        const response = await fetch(`/api/products/${selected.value}/batches`);
+        const batches = await response.json();
+        console.log("Fetched batches:", batches);
+        
+        if (batches.length === 0) {
+          console.log("No batches available");
+          toast.error("No batches available for this product");
+          setSelectedProduct(null);
+          return;
+        }
+
+        console.log("Setting product batches");
+        setProductBatches(prev => ({
+          ...prev,
+          [selected.value]: batches
+        }));
+
+        console.log("Adding item to items list");
+        setItems([
+          ...items,
+          {
+            productId: product.id,
+            productName: product.name,
+            currentStock: product.stockQty,
+            quantity: 1,
+            type: "Subtraction",
+            batchId: batches[0].id,
+          },
+        ]);
+        setSelectedProduct(null);
+      } catch (error) {
+        console.error('Error fetching batches:', error);
+        toast.error('Failed to fetch product batches');
+        setSelectedProduct(null);
+      }
     }
-
-    const product = products.find((p) => p.id === selectedProduct.value);
-    if (!product) return;
-
-    const existingItem = items.find((item) => item.productId === product.id);
-    if (existingItem) {
-      toast.error("Product already added");
-      return;
-    }
-
-    // Get batches for the selected product
-    const batches = productBatches[product.id] || [];
-    if (batches.length === 0) {
-      toast.error("No batches available for this product");
-      return;
-    }
-
-    setItems([
-      ...items,
-      {
-        productId: product.id,
-        productName: product.name,
-        currentStock: product.stockQty,
-        quantity: 1,
-        type: "Subtraction", // Default to Subtraction since we're working with batches
-        batchId: batches[0].id, // Select the first batch by default
-      },
-    ]);
-    setSelectedProduct(null);
   };
 
   const handleRemoveProduct = (productId: string) => {
@@ -190,7 +214,7 @@ export default function AdjustmentForm({ products, initialData, editingId }: Adj
     setItems(
       items.map((item) => {
         if (item.productId === productId) {
-          const batch = item.batchId ? productBatches[productId]?.find(b => b.id === item.batchId) : null;
+          const batch = item.batchId ? productBatches[item.productId]?.find(b => b.id === item.batchId) : null;
           
           // For subtractions, ensure quantity doesn't exceed batch quantity
           if (item.type === "Subtraction" && batch) {
@@ -335,13 +359,10 @@ export default function AdjustmentForm({ products, initialData, editingId }: Adj
                 <Combobox
                   items={productOptions}
                   value={selectedProduct}
-                  onChange={setSelectedProduct}
+                  onChange={handleProductSelect}
                   placeholder="Select a product"
                 />
               </div>
-              <Button type="button" onClick={handleAddProduct}>
-                Add
-              </Button>
             </div>
           </div>
 

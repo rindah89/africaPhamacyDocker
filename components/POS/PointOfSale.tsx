@@ -206,6 +206,16 @@ export default function PointOfSale({
 
     }
 
+    if (!orderLineItems || orderLineItems.length === 0) {
+
+      toast.error("Please add items to the order");
+
+      setProcessing(false);
+
+      return;
+
+    }
+
     const customerData = {
 
       customerId: customer.value,
@@ -250,9 +260,29 @@ export default function PointOfSale({
 
       }
 
-    } catch (error) {
+    } catch (error: any) {
 
-      console.log(error);
+      console.error("Order creation error:", error);
+
+      // Handle specific error cases
+
+      if (error.message?.includes("Insufficient batch quantity")) {
+
+        toast.error(error.message);
+
+      } else if (error.message?.includes("stock")) {
+
+        toast.error(error.message);
+
+      } else if (error.message?.includes("product")) {
+
+        toast.error(error.message);
+
+      } else {
+
+        toast.error("Failed to create order: " + (error.message || "Unknown error"));
+
+      }
 
     } finally {
 
