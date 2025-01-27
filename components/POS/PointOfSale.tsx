@@ -38,6 +38,8 @@ import { Option, Options } from "react-tailwindcss-select/dist/components/type";
 
 import { Input } from "../ui/input";
 
+import ReceiptPrint2 from "./ReceiptPrint2";
+
 
 
 type Customer = {
@@ -97,6 +99,8 @@ export default function PointOfSale({
   const [processing, setProcessing] = useState(false);
 
   const [success, setSuccess] = useState(false);
+
+  const [orderNumber, setOrderNumber] = useState<string>("");
 
   const orderLineItems = useAppSelector((state) => state.pos.products);
 
@@ -269,7 +273,9 @@ export default function PointOfSale({
 
         setSuccess(true);
 
-        dispatch(removeAllProductsFromOrderLine());
+        setOrderNumber(res.orderNumber || "");
+
+        // Don't clear order items yet, let receipt handle it
 
       } else {
 
@@ -641,7 +647,11 @@ export default function PointOfSale({
 
                 </Button>
 
-                <ReceiptPrint setSuccess={setSuccess} />
+                <ReceiptPrint2 
+                  setSuccess={setSuccess} 
+                  orderNumber={orderNumber}
+                  orderItems={orderLineItems}
+                />
 
               </div>
 

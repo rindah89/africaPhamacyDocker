@@ -23,8 +23,8 @@ interface ReceiptPrintProps {
   orderItems: OrderLineItem[];
 }
 
-export function ReceiptPrint({ setSuccess, orderNumber, orderItems }: ReceiptPrintProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
+export default function ReceiptPrint2({ setSuccess, orderNumber, orderItems }: ReceiptPrintProps) {
+  const [isOpen, setIsOpen] = React.useState(true);
   const componentRef = React.useRef<HTMLDivElement>(null);
   const dispatch = useAppDispatch();
   
@@ -64,9 +64,6 @@ export function ReceiptPrint({ setSuccess, orderNumber, orderItems }: ReceiptPri
 
   return (
     <Drawer open={isOpen} onOpenChange={setIsOpen}>
-      <DrawerTrigger asChild>
-        <Button className="w-full" onClick={() => setIsOpen(true)}>Print Receipt</Button>
-      </DrawerTrigger>
       <DrawerContent>
         <div className="mx-auto max-w-[300px]">
           <div ref={componentRef}>

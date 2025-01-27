@@ -121,11 +121,10 @@ export async function createLineOrder(
       return { item, availableBatches };
     }));
 
-    console.log('Starting database transaction...');
-    // Main transaction for critical operations - now optimized
+    console.log('Starting first transaction - Critical Operations...');
+    // First transaction for critical operations
     const lineOrderId = await prisma.$transaction(async (transaction) => {
       // Create the Line Order first
-      console.log('Creating main order record...');
       const lineOrder = await transaction.lineOrder.create({
         data: {
           customerId: customerData.customerId,
@@ -187,12 +186,23 @@ export async function createLineOrder(
             productThumbnail: item.productThumbnail,
           },
         });
+      }));
 
+      console.log('Critical operations completed');
+      return lineOrder.id;
+    }, {
+      timeout: 14000 // Increased timeout to 14 seconds
+    });
+
+    // Second transaction for non-critical operations (sales records)
+    console.log('Starting second transaction - Sales Records...');
+    await prisma.$transaction(async (transaction) => {
+      await Promise.all(orderItems.map(async (item) => {
         // Create sale record
         console.log(`Creating sale record for product ${item.name}...`);
         await transaction.sale.create({
           data: {
-            orderId: lineOrder.id,
+            orderId: lineOrderId,
             productId: item.id,
             qty: item.qty,
             salePrice: item.price,
@@ -203,16 +213,14 @@ export async function createLineOrder(
           },
         });
       }));
-
-      console.log('All items processed successfully');
-      return lineOrder.id;
+      console.log('Sales records created successfully');
     }, {
-      timeout: 10000 // Reduced timeout to 10 seconds to stay within Vercel limits
+      timeout: 14000 // Increased timeout to 14 seconds
     });
 
-    console.log('Transaction completed successfully');
+    console.log('All transactions completed successfully');
 
-    // Handle non-critical operations outside the transaction
+    // Handle non-critical operations outside transactions
     console.log('Processing post-transaction operations...');
     const updatedProducts = await prisma.product.findMany({
       where: { id: { in: orderItems.map(item => item.id) } }
@@ -244,7 +252,7 @@ export async function createLineOrder(
     });
 
     console.log('Order creation completed successfully');
-    return savedLineOrder as ILineOrder;
+    return savedLineOrder;
   } catch (error) {
     console.error("Transaction error:", error);
     // Add more detailed error information
