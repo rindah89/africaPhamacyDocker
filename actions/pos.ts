@@ -142,8 +142,8 @@ export async function createLineOrder(
         },
       });
 
-      // Process each item in parallel within the transaction
-      await Promise.all(orderItems.map(async (item) => {
+      // Process items sequentially to avoid race conditions
+      for (const item of orderItems) {
         // Find and update batches
         const availableBatches = await transaction.productBatch.findMany({
           where: {
@@ -151,12 +151,14 @@ export async function createLineOrder(
             status: true,
             quantity: { gt: 0 }
           },
-          orderBy: { expiryDate: 'asc' }
+          orderBy: { expiryDate: 'asc' },
+          for: 'update' // Lock the rows
         });
 
         let remainingQty = item.qty;
         for (const batch of availableBatches) {
           if (remainingQty <= 0) break;
+          
           const deductionQty = Math.min(batch.quantity, remainingQty);
           await transaction.productBatch.update({
             where: { id: batch.id },
@@ -166,7 +168,7 @@ export async function createLineOrder(
         }
 
         // Update product stock
-        const updatedProduct = await transaction.product.update({
+        await transaction.product.update({
           where: { id: item.id },
           data: { stockQty: { decrement: item.qty } },
         });
@@ -196,13 +198,11 @@ export async function createLineOrder(
             customerEmail: customerData.customerEmail,
           },
         });
-
-        return updatedProduct;
-      }));
+      }
 
       return lineOrder.id;
     }, {
-      timeout: 20000 // Reduced timeout since we optimized the transaction
+      timeout: 60000 // Increased timeout to 60 seconds
     });
 
     // Handle non-critical operations outside the transaction

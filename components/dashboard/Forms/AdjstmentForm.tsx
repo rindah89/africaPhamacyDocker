@@ -5,7 +5,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -23,7 +22,7 @@ import { IProduct } from "@/types/types";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { createAdjustment } from "@/actions/adjustments";
+import { createAdjustment, updateAdjustment } from "@/actions/adjustments";
 import { toast } from "sonner";
 import { Combobox } from "@/components/ui/combobox";
 import {
@@ -49,9 +48,27 @@ interface ProductBatch {
   quantity: number;
 }
 
-export default function AdjustmentForm({ products }: { products: IProduct[] }) {
-  const [items, setItems] = useState<AdjustmentItem[]>([]);
-  const [reason, setReason] = useState("");
+interface AdjustmentFormProps {
+  products: IProduct[];
+  initialData?: {
+    id: string;
+    reason: string;
+    items: {
+      id: string;
+      productId: string;
+      productName: string;
+      currentStock: number;
+      quantity: number;
+      type: "Addition" | "Subtraction";
+      batchId?: string;
+    }[];
+  };
+  editingId?: string;
+}
+
+export default function AdjustmentForm({ products, initialData, editingId }: AdjustmentFormProps) {
+  const [items, setItems] = useState<AdjustmentItem[]>(initialData?.items || []);
+  const [reason, setReason] = useState(initialData?.reason || "");
   const [loading, setLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<{
     value: string;
@@ -60,7 +77,33 @@ export default function AdjustmentForm({ products }: { products: IProduct[] }) {
   const [productBatches, setProductBatches] = useState<Record<string, ProductBatch[]>>({});
   const router = useRouter();
 
-  // Fetch batches when a product is selected
+  // Fetch batches for all products in items on mount and when items change
+  useEffect(() => {
+    const fetchBatchesForProducts = async () => {
+      const productIds = items.map(item => item.productId);
+      const uniqueProductIds = [...new Set(productIds)];
+      
+      for (const productId of uniqueProductIds) {
+        if (!productBatches[productId]) {
+          try {
+            const response = await fetch(`/api/products/${productId}/batches`);
+            const data = await response.json();
+            setProductBatches(prev => ({
+              ...prev,
+              [productId]: data
+            }));
+          } catch (error) {
+            console.error('Error fetching batches:', error);
+            toast.error('Failed to fetch product batches');
+          }
+        }
+      }
+    };
+
+    fetchBatchesForProducts();
+  }, [items]);
+
+  // Fetch batches when a new product is selected
   useEffect(() => {
     const fetchBatches = async (productId: string) => {
       try {
@@ -96,6 +139,13 @@ export default function AdjustmentForm({ products }: { products: IProduct[] }) {
       return;
     }
 
+    // Get batches for the selected product
+    const batches = productBatches[product.id] || [];
+    if (batches.length === 0) {
+      toast.error("No batches available for this product");
+      return;
+    }
+
     setItems([
       ...items,
       {
@@ -103,7 +153,8 @@ export default function AdjustmentForm({ products }: { products: IProduct[] }) {
         productName: product.name,
         currentStock: product.stockQty,
         quantity: 1,
-        type: "Addition",
+        type: "Subtraction", // Default to Subtraction since we're working with batches
+        batchId: batches[0].id, // Select the first batch by default
       },
     ]);
     setSelectedProduct(null);
@@ -115,19 +166,44 @@ export default function AdjustmentForm({ products }: { products: IProduct[] }) {
 
   const handleQtyChange = (productId: string, value: number) => {
     setItems(
-      items.map((item) =>
-        item.productId === productId ? { ...item, quantity: value } : item
-      )
+      items.map((item) => {
+        if (item.productId === productId) {
+          // Get the selected batch
+          const batch = item.batchId ? productBatches[productId]?.find(b => b.id === item.batchId) : null;
+          
+          // For subtractions, ensure quantity doesn't exceed batch quantity
+          if (item.type === "Subtraction" && batch) {
+            if (value > batch.quantity) {
+              toast.error(`Cannot exceed batch quantity of ${batch.quantity}`);
+              return item;
+            }
+          }
+          
+          return { ...item, quantity: value };
+        }
+        return item;
+      })
     );
   };
 
   const handleQtyIncrement = (productId: string) => {
     setItems(
-      items.map((item) =>
-        item.productId === productId
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      )
+      items.map((item) => {
+        if (item.productId === productId) {
+          const batch = item.batchId ? productBatches[productId]?.find(b => b.id === item.batchId) : null;
+          
+          // For subtractions, ensure quantity doesn't exceed batch quantity
+          if (item.type === "Subtraction" && batch) {
+            if (item.quantity >= batch.quantity) {
+              toast.error(`Cannot exceed batch quantity of ${batch.quantity}`);
+              return item;
+            }
+          }
+          
+          return { ...item, quantity: item.quantity + 1 };
+        }
+        return item;
+      })
     );
   };
 
@@ -143,17 +219,31 @@ export default function AdjustmentForm({ products }: { products: IProduct[] }) {
 
   const handleTypeChange = (productId: string, type: "Addition" | "Subtraction") => {
     setItems(
-      items.map((item) =>
-        item.productId === productId ? { ...item, type } : item
-      )
+      items.map((item) => {
+        if (item.productId === productId) {
+          // Reset batch selection when switching to Addition
+          return { 
+            ...item, 
+            type,
+            batchId: type === "Addition" ? undefined : item.batchId 
+          };
+        }
+        return item;
+      })
     );
   };
 
   const handleBatchChange = (productId: string, batchId: string) => {
     setItems(
-      items.map((item) =>
-        item.productId === productId ? { ...item, batchId } : item
-      )
+      items.map((item) => {
+        if (item.productId === productId) {
+          const batch = productBatches[productId]?.find(b => b.id === batchId);
+          // Reset quantity if it exceeds the new batch's quantity
+          const newQuantity = batch && item.quantity > batch.quantity ? batch.quantity : item.quantity;
+          return { ...item, batchId, quantity: newQuantity };
+        }
+        return item;
+      })
     );
   };
 
@@ -177,20 +267,36 @@ export default function AdjustmentForm({ products }: { products: IProduct[] }) {
       return;
     }
 
+    // Validate quantities against batch quantities
+    for (const item of items) {
+      if (item.type === "Subtraction" && item.batchId) {
+        const batch = productBatches[item.productId]?.find(b => b.id === item.batchId);
+        if (batch && item.quantity > batch.quantity) {
+          toast.error(`Cannot subtract ${item.quantity} from batch ${batch.batchNumber} which only has ${batch.quantity} items`);
+          return;
+        }
+      }
+    }
+
     try {
       setLoading(true);
-      const res = await createAdjustment({
+      const adjustmentData = {
         reason,
         items,
-      });
+      };
+
+      const res = editingId
+        ? await updateAdjustment(editingId, adjustmentData)
+        : await createAdjustment(adjustmentData);
+
       if (res) {
-        toast.success("Adjustment created successfully");
+        toast.success(editingId ? "Adjustment updated successfully" : "Adjustment created successfully");
         router.push("/dashboard/stock/adjustment");
         router.refresh();
       }
     } catch (error) {
       console.error(error);
-      toast.error("Failed to create adjustment");
+      toast.error(editingId ? "Failed to update adjustment" : "Failed to create adjustment");
     } finally {
       setLoading(false);
     }
@@ -207,7 +313,7 @@ export default function AdjustmentForm({ products }: { products: IProduct[] }) {
     <form onSubmit={handleSubmit}>
       <Card>
         <CardHeader>
-          <CardTitle>Stock Adjustment</CardTitle>
+          <CardTitle>{editingId ? "Update Stock Adjustment" : "Stock Adjustment"}</CardTitle>
           <CardDescription>
             Add or subtract stock from your inventory
           </CardDescription>
@@ -260,6 +366,8 @@ export default function AdjustmentForm({ products }: { products: IProduct[] }) {
                     (p) => p.id === item.productId
                   );
                   const batches = productBatches[item.productId] || [];
+                  const selectedBatch = item.batchId ? batches.find(b => b.id === item.batchId) : null;
+                  
                   return (
                     <TableRow key={item.productId}>
                       <TableCell className="font-medium">
@@ -296,6 +404,11 @@ export default function AdjustmentForm({ products }: { products: IProduct[] }) {
                             <Plus className="w-4 h-4" />
                           </button>
                         </div>
+                        {selectedBatch && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            Available in batch: {selectedBatch.quantity}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Select
@@ -352,7 +465,7 @@ export default function AdjustmentForm({ products }: { products: IProduct[] }) {
           )}
 
           <Button type="submit" disabled={loading}>
-            {loading ? "Creating..." : "Create Adjustment"}
+            {loading ? (editingId ? "Updating..." : "Creating...") : (editingId ? "Update Adjustment" : "Create Adjustment")}
           </Button>
         </CardContent>
       </Card>
