@@ -27,32 +27,18 @@ export default function DateRangeFilter({
   onFilter,
   setIsSearch,
   className,
+  dateRange,
+  onDateRangeChange,
 }: {
   data: any[];
   onFilter: any;
   setIsSearch: any;
   className?: string;
+  dateRange: DateRange | undefined;
+  onDateRangeChange: (range: DateRange | undefined) => void;
 }) {
-  const [date, setDate] = useState<DateRange | undefined>(() => {
-    const now = new Date();
-    return {
-      from: startOfYear(now),
-      to: now,
-    };
-  });
-
-  useEffect(() => {
-    // Apply initial filter when component mounts
-    if (date?.from && date?.to) {
-      const startDate = format(date.from, 'yyyy-MM-dd');
-      const endDate = format(date.to, 'yyyy-MM-dd');
-      const filteredData = filterByDateRange(data, startDate, endDate);
-      onFilter(filteredData);
-    }
-  }, [data, date?.from, date?.to, onFilter]);
-
   const handleChange = (selectedDate: DateRange | undefined) => {
-    setDate(selectedDate);
+    onDateRangeChange(selectedDate);
     setIsSearch(false);
     if (selectedDate?.from && selectedDate?.to) {
       const startDate = format(selectedDate.from, 'yyyy-MM-dd');
@@ -71,18 +57,18 @@ export default function DateRangeFilter({
             variant={"outline"}
             className={cn(
               "w-[300px] justify-start text-left font-normal",
-              !date && "text-muted-foreground"
+              !dateRange && "text-muted-foreground"
             )}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {date?.from ? (
-              date.to ? (
+            {dateRange?.from ? (
+              dateRange.to ? (
                 <>
-                  {format(date.from, "LLL dd, y")} -{" "}
-                  {format(date.to, "LLL dd, y")}
+                  {format(dateRange.from, "LLL dd, y")} -{" "}
+                  {format(dateRange.to, "LLL dd, y")}
                 </>
               ) : (
-                format(date.from, "LLL dd, y")
+                format(dateRange.from, "LLL dd, y")
               )
             ) : (
               <span>Pick a date</span>
@@ -93,8 +79,8 @@ export default function DateRangeFilter({
           <Calendar
             initialFocus
             mode="range"
-            defaultMonth={date?.from}
-            selected={date}
+            defaultMonth={dateRange?.from}
+            selected={dateRange}
             onSelect={handleChange}
             numberOfMonths={2}
           />

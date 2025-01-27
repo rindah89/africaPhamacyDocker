@@ -43,6 +43,8 @@ import { ListFilter } from "lucide-react";
 import DateFilters from "./DateFilters";
 import DateRangeFilter from "./DateRangeFilter";
 import TableAnalytics from "./TableAnalytics";
+import { DateRange } from "react-day-picker";
+import { startOfYear } from "date-fns";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -50,6 +52,8 @@ interface DataTableProps<TData, TValue> {
   tableTitle?: string;
   initialSorting?: SortingState;
   onSelectionChange?: (selectedRows: TData[]) => void;
+  onTableCreated?: (table: Table<TData>) => void;
+  onDataFiltered?: (filteredData: TData[]) => void;
 }
 
 export default function DataTable<TData, TValue>({
@@ -58,6 +62,8 @@ export default function DataTable<TData, TValue>({
   tableTitle = "",
   initialSorting = [],
   onSelectionChange,
+  onTableCreated,
+  onDataFiltered
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] = useState({});
@@ -68,6 +74,13 @@ export default function DataTable<TData, TValue>({
   const [filteredData, setFilteredData] = useState(data);
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [isSearch, setIsSearch] = useState(true);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    const now = new Date();
+    return {
+      from: startOfYear(now),
+      to: now,
+    };
+  });
 
   // Update selected rows when selection changes
   useEffect(() => {
@@ -101,6 +114,21 @@ export default function DataTable<TData, TValue>({
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
 
+  // Call onTableCreated when table is created
+  React.useEffect(() => {
+    if (onTableCreated) {
+      onTableCreated(table);
+    }
+  }, [table, onTableCreated]);
+
+  // Update filtered data when table data changes
+  React.useEffect(() => {
+    if (onDataFiltered) {
+      const currentData = isSearch ? searchResults : filteredData;
+      onDataFiltered(currentData);
+    }
+  }, [isSearch, searchResults, filteredData, onDataFiltered]);
+
   return (
     <div className="space-y-4">
       {tableTitle && (
@@ -117,16 +145,20 @@ export default function DataTable<TData, TValue>({
             setIsSearch={setIsSearch}
           />
         </div>
-        <div className="flex items-center gap-2 ">
+        <div className="flex items-center gap-2">
           <DateRangeFilter
             data={data}
             onFilter={setFilteredData}
             setIsSearch={setIsSearch}
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
           />
           <DateFilters
             data={data}
             onFilter={setFilteredData}
             setIsSearch={setIsSearch}
+            dateRange={dateRange}
+            onDateRangeChange={setDateRange}
           />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
