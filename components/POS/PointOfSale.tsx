@@ -193,6 +193,7 @@ export default function PointOfSale({
     }
 
     setProcessing(true);
+    console.log('Starting order creation...');
 
     const customer = customers.find(c => c.value === selectedCustomer.value);
 
@@ -228,19 +229,23 @@ export default function PointOfSale({
 
     const orderItems = orderLineItems;
 
-    
+    const orderAmount = subTotal;
 
-    // Use raw numeric value for backend processing
+    console.log('Preparing order with:', {
 
-    const orderAmount = subTotal; // No localization
+      customerData,
 
+      orderItems,
 
+      orderAmount
+
+    });
 
     const newOrder = {
 
       orderItems,
 
-      orderAmount, // Send raw numbers
+      orderAmount,
 
       orderType: "Sale",
 
@@ -250,7 +255,13 @@ export default function PointOfSale({
 
     try {
 
+      console.log('Calling createLineOrder...');
+
       const res = await createLineOrder(newOrder, customerData);
+
+      console.log('Order creation response:', res);
+
+      
 
       if (res) {
 
@@ -258,15 +269,37 @@ export default function PointOfSale({
 
         setSuccess(true);
 
+        dispatch(removeAllProductsFromOrderLine());
+
+      } else {
+
+        toast.error("Order creation failed - no response received");
+
       }
 
     } catch (error: any) {
 
       console.error("Order creation error:", error);
 
+      console.error("Error details:", {
+
+        name: error.name,
+
+        message: error.message,
+
+        stack: error.stack
+
+      });
+
+
+
       // Handle specific error cases
 
-      if (error.message?.includes("Insufficient batch quantity")) {
+      if (error.message?.includes("timed out") || error.name === "TimeoutError") {
+
+        toast.error("Order creation is taking longer than expected. Please try with fewer items or try again.");
+
+      } else if (error.message?.includes("Insufficient batch quantity")) {
 
         toast.error(error.message);
 
