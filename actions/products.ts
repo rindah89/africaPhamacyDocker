@@ -314,6 +314,8 @@ export async function getProductsByCategoryId(catId: string) {
 
           name: true,
 
+          content: true,
+
           productCode: true,
 
           stockQty: true,
@@ -323,6 +325,36 @@ export async function getProductsByCategoryId(catId: string) {
           productThumbnail: true,
 
           status: true,
+
+          slug: true,
+
+          createdAt: true,
+
+          updatedAt: true,
+
+          productCost: true,
+
+          productDetails: true,
+
+          productImages: true,
+
+          supplierId: true,
+
+          supplierPrice: true,
+
+          alertQty: true,
+
+          productTax: true,
+
+          taxMethod: true,
+
+          brandId: true,
+
+          subCategoryId: true,
+
+          unitId: true,
+
+          isFeatured: true,
 
           supplier: {
 
@@ -360,6 +392,8 @@ export async function getProductsByCategoryId(catId: string) {
 
           name: true,
 
+          content: true,
+
           productCode: true,
 
           stockQty: true,
@@ -369,6 +403,36 @@ export async function getProductsByCategoryId(catId: string) {
           productThumbnail: true,
 
           status: true,
+
+          slug: true,
+
+          createdAt: true,
+
+          updatedAt: true,
+
+          productCost: true,
+
+          productDetails: true,
+
+          productImages: true,
+
+          supplierId: true,
+
+          supplierPrice: true,
+
+          alertQty: true,
+
+          productTax: true,
+
+          taxMethod: true,
+
+          brandId: true,
+
+          subCategoryId: true,
+
+          unitId: true,
+
+          isFeatured: true,
 
           supplier: {
 

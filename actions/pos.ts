@@ -1,21 +1,14 @@
 "use server";
 
-import prisma from "@/lib/db";
+import { prisma } from "@/lib/db";
+import { revalidatePath } from "next/cache";
+import { OrderLineItem } from "@/redux/slices/pointOfSale";
+import { NotificationStatus, Prisma, PrismaClient, Product, LineOrder } from "@prisma/client";
 import { generateOrderNumber } from "@/lib/generateOrderNumbers";
 import { ILineOrder } from "@/types/types";
-import { NotificationStatus, Prisma } from "@prisma/client";
-import { revalidatePath } from "next/cache";
 
 // Define the PaymentMethod type based on the Prisma schema
 type PaymentMethod = Prisma.LineOrderCreateInput['paymentMethod']
-
-interface OrderLineItem {
-  id: string;
-  name: string;
-  price: number;
-  qty: number;
-  productThumbnail: string;
-}
 
 interface CustomerData {
   customerId: string;
@@ -34,7 +27,7 @@ interface CustomerData {
   method?: PaymentMethod;
 }
 
-interface NewOrderProps {
+interface OrderData {
   orderItems: OrderLineItem[];
   orderAmount: number;
   orderType: string;
@@ -46,6 +39,11 @@ type NotificationProps = {
   status?: NotificationStatus;
   statusText: string;
 };
+
+type TransactionClient = Omit<
+  PrismaClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>;
 
 export async function createNotification(data: NotificationProps) {
   try {
@@ -92,8 +90,110 @@ export async function getNotifications() {
   }
 }
 
+// Step 1: Validate and prepare order
+export async function validateOrder(orderData: OrderData, customerData: CustomerData) {
+  try {
+    // Validate customer exists
+    const customer = await prisma.user.findUnique({
+      where: { id: customerData.customerId },
+    });
+
+    if (!customer) {
+      throw new Error("Customer not found");
+    }
+
+    // Validate all products and their quantities
+    for (const item of orderData.orderItems) {
+      const product = await prisma.product.findUnique({
+        where: { id: item.id },
+        include: { batches: true },
+      });
+
+      if (!product) {
+        throw new Error(`Product ${item.name} not found`);
+      }
+
+      if (product.stockQty < item.qty) {
+        throw new Error(`Insufficient stock for ${item.name}`);
+      }
+    }
+
+    // Generate order number
+    const orderNumber = Math.floor(100000 + Math.random() * 900000).toString();
+
+    return {
+      success: true,
+      orderNumber,
+      message: "Order validated successfully"
+    };
+  } catch (error: any) {
+    console.error("Order validation error:", error);
+    return {
+      success: false,
+      message: error.message || "Failed to validate order"
+    };
+  }
+}
+
+// Step 2: Process payment and create order
+export async function processPaymentAndOrder(
+  orderData: OrderData, 
+  customerData: CustomerData,
+  orderNumber: string,
+  amountPaid: number
+) {
+  try {
+    const result = await prisma.$transaction(async (tx: TransactionClient) => {
+      // Create the order
+      const order = await tx.lineOrder.create({
+        data: {
+          orderNumber,
+          orderType: orderData.orderType,
+          source: orderData.source,
+          orderAmount: orderData.orderAmount,
+          customerId: customerData.customerId,
+          customerName: customerData.customerName,
+          customerEmail: customerData.customerEmail,
+          lineOrderItems: {
+            create: orderData.orderItems.map(item => ({
+              productId: item.id,
+              name: item.name,
+              qty: item.qty,
+              price: item.price,
+              productThumbnail: item.productThumbnail
+            }))
+          }
+        }
+      });
+
+      // Update product stock quantities
+      for (const item of orderData.orderItems) {
+        await tx.product.update({
+          where: { id: item.id },
+          data: {
+            stockQty: {
+              decrement: item.qty
+            }
+          }
+        });
+      }
+
+      return order;
+    });
+
+    revalidatePath("/pos");
+    return { success: true, order: result };
+  } catch (error: any) {
+    console.error("Payment processing error:", error);
+    return {
+      success: false,
+      message: error.message || "Failed to process payment and create order"
+    };
+  }
+}
+
 export async function createLineOrder(
-  newOrder: NewOrderProps,
+  newOrder: OrderData,
   customerData: CustomerData
 ) {
   const { orderItems, orderAmount, orderType, source } = newOrder;
@@ -123,7 +223,7 @@ export async function createLineOrder(
 
     console.log('Starting first transaction - Critical Operations...');
     // First transaction for critical operations
-    const lineOrderId = await prisma.$transaction(async (transaction) => {
+    const lineOrderId = await prisma.$transaction(async (transaction: TransactionClient) => {
       // Create the Line Order first
       const lineOrder = await transaction.lineOrder.create({
         data: {
@@ -196,7 +296,7 @@ export async function createLineOrder(
 
     // Second transaction for non-critical operations (sales records)
     console.log('Starting second transaction - Sales Records...');
-    await prisma.$transaction(async (transaction) => {
+    await prisma.$transaction(async (transaction: TransactionClient) => {
       await Promise.all(orderItems.map(async (item) => {
         // Create sale record
         console.log(`Creating sale record for product ${item.name}...`);
@@ -227,7 +327,7 @@ export async function createLineOrder(
     });
 
     // Create notifications for low stock outside the transaction
-    await Promise.all(updatedProducts.map(async (product) => {
+    await Promise.all(updatedProducts.map(async (product: Product) => {
       if (product.stockQty < product.alertQty) {
         const message = product.stockQty === 0
           ? `The stock of ${product.name} is out. Current stock: ${product.stockQty}.`
@@ -275,7 +375,7 @@ export async function getOrders() {
         lineOrderItems: true,
       },
     });
-    const orders = allOrders.filter((order) => order.lineOrderItems.length > 0);
+    const orders = allOrders.filter((order: LineOrder & { lineOrderItems: any[] }) => order.lineOrderItems.length > 0);
     return orders;
   } catch (error) {
     console.log(error);

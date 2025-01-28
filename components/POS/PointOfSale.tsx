@@ -24,7 +24,7 @@ import SearchItems from "./SearchItems";
 
 import FormSelectInput from "../global/FormInputs/FormSelectInput";
 
-import { createLineOrder } from "@/actions/pos";
+import { createLineOrder, validateOrder } from "@/actions/pos";
 
 import { Loader2 } from "lucide-react";
 
@@ -39,6 +39,8 @@ import { Option, Options } from "react-tailwindcss-select/dist/components/type";
 import { Input } from "../ui/input";
 
 import ReceiptPrint2 from "./ReceiptPrint2";
+
+import PaymentModal from "./PaymentModal";
 
 
 
@@ -105,6 +107,12 @@ export default function PointOfSale({
   const orderLineItems = useAppSelector((state) => state.pos.products);
 
   const [barcodeInput, setBarcodeInput] = useState('');
+
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  const [orderData, setOrderData] = useState<any>(null);
+
+  const [validatedCustomerData, setValidatedCustomerData] = useState<any>(null);
 
   
 
@@ -197,7 +205,7 @@ export default function PointOfSale({
     }
 
     setProcessing(true);
-    console.log('Starting order creation...');
+    console.log('Starting order validation...');
 
     const customer = customers.find(c => c.value === selectedCustomer.value);
 
@@ -231,25 +239,11 @@ export default function PointOfSale({
 
     };
 
-    const orderItems = orderLineItems;
+    const newOrderData = {
 
-    const orderAmount = subTotal;
+      orderItems: orderLineItems,
 
-    console.log('Preparing order with:', {
-
-      customerData,
-
-      orderItems,
-
-      orderAmount
-
-    });
-
-    const newOrder = {
-
-      orderItems,
-
-      orderAmount,
+      orderAmount: subTotal,
 
       orderType: "Sale",
 
@@ -259,69 +253,33 @@ export default function PointOfSale({
 
     try {
 
-      console.log('Calling createLineOrder...');
+      console.log('Validating order...');
 
-      const res = await createLineOrder(newOrder, customerData);
+      const validationResult = await validateOrder(newOrderData, customerData);
 
-      console.log('Order creation response:', res);
+      if (validationResult.success) {
 
-      
+        setOrderNumber(validationResult.orderNumber);
 
-      if (res) {
+        setOrderData(newOrderData);
 
-        toast.success("Order Created Successfully");
+        setValidatedCustomerData(customerData);
 
-        setSuccess(true);
+        setShowPaymentModal(true);
 
-        setOrderNumber(res.orderNumber || "");
-
-        // Don't clear order items yet, let receipt handle it
+        toast.success("Order validated successfully");
 
       } else {
 
-        toast.error("Order creation failed - no response received");
+        toast.error(validationResult.message || "Order validation failed");
 
       }
 
     } catch (error: any) {
 
-      console.error("Order creation error:", error);
+      console.error("Order validation error:", error);
 
-      console.error("Error details:", {
-
-        name: error.name,
-
-        message: error.message,
-
-        stack: error.stack
-
-      });
-
-
-
-      // Handle specific error cases
-
-      if (error.message?.includes("timed out") || error.name === "TimeoutError") {
-
-        toast.error("Order creation is taking longer than expected. Please try with fewer items or try again.");
-
-      } else if (error.message?.includes("Insufficient batch quantity")) {
-
-        toast.error(error.message);
-
-      } else if (error.message?.includes("stock")) {
-
-        toast.error(error.message);
-
-      } else if (error.message?.includes("product")) {
-
-        toast.error(error.message);
-
-      } else {
-
-        toast.error("Failed to create order: " + (error.message || "Unknown error"));
-
-      }
+      toast.error(error.message || "Failed to validate order");
 
     } finally {
 
@@ -340,6 +298,16 @@ export default function PointOfSale({
     setSuccess(false);
 
   }
+
+
+
+  const handlePaymentComplete = () => {
+
+    setShowPaymentModal(false);
+
+    setSuccess(true);
+
+  };
 
 
 
@@ -662,6 +630,16 @@ export default function PointOfSale({
         )}
 
       </div>
+
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        totalAmount={subTotal}
+        onPaymentComplete={handlePaymentComplete}
+        orderData={orderData}
+        customerData={validatedCustomerData}
+        orderNumber={orderNumber}
+      />
 
     </div>
 

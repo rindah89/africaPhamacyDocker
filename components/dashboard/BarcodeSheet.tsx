@@ -55,7 +55,7 @@ const BarcodeSheet = ({ selectedBatches }: BarcodeSheetProps) => {
     pageStyle: `
       @page {
         size: A4;
-        margin: 5mm;
+        margin: 12mm 16mm;
       }
       @media print {
         body {
