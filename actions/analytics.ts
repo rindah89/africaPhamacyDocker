@@ -53,30 +53,39 @@ function calculateSalesSummary(sales: Sale[]): SalesSummary {
   return summary;
 }
 export async function getAnalytics() {
-  //totals Sales
-  //Total Revenue
-  //Total Orders
-
   try {
-    const sales = await prisma.sale.findMany({
-      select: {
-        salePrice: true,
-        qty: true,
-      },
-    });
+    // Get sales for the last 30 days only to limit data
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const [sales, ordersCount, productsCount] = await Promise.all([
+      prisma.sale.findMany({
+        where: {
+          createdAt: {
+            gte: thirtyDaysAgo
+          }
+        },
+        select: {
+          salePrice: true,
+          qty: true,
+        },
+      }),
+      prisma.lineOrder.count(),
+      prisma.product.count(),
+    ]);
+
     const salesSummary = calculateSalesSummary(sales);
-    const ordersCount = await prisma.lineOrder.count();
-    const productsCount = await prisma.product.count();
+    
     const analytics = [
       {
-        title: "Total Sales",
+        title: "Total Sales (30 days)",
         count: salesSummary.salesCount,
         countUnit: "",
         detailLink: "/dashboard/sales",
         icon: BarChartHorizontal,
       },
       {
-        title: "Total Revenue",
+        title: "Revenue (30 days)",
         count: salesSummary.totalRevenue,
         countUnit: " ",
         detailLink: "/dashboard/sales",
