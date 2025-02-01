@@ -11,6 +11,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**',
       },
+      {
+        protocol: "https",
+        hostname: "utfs.io",
+      },
     ],
   },
   typescript: {
