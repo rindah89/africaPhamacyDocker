@@ -8,7 +8,7 @@ import Image from "next/image";
 
 import Link from "next/link";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 import { Button } from "../ui/button";
 
@@ -41,6 +41,8 @@ import { Input } from "../ui/input";
 import ReceiptPrint2 from "./ReceiptPrint2";
 
 import PaymentModal from "./PaymentModal";
+
+import { searchPOSProducts } from "@/actions/products";
 
 
 
@@ -95,6 +97,10 @@ export default function PointOfSale({
     initialCustomer ? { label: initialCustomer.label, value: initialCustomer.value } : { label: "", value: "" }
 
   );
+
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const [isSearching, setIsSearching] = useState(false);
 
   const [searchResults, setSearchResults] = useState(products);
 
@@ -191,6 +197,80 @@ export default function PointOfSale({
     }
 
   };
+
+
+
+  // Add debounced search function
+
+  const handleSearch = async (query: string) => {
+
+    console.log('Search initiated with query:', query);
+
+    setSearchQuery(query);
+
+    
+
+    if (!query.trim()) {
+
+      console.log('Empty query, resetting to all products');
+
+      setSearchResults(products);
+
+      return;
+
+    }
+
+
+
+    setIsSearching(true);
+
+    try {
+
+      console.log('Calling searchPOSProducts with query:', query);
+
+      const results = await searchPOSProducts(query);
+
+      console.log('Search results received:', results);
+
+      console.log('Number of results:', results?.length || 0);
+
+      setSearchResults(results);
+
+    } catch (error) {
+
+      console.error('Search error details:', error);
+
+      toast.error('Error searching products');
+
+    } finally {
+
+      setIsSearching(false);
+
+    }
+
+  };
+
+
+
+  // Add logging to initial render
+
+  useEffect(() => {
+
+    console.log('Initial products:', products);
+
+    console.log('Initial searchResults:', searchResults);
+
+  }, [products]);
+
+
+
+  // Add logging when searchResults change
+
+  useEffect(() => {
+
+    console.log('SearchResults updated:', searchResults);
+
+  }, [searchResults]);
 
 
 
@@ -404,33 +484,76 @@ export default function PointOfSale({
 
           <div className="">
 
-            <div className="grid grid-cols-3">
+            <div className="flex gap-2 p-4">
 
-              <SearchItems 
-                data={products} 
-                onSearch={setSearchResults} 
-                onBarcodeScan={(scannedProduct) => {
-                  if (scannedProduct) {
-                    const newOrderLineItem = {
-                      id: scannedProduct.id,
-                      name: scannedProduct.name,
-                      price: scannedProduct.productPrice,
-                      qty: 1,
-                      productThumbnail: scannedProduct.productThumbnail,
-                      stock: scannedProduct.stockQty,
-                    };
-                    dispatch(addProductToOrderLine(newOrderLineItem));
-                    toast.success(`Added ${scannedProduct.name}`);
-                  }
-                }} 
+              <Input
+
+                type="text"
+
+                placeholder="Search products..."
+
+                value={searchQuery}
+
+                onChange={(e) => {
+
+                  console.log('Search input changed:', e.target.value);
+
+                  handleSearch(e.target.value);
+
+                }}
+
+                className="w-full"
+
+              />
+
+              <Input
+
+                type="text"
+
+                placeholder="Scan barcode..."
+
+                value={barcodeInput}
+
+                onChange={(e) => setBarcodeInput(e.target.value)}
+
+                onKeyDown={handleBarcodeScan}
+
+                className="w-full"
+
               />
 
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 py-6 px-4">
-              {searchResults.map((item) => {
-                return <Item item={item} key={item.id} />;
-              })}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-4">
+
+              {isSearching ? (
+
+                <div className="col-span-full flex justify-center">
+
+                  <Loader2 className="h-8 w-8 animate-spin" />
+
+                </div>
+
+              ) : searchResults?.length > 0 ? (
+
+                searchResults.map((product) => {
+
+                  console.log('Rendering product:', product);
+
+                  return <Item key={product.id} item={product} />;
+
+                })
+
+              ) : (
+
+                <div className="col-span-full text-center text-gray-500">
+
+                  No products found
+
+                </div>
+
+              )}
+
             </div>
 
           </div>

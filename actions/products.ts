@@ -120,19 +120,7 @@ export async function getAllProducts() {
 
       include: {
 
-        subCategory: {
-
-          select: {
-
-            id: true,
-
-            title: true,
-
-            slug: true,
-
-          }
-
-        },
+        subCategory: true,
 
         reviews: {
 
@@ -226,7 +214,29 @@ export async function getSearchProducts() {
 
   try {
 
+    // Get products with basic filtering and limit
+
     const allProducts = await prisma.product.findMany({
+
+      where: {
+
+        AND: [
+
+          { status: true },  // Only active products
+
+          { stockQty: { gt: 0 } }  // Only products in stock
+
+        ]
+
+      },
+
+      take: 50, // Limit results
+
+      orderBy: {
+
+        name: 'asc'
+
+      },
 
       select: {
 
@@ -236,27 +246,53 @@ export async function getSearchProducts() {
 
         productThumbnail: true,
 
+        stockQty: true,
+
       },
 
     });
 
-    const products = allProducts.map((item) => {
 
-      return {
 
-        name: item.name,
+    if (!allProducts || allProducts.length === 0) {
 
-        slug: item.slug,
+      return [];
 
-        productThumbnail: item.productThumbnail,
+    }
 
-        type: "prod",
 
-      };
 
-    });
+    const products = allProducts.map((item) => ({
+
+      name: item.name,
+
+      slug: item.slug,
+
+      productThumbnail: item.productThumbnail,
+
+      type: "prod",
+
+    }));
+
+
+
+    // Get categories
 
     const allCategories = await prisma.category.findMany({
+
+      where: {
+
+        status: true  // Only active categories
+
+      },
+
+      take: 20,
+
+      orderBy: {
+
+        title: 'asc'
+
+      },
 
       select: {
 
@@ -270,7 +306,25 @@ export async function getSearchProducts() {
 
     });
 
+
+
+    // Get brands
+
     const allBrands = await prisma.brand.findMany({
+
+      where: {
+
+        status: true  // Only active brands
+
+      },
+
+      take: 20,
+
+      orderBy: {
+
+        title: 'asc'
+
+      },
 
       select: {
 
@@ -286,39 +340,39 @@ export async function getSearchProducts() {
 
     });
 
-    const categories = allCategories.map((item) => {
 
-      return {
 
-        name: item.title,
+    const categories = allCategories.map((item) => ({
 
-        slug: item.slug,
+      name: item.title,
 
-        productThumbnail: item.imageUrl,
+      slug: item.slug,
 
-        type: "cat",
+      productThumbnail: item.imageUrl,
 
-      };
+      type: "cat",
 
-    });
+    }));
 
-    const brands = allBrands.map((item) => {
 
-      return {
 
-        name: item.title,
+    const brands = allBrands.map((item) => ({
 
-        slug: item.slug,
+      name: item.title,
 
-        productThumbnail: item.logo,
+      slug: item.slug,
 
-        type: "brand",
+      productThumbnail: item.logo,
 
-        id: item.id,
+      type: "brand",
 
-      };
+      id: item.id,
 
-    });
+    }));
+
+
+
+    // Combine and return results
 
     const results = [...products, ...categories, ...brands];
 
@@ -326,9 +380,9 @@ export async function getSearchProducts() {
 
   } catch (error) {
 
-    console.log(error);
+    console.error("Search error:", error);
 
-    return null;
+    return [];  // Return empty array instead of null
 
   }
 
@@ -341,6 +395,16 @@ export async function getProductsByCategoryId(catId: string) {
     if (catId === "all") {
 
       const products = await prisma.product.findMany({
+
+        where: {
+
+          stockQty: {
+
+            gt: 0
+
+          }
+
+        },
 
         select: {
 
@@ -412,11 +476,29 @@ export async function getProductsByCategoryId(catId: string) {
 
         where: {
 
-          subCategory: {
+          AND: [
 
-            categoryId: catId,
+            {
 
-          },
+              subCategory: {
+
+                categoryId: catId,
+
+              }
+
+            },
+
+            {
+
+              stockQty: {
+
+                gt: 0
+
+              }
+
+            }
+
+          ]
 
         },
 
@@ -1928,6 +2010,62 @@ export async function getBestSellingProducts(productCount: number) {
 
   }
 
+}
+
+export async function searchPOSProducts(searchQuery: string) {
+  console.log('searchPOSProducts called with query:', searchQuery);
+  
+  try {
+    if (!searchQuery || searchQuery.trim() === '') {
+      console.log('Empty search query, returning empty array');
+      return [];
+    }
+
+    console.log('Building search query with filters');
+    const searchConditions = {
+      where: {
+        AND: [
+          {
+            OR: [
+              { name: { contains: searchQuery, mode: 'insensitive' } },
+              { productCode: { contains: searchQuery, mode: 'insensitive' } }
+            ]
+          },
+          { stockQty: { gt: 0 } },  // Only in-stock products
+          { status: true }  // Only active products
+        ]
+      },
+      select: {
+        id: true,
+        name: true,
+        productCode: true,
+        stockQty: true,
+        productPrice: true,
+        productThumbnail: true,
+        productImages: true,
+        productDetails: true,
+        status: true,
+        productTax: true,
+        taxMethod: true
+      },
+      orderBy: {
+        name: 'asc'
+      },
+      take: 20  // Limit results for better performance
+    };
+
+    console.log('Executing Prisma query with conditions:', JSON.stringify(searchConditions, null, 2));
+    const products = await prisma.product.findMany(searchConditions);
+    
+    console.log(`Search complete. Found ${products.length} products`);
+    console.log('First product in results:', products[0]);
+    
+    return products;
+  } catch (error) {
+    console.error("POS search error details:", error);
+    console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+    return [];
+  }
 }
 
 
