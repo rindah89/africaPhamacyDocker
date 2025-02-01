@@ -104,21 +104,35 @@ export async function createProduct(data: ProductProps) {
 
 }
 
-export async function getAllProducts(): Promise<IProduct[] | null> {
+export async function getAllProducts() {
 
   try {
 
     const products = await prisma.product.findMany({
 
+      take: 20,
+
       orderBy: {
 
-        name: "asc",
+        createdAt: "desc",
 
       },
 
       include: {
 
-        subCategory: true,
+        subCategory: {
+
+          select: {
+
+            id: true,
+
+            title: true,
+
+            slug: true,
+
+          }
+
+        },
 
         reviews: {
 
@@ -158,7 +172,7 @@ export async function getAllProducts(): Promise<IProduct[] | null> {
 
 
 
-    return products as IProduct[];
+    return products;
 
   } catch (error) {
 
@@ -320,56 +334,166 @@ export async function getSearchProducts() {
 
 }
 
-export async function getProductsByCategoryId(catId: string, page: number = 1, limit: number = 50) {
+export async function getProductsByCategoryId(catId: string) {
+
   try {
-    const skip = (page - 1) * limit;
-    
-    // Base query conditions
-    const where = catId === "all" 
-      ? { status: true }
-      : { 
+
+    if (catId === "all") {
+
+      const products = await prisma.product.findMany({
+
+        select: {
+
+          id: true,
+
+          name: true,
+
+          content: true,
+
+          productCode: true,
+
+          stockQty: true,
+
+          productPrice: true,
+
+          productThumbnail: true,
+
           status: true,
-          subCategory: {
-            categoryId: catId
-          }
-        };
 
-    const products = await prisma.product.findMany({
-      where,
-      take: limit,
-      skip,
-      orderBy: {
-        name: "asc"
-      },
-      select: {
-        id: true,
-        name: true,
-        productCode: true,
-        stockQty: true,
-        productPrice: true,
-        productThumbnail: true,
-        status: true,
-        // Only include essential fields for POS
-        batches: {
-          where: {
-            status: true,
-            quantity: { gt: 0 }
-          },
-          select: {
-            id: true,
-            quantity: true,
-            batchNumber: true,
-            expiryDate: true
+          slug: true,
+
+          createdAt: true,
+
+          updatedAt: true,
+
+          productCost: true,
+
+          productDetails: true,
+
+          productImages: true,
+
+          supplierId: true,
+
+          supplierPrice: true,
+
+          alertQty: true,
+
+          productTax: true,
+
+          taxMethod: true,
+
+          brandId: true,
+
+          subCategoryId: true,
+
+          unitId: true,
+
+          isFeatured: true,
+
+          supplier: {
+
+            select: {
+
+              name: true
+
+            }
+
           }
+
         }
-      }
-    });
 
-    return products;
+      });
+
+      return products;
+
+    } else {
+
+      const products = await prisma.product.findMany({
+
+        where: {
+
+          subCategory: {
+
+            categoryId: catId,
+
+          },
+
+        },
+
+        select: {
+
+          id: true,
+
+          name: true,
+
+          content: true,
+
+          productCode: true,
+
+          stockQty: true,
+
+          productPrice: true,
+
+          productThumbnail: true,
+
+          status: true,
+
+          slug: true,
+
+          createdAt: true,
+
+          updatedAt: true,
+
+          productCost: true,
+
+          productDetails: true,
+
+          productImages: true,
+
+          supplierId: true,
+
+          supplierPrice: true,
+
+          alertQty: true,
+
+          productTax: true,
+
+          taxMethod: true,
+
+          brandId: true,
+
+          subCategoryId: true,
+
+          unitId: true,
+
+          isFeatured: true,
+
+          supplier: {
+
+            select: {
+
+              name: true
+
+            }
+
+          }
+
+        }
+
+      });
+
+      return products;
+
+    }
+
   } catch (error) {
-    console.error("Error fetching products:", error);
+
+    console.log(error);
+
     return null;
+
   }
+
 }
 
 export async function getProductsByBrandId(brandId: string) {
@@ -1804,51 +1928,6 @@ export async function getBestSellingProducts(productCount: number) {
 
   }
 
-}
-
-export async function searchProducts(query: string): Promise<IProduct[] | null> {
-  try {
-    const products = await prisma.product.findMany({
-      where: {
-        OR: [
-          { name: { contains: query, mode: "insensitive" } },
-          { productCode: { contains: query, mode: "insensitive" } },
-          { productDetails: { contains: query, mode: "insensitive" } },
-          { subCategory: { title: { contains: query, mode: "insensitive" } } }
-        ],
-        AND: {
-          status: true // Only return active products
-        }
-      },
-      include: {
-        subCategory: true,
-        reviews: {
-          select: {
-            id: true,
-            rating: true,
-          }
-        },
-        batches: {
-          where: {
-            status: true
-          },
-          select: {
-            id: true,
-            quantity: true,
-            sellingPrice: true,
-          }
-        }
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
-
-    return products as IProduct[];
-  } catch (error) {
-    console.log(error);
-    return null;
-  }
 }
 
 
