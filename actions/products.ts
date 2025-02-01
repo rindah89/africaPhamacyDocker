@@ -104,7 +104,7 @@ export async function createProduct(data: ProductProps) {
 
 }
 
-export async function getAllProducts() {
+export async function getAllProducts(): Promise<IProduct[] | null> {
 
   try {
 
@@ -120,19 +120,7 @@ export async function getAllProducts() {
 
       include: {
 
-        subCategory: {
-
-          select: {
-
-            id: true,
-
-            title: true,
-
-            slug: true,
-
-          }
-
-        },
+        subCategory: true,
 
         reviews: {
 
@@ -172,7 +160,7 @@ export async function getAllProducts() {
 
 
 
-    return products;
+    return products as IProduct[];
 
   } catch (error) {
 

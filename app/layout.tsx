@@ -6,6 +6,7 @@ import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
 import { ourFileRouter } from "./api/uploadthing/core";
 import { extractRouterConfig } from "uploadthing/server";
 import { siteConfig } from "@/config/site";
+import { prefetchProducts } from "@/lib/prefetch";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -71,11 +72,14 @@ export const metadata: Metadata = {
   manifest: `${siteConfig.url}/site.webmanifest`,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
+  // Trigger prefetch as soon as the root layout loads
+  prefetchProducts();
+
   return (
     <html className="antialiased" lang="en" suppressHydrationWarning>
       <body className={inter.className}>

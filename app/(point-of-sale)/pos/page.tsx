@@ -7,6 +7,7 @@ import AuthorizePageWrapper from "@/components/dashboard/Auth/AuthorizePageWrapp
 import PointOfSale from "@/components/POS/PointOfSale";
 import PaymentModal from "@/components/POS/PaymentModal";
 import { permissionsObj } from "@/config/permissions";
+import { getPrefetchedProducts, getCachedSearchResults } from "@/lib/prefetch";
 
 export default async function page({
   params,
@@ -15,13 +16,17 @@ export default async function page({
   params: { slug: string };
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const { cat = "all", page = "1", limit = "50" } = searchParams;
+  const { cat = "all", page = "1", limit = "50", search } = searchParams;
   
-  // Run queries in parallel using Promise.all
+  // Run queries in parallel using Promise.all and use prefetched products
   const [allCategories, products, allCustomers] = await Promise.all([
     getAllCategories(),
-    getProductsByCategoryId(cat as string, parseInt(page as string), parseInt(limit as string)),
-    getAllUsers({ limit: 100 }) // Limit initial customer load
+    search 
+      ? getCachedSearchResults(search as string)
+      : cat === "all" 
+        ? (await getPrefetchedProducts()).products 
+        : getProductsByCategoryId(cat as string, parseInt(page as string), parseInt(limit as string)),
+    getAllUsers({ limit: 100 })
   ]);
 
   const customers = (allCustomers || []).map((item) => ({
@@ -39,7 +44,8 @@ export default async function page({
           products={products || []}
           selectedCatId={cat as string}
           currentPage={parseInt(page as string)}
-          hasMore={products && products.length === parseInt(limit as string)}
+          hasMore={!search && products && products.length === parseInt(limit as string)}
+          searchQuery={search as string}
         />
       </div>
     </AuthorizePageWrapper>
