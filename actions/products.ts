@@ -110,8 +110,6 @@ export async function getAllProducts() {
 
     const products = await prisma.product.findMany({
 
-      take: 20,
-
       orderBy: {
 
         createdAt: "desc",
@@ -170,6 +168,49 @@ export async function getAllProducts() {
 
   }
 
+}
+
+export async function getAllProductsNoLimit() {
+  try {
+    console.log('Fetching all products...');
+    
+    // First, let's check if there are any products at all
+    const count = await prisma.product.count();
+    console.log('Total number of products in database:', count);
+
+    if (count === 0) {
+      console.log('No products found in the database');
+      return [];
+    }
+
+    // If we have products, fetch them with their relations
+    const products = await prisma.product.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        subCategory: {
+          include: {
+            category: true
+          }
+        }
+      },
+    });
+
+    console.log('Products fetched successfully:', products.length);
+    if (products.length > 0) {
+      console.log('Sample product:', {
+        id: products[0].id,
+        name: products[0].name,
+        stockQty: products[0].stockQty
+      });
+    }
+
+    return products;
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    return null;
+  }
 }
 
 export async function getProductsWithSales() {

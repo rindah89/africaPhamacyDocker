@@ -2,10 +2,13 @@ import DataTable from "@/components/DataTableComponents/DataTable";
 import TableHeader from "@/components/dashboard/Tables/TableHeader";
 import React from "react";
 import { columns } from "./columns";
-import { getAllProducts } from "@/actions/products";
+import { getAllProductsNoLimit } from "@/actions/products";
 
 export default async function page() {
-  const products = (await getAllProducts()) || [];
+  console.log('Products page: Starting to fetch products...');
+  const products = (await getAllProductsNoLimit()) || [];
+  console.log('Products page: Products received:', products.length);
+  
   return (
     <div>
       <TableHeader
