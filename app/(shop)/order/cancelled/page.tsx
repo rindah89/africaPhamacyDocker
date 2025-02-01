@@ -27,47 +27,63 @@ export default function OrderCancelled() {
   const userId = session?.user.id;
   const cartItems = useAppSelector((state) => state.cart.cartItems);
   const dispatch = useAppDispatch();
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const mounted = React.useRef(false);
+
+  React.useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
   function handleRemove(id: string) {
     dispatch(removeProductFromCart(id));
   }
+
   const handleQtyIncrement = (id: string) => {
     dispatch(incrementQty(id));
   };
+
   const handleQtyDecrement = (id: string) => {
     dispatch(decrementQty(id));
   };
+
   const totalSum = cartItems.reduce(
     (sum, item) => sum + item.price * item.qty,
     0
   );
+
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors },
   } = useForm<FeedbackProps>();
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+
   async function submitFeedback(data: FeedbackProps) {
+    if (!mounted.current) return;
     setLoading(true);
     try {
       data.orderItemIds = cartItems.map((item) => item.id);
       data.userId = userId ?? "";
-      // console.log(data);
       const res = await createFeedback(data);
-      if (res) {
+      if (res && mounted.current) {
         toast.success("Your Feedback Submitted Successfully");
         setLoading(false);
         reset();
         dispatch(removeAllProductsFromCart());
         router.push("/");
       }
-      // setLoading(true);
     } catch (error) {
-      setLoading(false);
-      console.log(error);
+      if (mounted.current) {
+        setLoading(false);
+        console.log(error);
+      }
     }
   }
+
   return (
     <div className="container p-8">
       <div className="max-w-xl mx-auto pb-6 -pt-3">

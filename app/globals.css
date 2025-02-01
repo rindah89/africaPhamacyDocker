@@ -3,6 +3,68 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Add support for Forced Colors Mode */
+@media (forced-colors: active) {
+  /* Add high contrast overrides */
+  :root {
+    --background: Canvas;
+    --foreground: CanvasText;
+    --primary: Highlight;
+    --primary-foreground: HighlightText;
+    --secondary: Canvas;
+    --secondary-foreground: CanvasText;
+    --muted: GrayText;
+    --muted-foreground: GrayText;
+    --accent: Canvas;
+    --accent-foreground: CanvasText;
+    --destructive: LinkText;
+    --destructive-foreground: Canvas;
+    --border: CanvasText;
+    --input: Canvas;
+    --ring: Highlight;
+    --chart-1: Highlight;
+    --chart-2: Highlight;
+    --chart-3: Highlight;
+    --chart-4: Highlight;
+    --chart-5: Highlight;
+  }
+
+  /* Ensure buttons and interactive elements have proper contrast */
+  button, 
+  [role="button"],
+  a,
+  input,
+  select,
+  textarea {
+    forced-color-adjust: none;
+    background-color: ButtonFace !important;
+    color: ButtonText !important;
+    border-color: ButtonText !important;
+  }
+
+  /* Ensure SVG icons are visible */
+  svg {
+    forced-color-adjust: auto;
+    fill: currentColor !important;
+    stroke: currentColor !important;
+  }
+
+  /* Ensure proper contrast for disabled elements */
+  button:disabled,
+  [role="button"]:disabled,
+  input:disabled,
+  select:disabled,
+  textarea:disabled {
+    opacity: 1 !important;
+    background-color: GrayText !important;
+    color: ButtonFace !important;
+  }
+
+  /* Ensure images maintain visibility */
+  img {
+    forced-color-adjust: none;
+  }
+}
 
 @layer base {
   :root {
