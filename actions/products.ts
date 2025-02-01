@@ -110,11 +110,9 @@ export async function getAllProducts(): Promise<IProduct[] | null> {
 
     const products = await prisma.product.findMany({
 
-      take: 20,
-
       orderBy: {
 
-        createdAt: "desc",
+        name: "asc",
 
       },
 
@@ -1806,6 +1804,51 @@ export async function getBestSellingProducts(productCount: number) {
 
   }
 
+}
+
+export async function searchProducts(query: string): Promise<IProduct[] | null> {
+  try {
+    const products = await prisma.product.findMany({
+      where: {
+        OR: [
+          { name: { contains: query, mode: "insensitive" } },
+          { productCode: { contains: query, mode: "insensitive" } },
+          { productDetails: { contains: query, mode: "insensitive" } },
+          { subCategory: { title: { contains: query, mode: "insensitive" } } }
+        ],
+        AND: {
+          status: true // Only return active products
+        }
+      },
+      include: {
+        subCategory: true,
+        reviews: {
+          select: {
+            id: true,
+            rating: true,
+          }
+        },
+        batches: {
+          where: {
+            status: true
+          },
+          select: {
+            id: true,
+            quantity: true,
+            sellingPrice: true,
+          }
+        }
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    return products as IProduct[];
+  } catch (error) {
+    console.log(error);
+    return null;
+  }
 }
 
 

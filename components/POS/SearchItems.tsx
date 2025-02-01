@@ -1,8 +1,11 @@
 "use client";
 
 import { Product } from "@prisma/client";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Input } from "../ui/input";
+import { searchProducts } from "@/actions/products";
+import { useDebounce } from "@/hooks/useDebounce";
+import { Loader2 } from "lucide-react";
 
 interface SearchItemsProps {
   data: Product[];
@@ -12,17 +15,45 @@ interface SearchItemsProps {
 
 export default function SearchItems({ data, onSearch, onBarcodeScan }: SearchItemsProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Debounce the search to avoid too many server requests
+  const debouncedSearch = useDebounce(async (value: string) => {
+    if (!value.trim()) {
+      onSearch(data); // Reset to original data if search is empty
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const results = await searchProducts(value);
+      if (results) {
+        onSearch(results);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  }, 300);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
     
-    // Filter results for normal search
-    const results = data.filter((item) =>
-      item.name.toLowerCase().includes(value.toLowerCase()) ||
-      item.productCode.toLowerCase().includes(value.toLowerCase())
-    );
-    onSearch(results);
+    // If it looks like a barcode (exact match), don't debounce
+    const exactMatch = data.find(p => p.productCode === value);
+    if (exactMatch) {
+      if (onBarcodeScan) {
+        onBarcodeScan(exactMatch);
+        setSearchTerm('');
+        onSearch(data);
+      }
+      return;
+    }
+
+    // Otherwise, use debounced search
+    debouncedSearch(value);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -38,7 +69,7 @@ export default function SearchItems({ data, onSearch, onBarcodeScan }: SearchIte
   };
 
   return (
-    <div className="col-span-3 pb-4 px-4">
+    <div className="col-span-3 pb-4 px-4 relative">
       <Input
         type="search"
         placeholder="Search products or scan barcode..."
@@ -48,6 +79,11 @@ export default function SearchItems({ data, onSearch, onBarcodeScan }: SearchIte
         className="w-full"
         autoFocus
       />
+      {isSearching && (
+        <div className="absolute right-8 top-2">
+          <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
+        </div>
+      )}
     </div>
   );
 }
