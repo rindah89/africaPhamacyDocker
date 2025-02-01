@@ -110,6 +110,8 @@ export async function getAllProducts() {
 
     const products = await prisma.product.findMany({
 
+      take: 20,
+
       orderBy: {
 
         createdAt: "desc",
@@ -118,15 +120,47 @@ export async function getAllProducts() {
 
       include: {
 
-        subCategory: true,
+        subCategory: {
 
-        reviews: true,
+          select: {
+
+            id: true,
+
+            title: true,
+
+            slug: true,
+
+          }
+
+        },
+
+        reviews: {
+
+          select: {
+
+            id: true,
+
+            rating: true,
+
+          }
+
+        },
 
         batches: {
 
           where: {
 
             status: true
+
+          },
+
+          select: {
+
+            id: true,
+
+            quantity: true,
+
+            sellingPrice: true,
 
           }
 
