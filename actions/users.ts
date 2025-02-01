@@ -70,17 +70,20 @@ export async function createBulkUsers(users: UserProps[]) {
     console.log(error);
   }
 }
-export async function getAllUsers() {
+export async function getAllUsers({ limit }: { limit?: number } = {}) {
   try {
     const users = await prisma.user.findMany({
+      ...(limit ? { take: limit } : {}),
       orderBy: {
         createdAt: "desc",
       },
-      include: {
-        role: true,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true,
       },
     });
-
     return users;
   } catch (error) {
     console.log(error);

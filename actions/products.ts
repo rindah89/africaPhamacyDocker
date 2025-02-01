@@ -334,166 +334,56 @@ export async function getSearchProducts() {
 
 }
 
-export async function getProductsByCategoryId(catId: string) {
-
+export async function getProductsByCategoryId(catId: string, page: number = 1, limit: number = 50) {
   try {
-
-    if (catId === "all") {
-
-      const products = await prisma.product.findMany({
-
-        select: {
-
-          id: true,
-
-          name: true,
-
-          content: true,
-
-          productCode: true,
-
-          stockQty: true,
-
-          productPrice: true,
-
-          productThumbnail: true,
-
+    const skip = (page - 1) * limit;
+    
+    // Base query conditions
+    const where = catId === "all" 
+      ? { status: true }
+      : { 
           status: true,
-
-          slug: true,
-
-          createdAt: true,
-
-          updatedAt: true,
-
-          productCost: true,
-
-          productDetails: true,
-
-          productImages: true,
-
-          supplierId: true,
-
-          supplierPrice: true,
-
-          alertQty: true,
-
-          productTax: true,
-
-          taxMethod: true,
-
-          brandId: true,
-
-          subCategoryId: true,
-
-          unitId: true,
-
-          isFeatured: true,
-
-          supplier: {
-
-            select: {
-
-              name: true
-
-            }
-
-          }
-
-        }
-
-      });
-
-      return products;
-
-    } else {
-
-      const products = await prisma.product.findMany({
-
-        where: {
-
           subCategory: {
-
-            categoryId: catId,
-
-          },
-
-        },
-
-        select: {
-
-          id: true,
-
-          name: true,
-
-          content: true,
-
-          productCode: true,
-
-          stockQty: true,
-
-          productPrice: true,
-
-          productThumbnail: true,
-
-          status: true,
-
-          slug: true,
-
-          createdAt: true,
-
-          updatedAt: true,
-
-          productCost: true,
-
-          productDetails: true,
-
-          productImages: true,
-
-          supplierId: true,
-
-          supplierPrice: true,
-
-          alertQty: true,
-
-          productTax: true,
-
-          taxMethod: true,
-
-          brandId: true,
-
-          subCategoryId: true,
-
-          unitId: true,
-
-          isFeatured: true,
-
-          supplier: {
-
-            select: {
-
-              name: true
-
-            }
-
+            categoryId: catId
           }
+        };
 
+    const products = await prisma.product.findMany({
+      where,
+      take: limit,
+      skip,
+      orderBy: {
+        name: "asc"
+      },
+      select: {
+        id: true,
+        name: true,
+        productCode: true,
+        stockQty: true,
+        productPrice: true,
+        productThumbnail: true,
+        status: true,
+        // Only include essential fields for POS
+        batches: {
+          where: {
+            status: true,
+            quantity: { gt: 0 }
+          },
+          select: {
+            id: true,
+            quantity: true,
+            batchNumber: true,
+            expiryDate: true
+          }
         }
+      }
+    });
 
-      });
-
-      return products;
-
-    }
-
+    return products;
   } catch (error) {
-
-    console.log(error);
-
+    console.error("Error fetching products:", error);
     return null;
-
   }
-
 }
 
 export async function getProductsByBrandId(brandId: string) {

@@ -15,26 +15,31 @@ export default async function page({
   params: { slug: string };
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
-  const { cat = "all" } = searchParams;
-  const allCategories = (await getAllCategories()) || [];
-  const products = (await getProductsByCategoryId(cat as string)) || [];
-  const allCustomers = (await getAllUsers()) || [];
-  const customers = allCustomers.map((item) => {
-    return {
-      label: item.name,
-      value: item.id,
-      email: item.email,
-    };
-  });
+  const { cat = "all", page = "1", limit = "50" } = searchParams;
+  
+  // Run queries in parallel using Promise.all
+  const [allCategories, products, allCustomers] = await Promise.all([
+    getAllCategories(),
+    getProductsByCategoryId(cat as string, parseInt(page as string), parseInt(limit as string)),
+    getAllUsers({ limit: 100 }) // Limit initial customer load
+  ]);
+
+  const customers = (allCustomers || []).map((item) => ({
+    label: item.name,
+    value: item.id,
+    email: item.email,
+  }));
 
   return (
     <AuthorizePageWrapper requiredPermission={permissionsObj.canViewPos}>
       <div className="">
         <PointOfSale
           customers={customers}
-          categories={allCategories}
-          products={products}
+          categories={allCategories || []}
+          products={products || []}
           selectedCatId={cat as string}
+          currentPage={parseInt(page as string)}
+          hasMore={products && products.length === parseInt(limit as string)}
         />
       </div>
     </AuthorizePageWrapper>
