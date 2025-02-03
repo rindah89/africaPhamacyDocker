@@ -197,6 +197,11 @@ export const sidebarLinks: ISidebarLink[] = [
         access: "canViewProducts",
       },
       {
+        title: "Sales Report",
+        href: "/dashboard/reports/sales",
+        access: "canViewSales",
+      },
+      {
         title: "Customers Report",
         href: "/dashboard/reports/customers",
         access: "canViewCustomers",

@@ -1,19 +1,24 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { columns, exportToPDF } from "@/app/(back-office)/dashboard/reports/inventory/columns";
+import { columns } from "@/app/(back-office)/dashboard/reports/inventory/columns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoney } from "@/lib/formatMoney";
 import TableHeader from "@/components/dashboard/Tables/TableHeader";
 import DataTable from "@/components/DataTableComponents/DataTable";
-import { IProduct } from "@/types/types";
 
 interface InventoryReportProps {
-  products: IProduct[];
+  products: any[];
+  totals: {
+    totalItems: number;
+    totalStockValue: number;
+    totalPotentialValue: number;
+    totalPotentialProfit: number;
+  };
 }
 
-export default function InventoryReport({ products }: InventoryReportProps) {
-  const [selectedProducts, setSelectedProducts] = useState<IProduct[]>([]);
+export default function InventoryReport({ products, totals }: InventoryReportProps) {
+  const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
   
   // Sort products by name alphabetically (memoized)
   const sortedProducts = useMemo(() => 
@@ -21,41 +26,24 @@ export default function InventoryReport({ products }: InventoryReportProps) {
     [products]
   );
 
-  // Calculate totals based on selected products or all products (memoized)
-  const { totalItems, totalStockValue, totalPotentialValue, totalPotentialProfit } = useMemo(() => {
-    const productsToCalculate = selectedProducts.length > 0 ? selectedProducts : sortedProducts;
+  // Calculate totals based on selected products or use provided totals
+  const displayTotals = useMemo(() => {
+    if (selectedProducts.length === 0) {
+      return totals;
+    }
 
-    const totalItems = productsToCalculate.reduce((acc, product) => {
-      return acc + product.stockQty;
-    }, 0);
-
-    const totalStockValue = productsToCalculate.reduce((acc, product) => {
-      return acc + (product.stockQty * product.supplierPrice);
-    }, 0);
-
-    const totalPotentialValue = productsToCalculate.reduce((acc, product) => {
-      const sellingPrice = product.batches && product.batches.length > 0
-        ? product.batches[0].costPerUnit
-        : product.productPrice;
-      return acc + (product.stockQty * sellingPrice);
-    }, 0);
-
-    const totalPotentialProfit = totalPotentialValue - totalStockValue;
-
-    return {
-      totalItems,
-      totalStockValue,
-      totalPotentialValue,
-      totalPotentialProfit
-    };
-  }, [selectedProducts, sortedProducts]);
-
-  // Custom export function that passes selected products (memoized)
-  const handleExportPDF = useMemo(() => {
-    return (data: IProduct[]) => {
-      exportToPDF(selectedProducts.length > 0 ? selectedProducts : data);
-    };
-  }, [selectedProducts]);
+    return selectedProducts.reduce((acc, product) => ({
+      totalItems: acc.totalItems + product.stockQty,
+      totalStockValue: acc.totalStockValue + product.stockValue,
+      totalPotentialValue: acc.totalPotentialValue + product.potentialValue,
+      totalPotentialProfit: acc.totalPotentialProfit + product.potentialProfit
+    }), {
+      totalItems: 0,
+      totalStockValue: 0,
+      totalPotentialValue: 0,
+      totalPotentialProfit: 0
+    });
+  }, [selectedProducts, totals]);
 
   return (
     <div className="space-y-4">
@@ -65,7 +53,7 @@ export default function InventoryReport({ products }: InventoryReportProps) {
             <CardTitle className="text-sm font-medium">Total Items in Stock</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalItems.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{displayTotals.totalItems.toLocaleString()}</div>
           </CardContent>
         </Card>
         <Card>
@@ -73,7 +61,7 @@ export default function InventoryReport({ products }: InventoryReportProps) {
             <CardTitle className="text-sm font-medium">Total Stock Value (Cost)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatMoney(totalStockValue)}</div>
+            <div className="text-2xl font-bold">{formatMoney(displayTotals.totalStockValue)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -81,7 +69,7 @@ export default function InventoryReport({ products }: InventoryReportProps) {
             <CardTitle className="text-sm font-medium">Total Stock Value (Selling)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatMoney(totalPotentialValue)}</div>
+            <div className="text-2xl font-bold">{formatMoney(displayTotals.totalPotentialValue)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -89,7 +77,7 @@ export default function InventoryReport({ products }: InventoryReportProps) {
             <CardTitle className="text-sm font-medium">Total Potential Profit</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatMoney(totalPotentialProfit)}</div>
+            <div className="text-2xl font-bold">{formatMoney(displayTotals.totalPotentialProfit)}</div>
           </CardContent>
         </Card>
       </div>
@@ -102,7 +90,6 @@ export default function InventoryReport({ products }: InventoryReportProps) {
           data={sortedProducts}
           model="product"
           showPdfExport={true}
-          customExportPDF={handleExportPDF}
         />
         <DataTable 
           columns={columns} 

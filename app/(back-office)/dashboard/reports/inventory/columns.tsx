@@ -120,7 +120,7 @@ export const exportToPDF = (data: IProduct[]) => {
   doc.save("inventory-report.pdf");
 };
 
-export const columns: ColumnDef<IProduct>[] = [
+export const columns: ColumnDef<any>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -150,13 +150,28 @@ export const columns: ColumnDef<IProduct>[] = [
     ),
   },
   {
+    accessorKey: "productCode",
+    header: ({ column }) => (
+      <SortableColumn column={column} title="Product Code" />
+    ),
+  },
+  {
+    accessorKey: "category",
+    header: ({ column }) => (
+      <SortableColumn column={column} title="Category" />
+    ),
+  },
+  {
     accessorKey: "subCategory",
-    header: "Category",
-    cell: ({ row }) => {
-      const product = row.original;
-      const subCategory = product.subCategory.title;
-      return <h2>{subCategory}</h2>;
-    },
+    header: ({ column }) => (
+      <SortableColumn column={column} title="Sub Category" />
+    ),
+  },
+  {
+    accessorKey: "brand",
+    header: ({ column }) => (
+      <SortableColumn column={column} title="Brand" />
+    ),
   },
   {
     accessorKey: "stockQty",
@@ -170,8 +185,7 @@ export const columns: ColumnDef<IProduct>[] = [
       <SortableColumn column={column} title="Supplier Price" />
     ),
     cell: ({ row }) => {
-      const product = row.original;
-      return <h2>{formatMoney(product.supplierPrice)}</h2>;
+      return <div>{formatMoney(row.original.supplierPrice)}</div>;
     },
   },
   {
@@ -180,8 +194,7 @@ export const columns: ColumnDef<IProduct>[] = [
       <SortableColumn column={column} title="Selling Price" />
     ),
     cell: ({ row }) => {
-      const product = row.original;
-      return <h2>{formatMoney(product.productPrice)}</h2>;
+      return <div>{formatMoney(row.original.productPrice)}</div>;
     },
   },
   {
@@ -190,9 +203,7 @@ export const columns: ColumnDef<IProduct>[] = [
       <SortableColumn column={column} title="Stock Value (Cost)" />
     ),
     cell: ({ row }) => {
-      const product = row.original;
-      const stockValue = product.stockQty * product.supplierPrice;
-      return <h2>{formatMoney(stockValue)}</h2>;
+      return <div>{formatMoney(row.original.stockValue)}</div>;
     },
   },
   {
@@ -201,9 +212,7 @@ export const columns: ColumnDef<IProduct>[] = [
       <SortableColumn column={column} title="Stock Value (Selling)" />
     ),
     cell: ({ row }) => {
-      const product = row.original;
-      const potentialValue = product.stockQty * product.productPrice;
-      return <h2>{formatMoney(potentialValue)}</h2>;
+      return <div>{formatMoney(row.original.potentialValue)}</div>;
     },
   },
   {
@@ -212,11 +221,7 @@ export const columns: ColumnDef<IProduct>[] = [
       <SortableColumn column={column} title="Potential Profit" />
     ),
     cell: ({ row }) => {
-      const product = row.original;
-      const stockValue = product.stockQty * product.supplierPrice;
-      const potentialValue = product.stockQty * product.productPrice;
-      const potentialProfit = potentialValue - stockValue;
-      return <h2>{formatMoney(potentialProfit)}</h2>;
+      return <div>{formatMoney(row.original.potentialProfit)}</div>;
     },
   }
 ];

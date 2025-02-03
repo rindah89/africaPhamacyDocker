@@ -1,9 +1,10 @@
 import React from "react";
-import { getAllProducts } from "@/actions/products";
 import InventoryReport from "@/components/dashboard/Reports/InventoryReport";
-import { IProduct } from "@/types/types";
+import { getInventoryReport } from "@/actions/reports";
 
 export default async function page() {
-  const products = (await getAllProducts()) || [];
-  return <InventoryReport products={products as IProduct[]} />;
+  const data = await getInventoryReport();
+  if (!data) return <div>Error loading inventory report</div>;
+  
+  return <InventoryReport products={data.products} totals={data.totals} />;
 }
