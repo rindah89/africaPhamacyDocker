@@ -27,17 +27,6 @@ export const exportToPDF = (data: IProduct[]) => {
 
   // Calculate inventory statistics
   const totalItems = data.reduce((sum, item) => sum + item.stockQty, 0);
-  const totalCost = data.reduce((sum, item) => sum + (item.stockQty * item.supplierPrice), 0);
-  const totalSelling = data.reduce((sum, item) => {
-    const sellingPrice = item.productPrice;
-    return sum + (item.stockQty * sellingPrice);
-  }, 0);
-  const totalProfit = totalSelling - totalCost;
-
-  // Format currency with comma separators
-  const formatCurrency = (value: number) => {
-    return value.toLocaleString('en-US', { maximumFractionDigits: 0 }) + " FCFA";
-  };
 
   // Summary table
   doc.autoTable({
@@ -45,10 +34,7 @@ export const exportToPDF = (data: IProduct[]) => {
     head: [[{ content: 'Metric', styles: { fillColor: [39, 174, 96] } }, 
             { content: 'Value', styles: { fillColor: [39, 174, 96] } }]],
     body: [
-      ['Total Items in Stock', totalItems.toLocaleString()],
-      ['Total Stock Value (Cost)', formatCurrency(totalCost)],
-      ['Total Stock Value (Selling)', formatCurrency(totalSelling)],
-      ['Total Potential Profit', formatCurrency(totalProfit)]
+      ['Total Items in Stock', totalItems.toLocaleString()]
     ],
     theme: 'grid',
     styles: { fontSize: 10 },
@@ -62,28 +48,17 @@ export const exportToPDF = (data: IProduct[]) => {
   // Main inventory table
   const tableColumns = [
     "Product Name",
-    "Category",
     "Stock Qty",
     "Supplier Price (FCFA)",
-    "Selling Price (FCFA)",
-    "Stock Value Cost (FCFA)",
-    "Stock Value Selling (FCFA)",
-    "Potential Profit (FCFA)"
+    "Selling Price (FCFA)"
   ];
 
   const tableRows = data.map((item) => {
-    const sellingPrice = item.productPrice;
-    const stockValueCost = item.stockQty * item.supplierPrice;
-    const stockValueSelling = item.stockQty * sellingPrice;
     return [
       item.name,
-      item.subCategory.title,
       item.stockQty.toString(),
       item.supplierPrice.toLocaleString('en-US'),
-      sellingPrice.toLocaleString('en-US'),
-      stockValueCost.toLocaleString('en-US'),
-      stockValueSelling.toLocaleString('en-US'),
-      (stockValueSelling - stockValueCost).toLocaleString('en-US')
+      item.productPrice.toLocaleString('en-US')
     ];
   });
 
@@ -96,20 +71,16 @@ export const exportToPDF = (data: IProduct[]) => {
     styles: { fontSize: 8 },
     columnStyles: {
       0: { cellWidth: 'auto' },
-      1: { cellWidth: 'auto' },
+      1: { cellWidth: 'auto', halign: 'right' },
       2: { cellWidth: 'auto', halign: 'right' },
-      3: { cellWidth: 'auto', halign: 'right' },
-      4: { cellWidth: 'auto', halign: 'right' },
-      5: { cellWidth: 'auto', halign: 'right' },
-      6: { cellWidth: 'auto', halign: 'right' },
-      7: { cellWidth: 'auto', halign: 'right' }
+      3: { cellWidth: 'auto', halign: 'right' }
     },
     didDrawPage: function() {
       // Add page number at the bottom
       const pageNumber = (doc as any).internal.getNumberOfPages();
       doc.setFontSize(10);
       doc.text(
-        `Page ${pageNumber}`,
+        `Page ${pageNumber} of ${(doc as any).internal.getNumberOfPages()}`,
         doc.internal.pageSize.width / 2,
         doc.internal.pageSize.height - 10,
         { align: "center" }
@@ -156,24 +127,6 @@ export const columns: ColumnDef<any>[] = [
     ),
   },
   {
-    accessorKey: "category",
-    header: ({ column }) => (
-      <SortableColumn column={column} title="Category" />
-    ),
-  },
-  {
-    accessorKey: "subCategory",
-    header: ({ column }) => (
-      <SortableColumn column={column} title="Sub Category" />
-    ),
-  },
-  {
-    accessorKey: "brand",
-    header: ({ column }) => (
-      <SortableColumn column={column} title="Brand" />
-    ),
-  },
-  {
     accessorKey: "stockQty",
     header: ({ column }) => (
       <SortableColumn column={column} title="Stock Qty" />
@@ -195,33 +148,6 @@ export const columns: ColumnDef<any>[] = [
     ),
     cell: ({ row }) => {
       return <div>{formatMoney(row.original.productPrice)}</div>;
-    },
-  },
-  {
-    accessorKey: "stockValue",
-    header: ({ column }) => (
-      <SortableColumn column={column} title="Stock Value (Cost)" />
-    ),
-    cell: ({ row }) => {
-      return <div>{formatMoney(row.original.stockValue)}</div>;
-    },
-  },
-  {
-    accessorKey: "potentialValue",
-    header: ({ column }) => (
-      <SortableColumn column={column} title="Stock Value (Selling)" />
-    ),
-    cell: ({ row }) => {
-      return <div>{formatMoney(row.original.potentialValue)}</div>;
-    },
-  },
-  {
-    accessorKey: "potentialProfit",
-    header: ({ column }) => (
-      <SortableColumn column={column} title="Potential Profit" />
-    ),
-    cell: ({ row }) => {
-      return <div>{formatMoney(row.original.potentialProfit)}</div>;
     },
   }
 ];
