@@ -45,15 +45,8 @@ export async function getInventoryReport() {
 
     // Calculate additional metrics
     const inventoryReport = products.map(product => {
-      const stockValue = product.stockQty * product.supplierPrice;
-      const potentialValue = product.stockQty * product.productPrice;
-      const potentialProfit = potentialValue - stockValue;
-
       return {
         ...product,
-        stockValue,
-        potentialValue,
-        potentialProfit,
         category: product.subCategory.category.title,
         subCategory: product.subCategory.title,
         brand: product.brand.title
@@ -63,16 +56,10 @@ export async function getInventoryReport() {
     // Calculate totals
     const totals = inventoryReport.reduce((acc, product) => {
       return {
-        totalItems: acc.totalItems + product.stockQty,
-        totalStockValue: acc.totalStockValue + product.stockValue,
-        totalPotentialValue: acc.totalPotentialValue + product.potentialValue,
-        totalPotentialProfit: acc.totalPotentialProfit + product.potentialProfit
+        totalItems: acc.totalItems + product.stockQty
       };
     }, {
-      totalItems: 0,
-      totalStockValue: 0,
-      totalPotentialValue: 0,
-      totalPotentialProfit: 0
+      totalItems: 0
     });
 
     return {
