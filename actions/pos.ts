@@ -143,51 +143,91 @@ export async function processPaymentAndOrder(
   amountPaid: number
 ) {
   try {
-    const result = await prisma.$transaction(async (tx: TransactionClient) => {
-      // Create the order
-      const order = await tx.lineOrder.create({
-        data: {
-          orderNumber,
-          orderType: orderData.orderType,
-          source: orderData.source,
-          orderAmount: orderData.orderAmount,
-          customerId: customerData.customerId,
-          customerName: customerData.customerName,
-          customerEmail: customerData.customerEmail,
-          lineOrderItems: {
-            create: orderData.orderItems.map(item => ({
-              productId: item.id,
-              name: item.name,
-              qty: item.qty,
-              price: item.price,
-              productThumbnail: item.productThumbnail
-            }))
-          }
+    // Create order and line items only
+    const order = await prisma.lineOrder.create({
+      data: {
+        orderNumber,
+        orderType: orderData.orderType,
+        source: orderData.source,
+        orderAmount: orderData.orderAmount,
+        customerId: customerData.customerId,
+        customerName: customerData.customerName,
+        customerEmail: customerData.customerEmail,
+        lineOrderItems: {
+          create: orderData.orderItems.map(item => ({
+            productId: item.id,
+            name: item.name,
+            qty: item.qty,
+            price: item.price,
+            productThumbnail: item.productThumbnail
+          }))
         }
-      });
-
-      // Update product stock quantities
-      for (const item of orderData.orderItems) {
-        await tx.product.update({
-          where: { id: item.id },
-          data: {
-            stockQty: {
-              decrement: item.qty
-            }
-          }
-        });
+      },
+      include: {
+        lineOrderItems: true
       }
-
-      return order;
     });
 
     revalidatePath("/pos");
-    return { success: true, order: result };
+    return { success: true, order };
   } catch (error: any) {
-    console.error("Payment processing error:", error);
+    console.error("Order creation error:", error);
     return {
       success: false,
-      message: error.message || "Failed to process payment and create order"
+      message: error.message || "Failed to create order"
+    };
+  }
+}
+
+// New function to create sales records
+export async function createSalesRecords(
+  orderId: string,
+  orderItems: OrderLineItem[],
+  customerName: string,
+  customerEmail: string
+) {
+  try {
+    // Process items in chunks to avoid timeouts
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < orderItems.length; i += CHUNK_SIZE) {
+      const chunk = orderItems.slice(i, i + CHUNK_SIZE);
+      
+      await prisma.$transaction(async (tx: TransactionClient) => {
+        for (const item of chunk) {
+          // Update stock
+          await tx.product.update({
+            where: { id: item.id },
+            data: { stockQty: { decrement: item.qty } }
+          });
+
+          // Create sale record
+          await tx.sale.create({
+            data: {
+              orderId: orderId,
+              productId: item.id,
+              qty: item.qty,
+              salePrice: item.price,
+              productName: item.name,
+              productImage: item.productThumbnail || '',
+              customerName: customerName || 'Walk-in Customer',
+              customerEmail: customerEmail || '',
+            },
+          });
+        }
+      });
+      
+      // Small delay between chunks
+      if (i + CHUNK_SIZE < orderItems.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Sales creation error:", error);
+    return {
+      success: false,
+      message: error.message || "Failed to create sales records"
     };
   }
 }
@@ -200,7 +240,7 @@ export async function createLineOrder(
   try {
     console.log('Starting order creation process...');
     
-    // Pre-check available batches for all products before starting transaction
+    // Pre-check available batches
     console.log('Checking batch quantities...');
     const batchChecks = await Promise.all(orderItems.map(async (item) => {
       const availableBatches = await prisma.productBatch.findMany({
@@ -212,150 +252,107 @@ export async function createLineOrder(
         orderBy: { expiryDate: 'asc' }
       });
 
-      const availableQty = availableBatches.reduce((sum, batch) => sum + batch.quantity, 0);
-      console.log(`Product ${item.name}: Required qty=${item.qty}, Available qty=${availableQty}`);
-      
+      const availableQty = availableBatches.reduce((sum: number, batch: { quantity: number }) => sum + batch.quantity, 0);
       if (availableQty < item.qty) {
         throw new Error(`Insufficient batch quantity for product: ${item.name}`);
       }
       return { item, availableBatches };
     }));
 
-    console.log('Starting first transaction - Critical Operations...');
-    // First transaction for critical operations
-    const lineOrderId = await prisma.$transaction(async (transaction: TransactionClient) => {
-      // Create the Line Order first
-      const lineOrder = await transaction.lineOrder.create({
-        data: {
-          customerId: customerData.customerId,
-          customerName: customerData.customerName,
-          customerEmail: customerData.customerEmail,
-          firstName: customerData.firstName,
-          lastName: customerData.lastName,
-          phone: customerData.phone,
-          email: customerData.email,
-          streetAddress: customerData.streetAddress,
-          apartment: customerData.apartment,
-          city: customerData.city,
-          state: customerData.state,
-          zipCode: customerData.zipCode,
-          country: customerData.country,
-          paymentMethod: customerData.method ?? 'NONE' as PaymentMethod,
-          orderNumber: generateOrderNumber(),
-          orderAmount,
-          orderType,
-          source,
-          status: source === "pos" ? "PENDING" : "PROCESSING",
-        },
-      });
-      console.log('Main order created with ID:', lineOrder.id);
+    // Create the base order first
+    const lineOrder = await prisma.lineOrder.create({
+      data: {
+        customerId: customerData.customerId,
+        customerName: customerData.customerName,
+        customerEmail: customerData.customerEmail,
+        firstName: customerData.firstName,
+        lastName: customerData.lastName,
+        phone: customerData.phone,
+        email: customerData.email,
+        streetAddress: customerData.streetAddress,
+        apartment: customerData.apartment,
+        city: customerData.city,
+        state: customerData.state,
+        zipCode: customerData.zipCode,
+        country: customerData.country,
+        paymentMethod: customerData.method ?? 'NONE' as PaymentMethod,
+        orderNumber: generateOrderNumber(),
+        orderAmount,
+        orderType,
+        source,
+        status: source === "pos" ? "PENDING" : "PROCESSING",
+      }
+    });
 
-      // Process all items in parallel within the transaction
-      console.log('Processing order items...');
-      await Promise.all(batchChecks.map(async ({ item, availableBatches }) => {
-        let remainingQty = item.qty;
-        
-        // Update batches
-        console.log(`Updating batches for product ${item.name}...`);
-        for (const batch of availableBatches) {
-          if (remainingQty <= 0) break;
-          const deductionQty = Math.min(batch.quantity, remainingQty);
-          await transaction.productBatch.update({
-            where: { id: batch.id },
-            data: { quantity: { decrement: deductionQty } }
+    // Process items in chunks
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < batchChecks.length; i += CHUNK_SIZE) {
+      const chunk = batchChecks.slice(i, i + CHUNK_SIZE);
+      
+      await prisma.$transaction(async (tx: TransactionClient) => {
+        for (const { item, availableBatches } of chunk) {
+          let remainingQty = item.qty;
+          
+          // Update batches
+          for (const batch of availableBatches) {
+            if (remainingQty <= 0) break;
+            const deductionQty = Math.min(batch.quantity, remainingQty);
+            await tx.productBatch.update({
+              where: { id: batch.id },
+              data: { quantity: { decrement: deductionQty } }
+            });
+            remainingQty -= deductionQty;
+          }
+
+          // Update product stock
+          await tx.product.update({
+            where: { id: item.id },
+            data: { stockQty: { decrement: item.qty } }
           });
-          remainingQty -= deductionQty;
+
+          // Create line order item
+          await tx.lineOrderItem.create({
+            data: {
+              orderId: lineOrder.id,
+              productId: item.id,
+              name: item.name,
+              price: item.price,
+              qty: item.qty,
+              productThumbnail: item.productThumbnail,
+            }
+          });
         }
+      });
+    }
 
-        // Update product stock
-        console.log(`Updating stock for product ${item.name}...`);
-        await transaction.product.update({
-          where: { id: item.id },
-          data: { stockQty: { decrement: item.qty } },
-        });
-
-        // Create line order item
-        console.log(`Creating line item for product ${item.name}...`);
-        await transaction.lineOrderItem.create({
-          data: {
-            orderId: lineOrder.id,
-            productId: item.id,
-            name: item.name,
-            price: item.price,
-            qty: item.qty,
-            productThumbnail: item.productThumbnail,
-          },
-        });
-      }));
-
-      console.log('Critical operations completed');
-      return lineOrder.id;
-    }, {
-      timeout: 14000 // Increased timeout to 14 seconds
-    });
-
-    // Second transaction for non-critical operations (sales records)
-    console.log('Starting second transaction - Sales Records...');
-    await prisma.$transaction(async (transaction: TransactionClient) => {
-      await Promise.all(orderItems.map(async (item) => {
-        // Create sale record
-        console.log(`Creating sale record for product ${item.name}...`);
-        await transaction.sale.create({
-          data: {
-            orderId: lineOrderId,
-            productId: item.id,
-            qty: item.qty,
-            salePrice: item.price,
-            productName: item.name,
-            productImage: item.productThumbnail,
-            customerName: customerData.customerName,
-            customerEmail: customerData.customerEmail,
-          },
-        });
-      }));
-      console.log('Sales records created successfully');
-    }, {
-      timeout: 14000 // Increased timeout to 14 seconds
-    });
-
-    console.log('All transactions completed successfully');
-
-    // Handle non-critical operations outside transactions
-    console.log('Processing post-transaction operations...');
+    // Handle notifications outside of transactions
     const updatedProducts = await prisma.product.findMany({
       where: { id: { in: orderItems.map(item => item.id) } }
     });
 
-    // Create notifications for low stock outside the transaction
-    await Promise.all(updatedProducts.map(async (product: Product) => {
+    for (const product of updatedProducts) {
       if (product.stockQty < product.alertQty) {
         const message = product.stockQty === 0
           ? `The stock of ${product.name} is out. Current stock: ${product.stockQty}.`
           : `The stock of ${product.name} has gone below threshold. Current stock: ${product.stockQty}.`;
-        const statusText = product.stockQty === 0 ? "Stock Out" : "Warning";
-        const status: NotificationStatus = product.stockQty === 0 ? "DANGER" : "WARNING";
-
         await createNotification({
           message,
-          status,
-          statusText,
+          status: product.stockQty === 0 ? "DANGER" : "WARNING",
+          statusText: product.stockQty === 0 ? "Stock Out" : "Warning",
         });
       }
-    }));
+    }
 
     revalidatePath("/dashboard/sales");
 
-    console.log('Fetching final order details...');
     const savedLineOrder = await prisma.lineOrder.findUnique({
-      where: { id: lineOrderId },
+      where: { id: lineOrder.id },
       include: { lineOrderItems: true },
     });
 
-    console.log('Order creation completed successfully');
     return savedLineOrder;
   } catch (error) {
     console.error("Transaction error:", error);
-    // Add more detailed error information
     if (error instanceof Error) {
       console.error("Error name:", error.name);
       console.error("Error message:", error.message);

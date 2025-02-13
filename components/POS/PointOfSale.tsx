@@ -110,6 +110,8 @@ export default function PointOfSale({
 
   const [orderNumber, setOrderNumber] = useState<string>("");
 
+  const [createdOrderId, setCreatedOrderId] = useState<string>("");
+
   const orderLineItems = useAppSelector((state) => state.pos.products);
 
   const [barcodeInput, setBarcodeInput] = useState('');
@@ -119,6 +121,10 @@ export default function PointOfSale({
   const [orderData, setOrderData] = useState<any>(null);
 
   const [validatedCustomerData, setValidatedCustomerData] = useState<any>(null);
+
+  const [showReceipt, setShowReceipt] = useState(false);
+
+  const [amountPaid, setAmountPaid] = useState(0);
 
   
 
@@ -252,144 +258,174 @@ export default function PointOfSale({
 
 
 
-  // Add logging to initial render
-
-  useEffect(() => {
-
-    console.log('Initial products:', products);
-
-    console.log('Initial searchResults:', searchResults);
-
-  }, [products]);
-
-
-
-  // Add logging when searchResults change
-
-  useEffect(() => {
-
-    console.log('SearchResults updated:', searchResults);
-
-  }, [searchResults]);
+  
 
 
 
   async function handleCreateOrder() {
+    console.log('Starting order creation...', {
+      selectedCustomer,
+      orderLineItems: orderLineItems.length
+    });
 
     if (!selectedCustomer.value) {
-
+      console.log('No customer selected');
       toast.error("Please select a customer");
-
       return;
-
     }
 
     setProcessing(true);
     console.log('Starting order validation...');
 
     const customer = customers.find(c => c.value === selectedCustomer.value);
-
     if (!customer) {
-
+      console.log('Selected customer not found', { selectedCustomer });
       toast.error("Selected customer not found");
-
       setProcessing(false);
-
       return;
-
     }
 
     if (!orderLineItems || orderLineItems.length === 0) {
-
+      console.log('No items in order');
       toast.error("Please add items to the order");
-
       setProcessing(false);
-
       return;
-
     }
 
     const customerData = {
-
       customerId: customer.value,
-
       customerName: customer.label,
-
       customerEmail: customer.email,
-
     };
 
     const newOrderData = {
-
       orderItems: orderLineItems,
-
       orderAmount: subTotal,
-
       orderType: "Sale",
-
       source: "pos",
-
     };
 
     try {
-
-      console.log('Validating order...');
-
+      console.log('Validating order...', { customerData, newOrderData });
       const validationResult = await validateOrder(newOrderData, customerData);
+      console.log('Validation result:', validationResult);
 
       if (validationResult.success) {
-
-        setOrderNumber(validationResult.orderNumber);
-
+        setOrderNumber(validationResult.orderNumber || '');
         setOrderData(newOrderData);
-
         setValidatedCustomerData(customerData);
-
         setShowPaymentModal(true);
-
+        console.log('Order validated, showing payment modal', {
+          orderNumber: validationResult.orderNumber,
+          customerData,
+          newOrderData
+        });
         toast.success("Order validated successfully");
-
       } else {
-
+        console.error('Order validation failed:', validationResult.message);
         toast.error(validationResult.message || "Order validation failed");
-
       }
-
     } catch (error: any) {
-
       console.error("Order validation error:", error);
-
       toast.error(error.message || "Failed to validate order");
-
     } finally {
-
       setProcessing(false);
-
     }
-
   }
 
+  const handlePaymentComplete = async (result: any) => {
+    console.log('Payment completion handler called', result);
+    
+    if (result.success && result.order) {
+      console.log('Setting order details', {
+        orderNumber: result.order.orderNumber,
+        orderId: result.order.id,
+        amountPaid: result.amountPaid
+      });
 
+      // Batch state updates to prevent race conditions
+      const updates = {
+        orderNumber: result.order.orderNumber,
+        orderId: result.order.id,
+        amountPaid: result.amountPaid || 0,
+        showReceipt: true,
+        success: true,
+        showPaymentModal: false
+      };
 
-  function clearOrder() {
+      // Update all states synchronously
+      setOrderNumber(updates.orderNumber);
+      setCreatedOrderId(updates.orderId);
+      setAmountPaid(updates.amountPaid);
+      setShowReceipt(updates.showReceipt);
+      setSuccess(updates.success);
+      setShowPaymentModal(updates.showPaymentModal);
 
-    dispatch(removeAllProductsFromOrderLine());
-
-    setSuccess(false);
-
-  }
-
-
-
-  const handlePaymentComplete = () => {
-
-    setShowPaymentModal(false);
-
-    setSuccess(true);
-
+      console.log('States updated', updates);
+    } else {
+      console.error('Payment completion failed:', result);
+      toast.error('Payment processing failed');
+    }
   };
 
+  function clearOrder() {
+    console.log('Clearing order', { showReceipt, createdOrderId });
+    dispatch(removeAllProductsFromOrderLine());
+    setSuccess(false);
+    setShowReceipt(false);
+    setCreatedOrderId('');
+    setOrderNumber('');
+    setAmountPaid(0);
+    console.log('Order cleared');
+  }
 
+  // Memoize the receipt component with stable key
+  const receiptKey = React.useMemo(() => 
+    createdOrderId ? `receipt-${createdOrderId}` : null
+  , [createdOrderId]);
+
+  // Memoize the receipt component
+  const receiptComponent = React.useMemo(() => {
+    console.log('Evaluating receipt component render', {
+      showReceipt,
+      itemCount: orderLineItems.length,
+      createdOrderId,
+      orderNumber,
+      receiptKey,
+      amountPaid
+    });
+
+    if (!showReceipt || !orderLineItems.length || !createdOrderId) {
+      console.log('Receipt conditions not met', {
+        showReceipt,
+        hasItems: orderLineItems.length > 0,
+        createdOrderId
+      });
+      return null;
+    }
+
+    console.log('Rendering receipt component', {
+      orderNumber,
+      createdOrderId,
+      customerName: validatedCustomerData?.customerName,
+      amountPaid
+    });
+
+    return (
+      <div key={receiptKey} className="receipt-container">
+        <ReceiptPrint2 
+          key={`receipt-print-${createdOrderId}`}
+          setSuccess={setSuccess} 
+          orderNumber={orderNumber}
+          orderItems={orderLineItems}
+          orderId={createdOrderId}
+          customerName={validatedCustomerData?.customerName || ''}
+          customerEmail={validatedCustomerData?.customerEmail || ''}
+          amountPaid={amountPaid}
+        />
+      </div>
+    );
+  }, [showReceipt, orderLineItems, createdOrderId, orderNumber, validatedCustomerData, amountPaid, setSuccess]);
 
   return (
 
@@ -538,7 +574,7 @@ export default function PointOfSale({
 
                 searchResults.map((product) => {
 
-                  console.log('Rendering product:', product);
+                  
 
                   return <Item key={product.id} item={product} />;
 
@@ -720,39 +756,23 @@ export default function PointOfSale({
 
             )}
 
-            {success && orderLineItems.length > 0 && (
-
+            {showReceipt && orderLineItems.length > 0 && (
               <div className="flex items-center space-x-2">
-
                 <Button
-
                   variant={"outline"}
-
                   className="w-full"
-
                   onClick={clearOrder}
-
                 >
-
                   Clear Order
-
                 </Button>
-
-                <ReceiptPrint2 
-                  setSuccess={setSuccess} 
-                  orderNumber={orderNumber}
-                  orderItems={orderLineItems}
-                />
-
               </div>
-
             )}
-
           </div>
-
         )}
-
       </div>
+
+      {/* Render the memoized receipt component */}
+      {receiptComponent}
 
       <PaymentModal
         isOpen={showPaymentModal}
