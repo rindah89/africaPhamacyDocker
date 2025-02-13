@@ -18,7 +18,7 @@ import prisma from "@/lib/db";
 
 import { revalidatePath } from "next/cache";
 
-import { Product, Review, SubCategory } from "@prisma/client";
+import { Product, Review, SubCategory, Category, Brand } from "@prisma/client";
 
 import { SearchProduct } from "@/components/global/ShopHeader";
 
@@ -146,7 +146,7 @@ export async function getAllProducts() {
 
             quantity: true,
 
-            sellingPrice: true,
+            costPerUnit: true,
 
           }
 
@@ -303,7 +303,7 @@ export async function getSearchProducts() {
 
 
 
-    const products = allProducts.map((item) => ({
+    const products = allProducts.map((item: Product) => ({
 
       name: item.name,
 
@@ -383,7 +383,7 @@ export async function getSearchProducts() {
 
 
 
-    const categories = allCategories.map((item) => ({
+    const categories = allCategories.map((item: Category) => ({
 
       name: item.title,
 
@@ -397,7 +397,7 @@ export async function getSearchProducts() {
 
 
 
-    const brands = allBrands.map((item) => ({
+    const brands = allBrands.map((item: Brand) => ({
 
       name: item.title,
 
@@ -667,33 +667,17 @@ export async function getGroupedProductsByBrandId(brandId: string) {
 
     });
 
-    const groupedProducts = products.reduce<Record<string, GroupedProducts>>(
-
-      (acc, product) => {
-
-        const subCategory = product.subCategory;
-
-        if (!acc[subCategory.id]) {
-
-          acc[subCategory.id] = {
-
-            subCategory,
-
-            products: [],
-
-          };
-
-        }
-
-        acc[subCategory.id].products.push(product);
-
-        return acc;
-
-      },
-
-      {}
-
-    );
+    const groupedProducts = products.reduce((acc: Record<string, GroupedProducts>, product: Product & { subCategory: SubCategory; reviews: Review[] }) => {
+      const subCategory = product.subCategory;
+      if (!acc[subCategory.id]) {
+        acc[subCategory.id] = {
+          subCategory,
+          products: [],
+        };
+      }
+      acc[subCategory.id].products.push(product);
+      return acc;
+    }, {} as Record<string, GroupedProducts>);
 
 
 
@@ -1465,7 +1449,7 @@ export async function getProductsByCategorySlug(
 
 
 
-        categories = mainCategory.categories.map((cat) => ({
+        categories = mainCategory.categories.map((cat: Category) => ({
 
           title: cat.title,
 
@@ -1537,7 +1521,7 @@ export async function getProductsByCategorySlug(
 
 
 
-        categories = category.subCategories.map((subCat) => ({
+        categories = category.subCategories.map((subCat: SubCategory) => ({
 
           title: subCat.title,
 
@@ -1931,13 +1915,13 @@ export async function getProductsBySearchQuery(
 
   // Filter products based on the found categories and brands, and apply min, max, and sort
 
-  const categoryIds = categories.map((category) => category.id);
+  const categoryIds = categories.map((category: Category) => category.id);
 
-  const brandIds = brands.map((brand) => brand.id);
+  const brandIds = brands.map((brand: Brand) => brand.id);
 
 
 
-  let filteredProducts = allProducts.filter((product) => {
+  let filteredProducts = allProducts.filter((product: Product) => {
 
     return (
 
@@ -1953,7 +1937,7 @@ export async function getProductsBySearchQuery(
 
   // Apply min and max price filters to the filtered products
 
-  filteredProducts = filteredProducts.filter((product) => {
+  filteredProducts = filteredProducts.filter((product: Product) => {
 
     const meetsMinCondition = min ? product.productPrice >= min : true;
 
@@ -1969,7 +1953,7 @@ export async function getProductsBySearchQuery(
 
   if (sort) {
 
-    filteredProducts.sort((a, b) => {
+    filteredProducts.sort((a: Product, b: Product) => {
 
       if (sort === "asc") {
 
@@ -2018,39 +2002,44 @@ export async function getProductsBySearchQuery(
 
 
 export async function getBestSellingProducts(productCount: number) {
-
   try {
-
     const topSellingProducts = await prisma.product.findMany({
-
       take: productCount,
-
+      where: {
+        status: true, // Only include active products
+      },
       orderBy: {
-
         sales: {
-
           _count: "desc",
-
         },
-
       },
-
       include: {
-
-        sales: true,
-
+        sales: {
+          select: {
+            id: true,
+            qty: true,
+            salePrice: true,
+            productName: true,
+            productImage: true,
+            customerName: true,
+            customerEmail: true,
+            paymentMethod: true,
+            createdAt: true,
+          },
+        },
       },
-
     });
-
+    
+    if (!topSellingProducts) {
+      console.error("No products found");
+      return [];
+    }
+    
     return topSellingProducts;
-
   } catch (error) {
-
-    console.log(error);
-
+    console.error("Error in getBestSellingProducts:", error);
+    return [];
   }
-
 }
 
 export async function searchPOSProducts(searchQuery: string) {

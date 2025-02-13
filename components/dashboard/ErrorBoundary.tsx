@@ -24,6 +24,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     return { hasError: true, error };
   }
 
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Log the error to console for debugging
+    console.error('ErrorBoundary caught an error:', error);
+    console.error('Error Stack:', error.stack);
+    console.error('Component Stack:', errorInfo.componentStack);
+  }
+
   render() {
     if (this.state.hasError) {
       return (
@@ -31,7 +38,18 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription className="flex flex-col gap-3">
-            <p>There was a problem loading this section.</p>
+            <p>There was a problem loading this section:</p>
+            <p className="text-sm font-mono bg-secondary/50 p-2 rounded">
+              {this.state.error?.message || "Unknown error occurred"}
+            </p>
+            {this.state.error?.stack && (
+              <details className="text-xs">
+                <summary className="cursor-pointer">Show error details</summary>
+                <pre className="mt-2 whitespace-pre-wrap bg-secondary/50 p-2 rounded">
+                  {this.state.error.stack}
+                </pre>
+              </details>
+            )}
             <Button 
               variant="outline" 
               onClick={() => {

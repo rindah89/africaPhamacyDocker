@@ -153,8 +153,14 @@ export const getSalesCountForPastSevenDaysOld = async (): Promise<
 export const getSalesCountForPastSevenDays = async (): Promise<
   DailySales[]
 > => {
+  console.log('getSalesCountForPastSevenDays: Starting function');
   const now = new Date();
   const sevenDaysAgo = subDays(now, 6); // Start from six days ago to include today
+
+  console.log('getSalesCountForPastSevenDays: Date range', {
+    start: sevenDaysAgo,
+    end: now
+  });
 
   // Get all dates for the past 7 days
   const days = eachDayOfInterval({
@@ -169,6 +175,8 @@ export const getSalesCountForPastSevenDays = async (): Promise<
     salesCountMap[formattedDay] = 0;
   });
 
+  console.log('getSalesCountForPastSevenDays: Initialized days map:', salesCountMap);
+
   // Fetch sales data for the past 7 days
   const sales = await prisma.sale.findMany({
     where: {
@@ -181,6 +189,8 @@ export const getSalesCountForPastSevenDays = async (): Promise<
       createdAt: true,
     },
   });
+
+  console.log('getSalesCountForPastSevenDays: Found sales records:', sales.length);
 
   // Update sales count map with actual sales data
   sales.forEach((sale) => {
@@ -197,6 +207,7 @@ export const getSalesCountForPastSevenDays = async (): Promise<
     };
   });
 
+  console.log('getSalesCountForPastSevenDays: Final processed data:', salesCountArray);
   return salesCountArray;
 };
 
@@ -303,27 +314,122 @@ export interface MonthlyMainCategoryRevenue {
   [category: string]: number | string;
 }
 const getFirstWord = (str: string) => str.split(" ")[0];
+async function checkAndFixSalesData() {
+  console.log('Checking sales data for null orderNumbers...');
+  
+  try {
+    // First, let's count how many sales have null orderNumbers
+    const nullOrderNumberCount = await prisma.sale.count({
+      where: {
+        orderNumber: null
+      }
+    });
+
+    console.log(`Found ${nullOrderNumberCount} sales with null orderNumbers`);
+
+    if (nullOrderNumberCount > 0) {
+      // Get all sales with null orderNumbers
+      const salesWithNullOrders = await prisma.sale.findMany({
+        where: {
+          orderNumber: null
+        },
+        include: {
+          product: true
+        },
+        orderBy: {
+          createdAt: 'asc'
+        }
+      });
+
+      console.log('Sample of affected sales:', salesWithNullOrders.slice(0, 3));
+
+      // Generate new order numbers and update the sales
+      const updates = salesWithNullOrders.map((sale, index) => {
+        const timestamp = sale.createdAt.getTime();
+        const newOrderNumber = `FIX-${timestamp}-${index + 1}`;
+        
+        return prisma.sale.update({
+          where: { id: sale.id },
+          data: { orderNumber: newOrderNumber }
+        });
+      });
+
+      console.log('Fixing sales records...');
+      await prisma.$transaction(updates);
+      console.log('Fixed all sales records with null orderNumbers');
+    }
+
+    return nullOrderNumberCount;
+  } catch (error) {
+    console.error('Error checking/fixing sales data:', error);
+    throw error;
+  }
+}
+
+async function fixNullOrderNumbers() {
+  try {
+    // Get all sales with null orderNumbers
+    const salesWithNullOrders = await prisma.$queryRaw`
+      SELECT id, created_at
+      FROM Sale
+      WHERE order_number IS NULL
+    `;
+
+    if (Array.isArray(salesWithNullOrders) && salesWithNullOrders.length > 0) {
+      console.log(`Found ${salesWithNullOrders.length} sales with null orderNumbers`);
+
+      // Update each sale with a new order number
+      for (const sale of salesWithNullOrders) {
+        const timestamp = new Date(sale.created_at).getTime();
+        const newOrderNumber = `FIX-${timestamp}-${sale.id}`;
+        
+        await prisma.$executeRaw`
+          UPDATE Sale
+          SET order_number = ${newOrderNumber}
+          WHERE id = ${sale.id}
+        `;
+      }
+
+      console.log('Fixed all null orderNumbers');
+      return salesWithNullOrders.length;
+    }
+
+    return 0;
+  } catch (error) {
+    console.error('Error fixing null orderNumbers:', error);
+    throw error;
+  }
+}
+
 export const getRevenueByMainCategoryPastSixMonths = async (): Promise<
   MonthlyMainCategoryRevenue[]
 > => {
-  // Calculate the start date for the 6-month period
-  const sixMonthsAgo = subMonths(new Date(), 5); // Include the current month
-  const startOfSixMonthsAgo = startOfMonth(sixMonthsAgo);
+  console.log('getRevenueByMainCategoryPastSixMonths: Starting function');
+  
+  try {
+    // Calculate the start date for the 6-month period
+    const sixMonthsAgo = subMonths(new Date(), 5);
+    const startOfSixMonthsAgo = startOfMonth(sixMonthsAgo);
 
-  // Fetch all main categories with sales within the last 6 months
-  const mainCategories = await prisma.mainCategory.findMany({
-    include: {
-      categories: {
-        include: {
-          subCategories: {
-            include: {
-              products: {
-                include: {
-                  sales: {
-                    where: {
-                      createdAt: {
-                        gte: startOfSixMonthsAgo,
+    // Now fetch the main categories and their sales data
+    const mainCategories = await prisma.mainCategory.findMany({
+      include: {
+        categories: {
+          include: {
+            subCategories: {
+              include: {
+                products: {
+                  include: {
+                    sales: {
+                      where: {
+                        createdAt: {
+                          gte: startOfSixMonthsAgo
+                        }
                       },
+                      select: {
+                        salePrice: true,
+                        createdAt: true
+                      }
                     },
                   },
                 },
@@ -332,53 +438,56 @@ export const getRevenueByMainCategoryPastSixMonths = async (): Promise<
           },
         },
       },
-    },
-  });
+    });
 
-  // Initialize a map to store monthly revenue for each main category
-  const monthlyRevenueMap: { [month: string]: MonthlyMainCategoryRevenue } = {};
+    // Initialize monthly revenue map
+    const monthlyRevenueMap: { [month: string]: MonthlyMainCategoryRevenue } = {};
 
-  // Populate the map with months and categories
-  for (let i = 0; i < 6; i++) {
-    const date = subMonths(new Date(), i);
-    const month = format(date, "MMMM");
-
-    if (!monthlyRevenueMap[month]) {
+    // Setup the months
+    for (let i = 0; i < 6; i++) {
+      const date = subMonths(new Date(), i);
+      const month = format(date, "MMMM");
       monthlyRevenueMap[month] = { month };
+
+      // Initialize all category revenues to 0
+      mainCategories.forEach((mainCategory) => {
+        const categoryKey = getFirstWord(mainCategory.title);
+        monthlyRevenueMap[month][categoryKey] = 0;
+      });
     }
 
+    // Calculate revenue for each category and month
     mainCategories.forEach((mainCategory) => {
       const categoryKey = getFirstWord(mainCategory.title);
-      if (!(categoryKey in monthlyRevenueMap[month])) {
-        monthlyRevenueMap[month][categoryKey] = 0;
-      }
-    });
-  }
+      let totalSales = 0;
 
-  // Aggregate revenue by month and main category
-  mainCategories.forEach((mainCategory) => {
-    const categoryKey = getFirstWord(mainCategory.title);
-    mainCategory.categories.forEach((category) => {
-      category.subCategories.forEach((subCategory) => {
-        subCategory.products.forEach((product) => {
-          product.sales.forEach((sale) => {
-            const saleMonth = format(sale.createdAt, "MMMM");
-            if (monthlyRevenueMap[saleMonth]) {
-              monthlyRevenueMap[saleMonth][categoryKey] =
-                (monthlyRevenueMap[saleMonth][categoryKey] as number) +
-                sale.salePrice;
-            }
+      mainCategory.categories.forEach((category) => {
+        category.subCategories.forEach((subCategory) => {
+          subCategory.products.forEach((product) => {
+            product.sales.forEach((sale) => {
+              totalSales++;
+              const saleMonth = format(sale.createdAt, "MMMM");
+              if (monthlyRevenueMap[saleMonth]) {
+                monthlyRevenueMap[saleMonth][categoryKey] =
+                  (monthlyRevenueMap[saleMonth][categoryKey] as number) +
+                  sale.salePrice;
+              }
+            });
           });
         });
       });
+      console.log(`Processed ${totalSales} sales for category ${categoryKey}`);
     });
-  });
 
-  // Convert the map to an array and ensure it conforms to MonthlyMainCategoryRevenue[]
-  const mainCategoryRevenueArray: MonthlyMainCategoryRevenue[] =
-    Object.values(monthlyRevenueMap).reverse(); // Reverse to have the months in ascending order
+    // Convert to array and sort in reverse chronological order
+    const mainCategoryRevenueArray: MonthlyMainCategoryRevenue[] =
+      Object.values(monthlyRevenueMap).reverse();
 
-  return mainCategoryRevenueArray;
+    return mainCategoryRevenueArray;
+  } catch (error) {
+    console.error('Error in getRevenueByMainCategoryPastSixMonths:', error);
+    throw error;
+  }
 };
 
 export async function getProductsCount() {

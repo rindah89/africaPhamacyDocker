@@ -211,6 +211,8 @@ export async function createSalesRecords(
               productImage: item.productThumbnail || '',
               customerName: customerName || 'Walk-in Customer',
               customerEmail: customerEmail || '',
+              orderNumber: generateOrderNumber(),
+              total: item.qty * item.price
             },
           });
         }

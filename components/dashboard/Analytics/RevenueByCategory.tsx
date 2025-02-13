@@ -18,8 +18,10 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { MonthlyMainCategoryRevenue } from "@/actions/analytics";
-import React from "react";
+import React, { useEffect } from "react";
 import { formatMoney } from "@/lib/formatMoney";
+
+console.log('RevenueByCategory: Module initialization');
 
 const colors = [
   "hsl(var(--chart-1))",
@@ -30,9 +32,11 @@ const colors = [
   // Add more colors as needed
 ];
 
-export function generateChartConfig(
+const generateChartConfig = (
   mainCategoryRevenueArray: MonthlyMainCategoryRevenue[]
-): ChartConfig {
+): ChartConfig => {
+  console.log('RevenueByCategory: Generating chart config with data:', JSON.stringify(mainCategoryRevenueArray, null, 2));
+  
   const chartConfig: ChartConfig = {};
 
   // Extract unique category keys
@@ -49,15 +53,19 @@ export function generateChartConfig(
   Array.from(categoryKeys).forEach((category, index) => {
     chartConfig[category] = {
       label: category,
-      color: colors[index % colors.length], // Cycle through colors if there are more categories than colors
+      color: colors[index % colors.length],
     };
   });
 
+  console.log('RevenueByCategory: Generated chart config:', chartConfig);
   return chartConfig;
-}
+};
+
 const calculateTotalRevenueAndLeadingMonthAndCategory = (
   categoryRevenueData: MonthlyMainCategoryRevenue[]
 ) => {
+  console.log('RevenueByCategory: Calculating metrics from data:', JSON.stringify(categoryRevenueData, null, 2));
+  
   let totalRevenue = 0;
   let leadingMonth = "";
   let maxMonthlyRevenue = 0;
@@ -92,67 +100,85 @@ const calculateTotalRevenueAndLeadingMonthAndCategory = (
     totalRevenue += monthlyRevenue;
   });
 
-  return { totalRevenue, leadingMonth, leadingCategory };
+  const metrics = { totalRevenue, leadingMonth, leadingCategory };
+  console.log('RevenueByCategory: Calculated metrics:', metrics);
+  return metrics;
 };
-export function RevenueByCategory({
+
+const RevenueByCategory = ({
   categoryRevenueData,
 }: {
   categoryRevenueData: MonthlyMainCategoryRevenue[];
-}) {
-  const chartConfig = generateChartConfig(categoryRevenueData);
-  const { totalRevenue, leadingMonth, leadingCategory } =
-    calculateTotalRevenueAndLeadingMonthAndCategory(categoryRevenueData);
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Revenue By Category Chart</CardTitle>
-        <CardDescription>
-          <span className="text-lg font-bold leading-none sm:text-xl">
-            Total : CFA {formatMoney(totalRevenue)}
-          </span>
-        </CardDescription>
-      </CardHeader>
+}) => {
+  console.log('RevenueByCategory: Component rendering started');
 
-      <CardContent>
-        <ChartContainer config={chartConfig}>
-          <BarChart accessibilityLayer data={categoryRevenueData}>
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="month"
-              tickLine={false}
-              tickMargin={10}
-              axisLine={false}
-              tickFormatter={(value) => value.slice(0, 3)}
-            />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent indicator="dashed" />}
-            />
-            {
-              // Generate Bar components for each category
-              Object.keys(chartConfig).map((category) => (
+  useEffect(() => {
+    console.log('RevenueByCategory: Component mounted');
+    return () => {
+      console.log('RevenueByCategory: Component unmounting');
+    };
+  }, []);
+
+  try {
+    console.log('RevenueByCategory: Processing data:', JSON.stringify(categoryRevenueData, null, 2));
+    
+    const chartConfig = generateChartConfig(categoryRevenueData);
+    const { totalRevenue, leadingMonth, leadingCategory } =
+      calculateTotalRevenueAndLeadingMonthAndCategory(categoryRevenueData);
+    
+    console.log('RevenueByCategory: Attempting to render chart');
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Revenue By Category Chart</CardTitle>
+          <CardDescription>
+            <span className="text-lg font-bold leading-none sm:text-xl">
+              Total : CFA {formatMoney(totalRevenue)}
+            </span>
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          <ChartContainer config={chartConfig}>
+            <BarChart accessibilityLayer data={categoryRevenueData}>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="month"
+                tickLine={false}
+                tickMargin={10}
+                axisLine={false}
+                tickFormatter={(value) => value.slice(0, 3)}
+              />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent indicator="dashed" />}
+              />
+              {Object.keys(chartConfig).map((category) => (
                 <Bar
                   key={category}
                   dataKey={category}
                   fill={chartConfig[category].color}
                   radius={4}
                 />
-              ))
-            }
-            {/* <Bar dataKey="desktop" fill="var(--color-desktop)" radius={4} />
-            <Bar dataKey="mobile" fill="var(--color-mobile)" radius={4} /> */}
-          </BarChart>
-        </ChartContainer>
-      </CardContent>
-      <CardFooter className="flex-col items-start gap-2 text-sm">
-        <div className="flex gap-2 leading-none">
-          Leading Month is {leadingMonth} and leading Category is{" "}
-          {leadingCategory}
-        </div>
-        <div className="leading-none text-muted-foreground">
-          Showing total revenue for the past 6 months
-        </div>
-      </CardFooter>
-    </Card>
-  );
-}
+              ))}
+            </BarChart>
+          </ChartContainer>
+        </CardContent>
+        <CardFooter className="flex-col items-start gap-2 text-sm">
+          <div className="flex gap-2 leading-none">
+            Leading Month is {leadingMonth} and leading Category is{" "}
+            {leadingCategory}
+          </div>
+          <div className="leading-none text-muted-foreground">
+            Showing total revenue for the past 6 months
+          </div>
+        </CardFooter>
+      </Card>
+    );
+  } catch (error) {
+    console.error('RevenueByCategory: Error rendering chart:', error);
+    throw error;
+  }
+};
+
+export default RevenueByCategory;
