@@ -52,6 +52,7 @@
     "dayjs": "^1.11.12",
     "debounce": "^2.0.0",
     "html-react-parser": "^5.1.10",
+    "idb": "^8.0.2",
     "input-otp": "^1.2.4",
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^3.8.4",
