@@ -69,6 +69,7 @@ export default function PaymentModal({
     const numericAmount = parseInt(amountPaid) || 0;
     if (numericAmount < totalAmount) {
       console.log('Payment amount insufficient', { numericAmount, totalAmount });
+      toast.error("Amount paid must be equal to or greater than total amount");
       return;
     }
 
@@ -85,11 +86,11 @@ export default function PaymentModal({
       console.log('Payment process result:', result);
 
       if (result.success) {
-        console.log('Payment successful, calling completion handlers');
-        toast.success("Payment processed successfully");
-        onPaymentComplete({ ...result, amountPaid: numericAmount });
+        onPaymentComplete({ amountPaid: numericAmount });
+        
         onClose();
-        console.log('Payment modal closed');
+        
+        toast.success("Payment processed successfully");
       } else {
         console.error('Payment failed:', result.message);
         toast.error(result.message || "Failed to process payment");
@@ -98,7 +99,6 @@ export default function PaymentModal({
       console.error("Payment processing error:", error);
       toast.error(error.message || "Failed to process payment");
     } finally {
-      console.log('Payment processing completed');
       setProcessing(false);
     }
   };
@@ -107,8 +107,15 @@ export default function PaymentModal({
     <Dialog 
       open={isOpen} 
       onOpenChange={(open) => {
-        console.log('Dialog open state changing:', { open });
-        onClose();
+        if (processing) {
+          console.log('Preventing dialog close during processing');
+          return;
+        }
+        
+        if (!open) {
+          console.log('Dialog closing requested');
+          onClose();
+        }
       }}
     >
       <DialogContent>

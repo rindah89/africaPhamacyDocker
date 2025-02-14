@@ -112,8 +112,6 @@ export default function PointOfSale({
 
   const [createdOrderId, setCreatedOrderId] = useState<string>("");
 
-  const orderLineItems = useAppSelector((state) => state.pos.products);
-
   const [barcodeInput, setBarcodeInput] = useState('');
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -122,27 +120,33 @@ export default function PointOfSale({
 
   const [validatedCustomerData, setValidatedCustomerData] = useState<any>(null);
 
-  const [showReceipt, setShowReceipt] = useState(false);
-
   const [amountPaid, setAmountPaid] = useState(0);
+
+  const [receiptKey, setReceiptKey] = React.useState<number>(0);
 
   
 
-  // Raw number calculations for backend
+  const dispatch = useAppDispatch();
+
+  
+
+  // Get orderLineItems from Redux store
+
+  const orderLineItems = useAppSelector((state) => state.pos.products);
+
+  
+
+  // Raw number calculations for backend - after orderLineItems is defined
 
   const subTotal = orderLineItems.reduce((total, item) => total + item.price * item.qty, 0);
 
   
 
-  // Localized display values
+  // Localized display values - after subTotal is calculated
 
-  const totalSumDisplay = (subTotal).toLocaleString('fr-CM'); // For frontend display
+  const totalSumDisplay = (subTotal).toLocaleString('fr-CM');
 
   const subTotalDisplay = subTotal.toLocaleString('fr-CM');
-
-
-
-  const dispatch = useAppDispatch();
 
 
 
@@ -334,129 +338,32 @@ export default function PointOfSale({
   }
 
   const handlePaymentComplete = async (result: any) => {
-    console.log('Payment completion handler called', result);
-    
-    if (result.success && result.order) {
-      console.log('Payment successful, updating states with:', {
-        orderNumber: result.order.orderNumber,
-        orderId: result.order.id,
-        amountPaid: result.amountPaid,
-        itemCount: orderLineItems.length
-      });
-
-      // Use state updater functions to ensure state updates are atomic
-      setOrderNumber(prev => {
-        console.log('Updating orderNumber:', { prev, new: result.order.orderNumber });
-        return result.order.orderNumber;
-      });
-      
-      setCreatedOrderId(prev => {
-        console.log('Updating createdOrderId:', { prev, new: result.order.id });
-        return result.order.id;
-      });
-      
-      setAmountPaid(prev => {
-        console.log('Updating amountPaid:', { prev, new: result.amountPaid || 0 });
-        return result.amountPaid || 0;
-      });
-      
-      setShowReceipt(prev => {
-        console.log('Updating showReceipt:', { prev, new: true });
-        return true;
-      });
-      
-      setSuccess(prev => {
-        console.log('Updating success:', { prev, new: true });
-        return true;
-      });
-      
-      setShowPaymentModal(false);
-
-      // Add a check to verify states were updated correctly
-      setTimeout(() => {
-        console.log('State verification after updates:', {
-          orderNumber,
-          createdOrderId,
-          amountPaid,
-          showReceipt,
-          success,
-          itemCount: orderLineItems.length
-        });
-      }, 0);
-    } else {
-      console.error('Payment completion failed:', result);
-      toast.error('Payment processing failed');
-    }
+    console.log('Payment completion handler called with result:', result);
+    console.log('Preparing to show receipt...', {
+      amountPaid: result.amountPaid,
+      customerName: validatedCustomerData?.customerName,
+      itemCount: orderLineItems.length
+    });
+    setAmountPaid(result.amountPaid || 0);
+    setSuccess(true);
+    setShowPaymentModal(false);
+    setReceiptKey(prev => prev + 1);
   };
 
   function clearOrder() {
-    console.log('clearOrder called with states:', { 
-      showReceipt, 
-      createdOrderId,
-      hasItems: orderLineItems.length > 0
-    });
-
-    // Only clear if we're not showing the receipt
-    if (!showReceipt) {
-      console.log('Clearing order states');
-      dispatch(removeAllProductsFromOrderLine());
-      setSuccess(false);
-      setShowReceipt(false);
-      setCreatedOrderId('');
-      setOrderNumber('');
-      setAmountPaid(0);
-    } else {
-      console.log('Skipping order clear - receipt is being shown');
-    }
-  }
-
-  // Memoize the receipt component with stable key
-  const receiptKey = React.useMemo(() => 
-    createdOrderId ? `receipt-${createdOrderId}` : null
-  , [createdOrderId]);
-
-  // Memoize the receipt component
-  const receiptComponent = React.useMemo(() => {
-    console.log('Evaluating receipt component render', {
-      showReceipt,
+    console.log('Clearing order state after receipt handling...', {
       itemCount: orderLineItems.length,
-      createdOrderId,
       orderNumber,
-      receiptKey,
-      amountPaid
+      customerName: validatedCustomerData?.customerName
     });
-
-    if (!showReceipt || !orderLineItems.length || !createdOrderId) {
-      console.log('Receipt conditions not met', {
-        showReceipt,
-        hasItems: orderLineItems.length > 0,
-        createdOrderId
-      });
-      return null;
-    }
-
-    console.log('Rendering receipt component', {
-      orderNumber,
-      createdOrderId,
-      customerName: validatedCustomerData?.customerName,
-      amountPaid
-    });
-
-    return (
-      <div key={receiptKey} className="receipt-container">
-        <ReceiptPrint2 
-          key={`receipt-print-${createdOrderId}`}
-          setSuccess={setSuccess} 
-          orderNumber={orderNumber}
-          orderItems={orderLineItems}
-          orderId={createdOrderId}
-          customerName={validatedCustomerData?.customerName || ''}
-          customerEmail={validatedCustomerData?.customerEmail || ''}
-          amountPaid={amountPaid}
-        />
-      </div>
-    );
-  }, [showReceipt, orderLineItems, createdOrderId, orderNumber, validatedCustomerData, amountPaid, setSuccess]);
+    dispatch(removeAllProductsFromOrderLine());
+    setSuccess(false);
+    setOrderNumber('');
+    setAmountPaid(0);
+    setValidatedCustomerData(null);
+    setOrderData(null);
+    console.log('Order state cleared successfully');
+  }
 
   return (
 
@@ -787,27 +694,32 @@ export default function PointOfSale({
 
             )}
 
-            {showReceipt && orderLineItems.length > 0 && (
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant={"outline"}
-                  className="w-full"
-                  onClick={clearOrder}
-                >
-                  Clear Order
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </div>
 
-      {/* Render the memoized receipt component */}
-      {receiptComponent}
+      {/* Receipt component with key-based mounting */}
+      {success && orderLineItems.length > 0 && (
+        <ReceiptPrint2 
+          key={receiptKey}
+          setSuccess={setSuccess}
+          orderItems={orderLineItems}
+          customerName={validatedCustomerData?.customerName || ''}
+          customerEmail={validatedCustomerData?.customerEmail || ''}
+          amountPaid={amountPaid}
+          onComplete={() => {
+            console.log('Receipt handling completed, cleaning up...');
+            clearOrder();
+          }}
+        />
+      )}
 
       <PaymentModal
         isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
+        onClose={() => {
+          console.log('Payment modal closed without completion');
+          setShowPaymentModal(false);
+        }}
         totalAmount={subTotal}
         onPaymentComplete={handlePaymentComplete}
         orderData={orderData}

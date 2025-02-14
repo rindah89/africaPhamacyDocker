@@ -9,7 +9,6 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerDescription,
-  DrawerTrigger,
 } from "@/components/ui/drawer";
 import { useAppDispatch } from "@/redux/hooks/hooks";
 import { getCurrentDateAndTime } from "@/lib/getCurrentDateTime";
@@ -17,103 +16,78 @@ import { useReactToPrint } from "react-to-print";
 import { removeAllProductsFromOrderLine } from "@/redux/slices/pointOfSale";
 import { OrderLineItem } from "@/redux/slices/pointOfSale";
 import toast from "react-hot-toast";
-import { createSalesRecords } from "@/actions/pos";
 import { Loader2 } from "lucide-react";
 
 interface ReceiptPrintProps {
   setSuccess: (value: boolean) => void;
-  orderNumber?: string;
   orderItems: OrderLineItem[];
-  orderId: string;
   customerName: string;
   customerEmail: string;
   amountPaid?: number;
+  onComplete?: () => void;
 }
 
 export default function ReceiptPrint2({ 
   setSuccess, 
-  orderNumber, 
   orderItems,
-  orderId,
   customerName,
   customerEmail,
-  amountPaid = 0
+  amountPaid = 0,
+  onComplete
 }: ReceiptPrintProps) {
-  console.log('ReceiptPrint2 render', { 
-    orderNumber, 
-    orderId, 
-    itemCount: orderItems.length,
-    customerName 
-  });
-
   const componentRef = React.useRef<HTMLDivElement>(null);
-  const mounted = React.useRef(true);
   const [isOpen, setIsOpen] = React.useState(true);
   const [isPrinting, setIsPrinting] = React.useState(false);
   const [hasPrinted, setHasPrinted] = React.useState(false);
   const [isClosing, setIsClosing] = React.useState(false);
   const dispatch = useAppDispatch();
-
-  React.useEffect(() => {
-    console.log('Mount effect running', { orderId, isOpen });
-    mounted.current = true;
-    setIsOpen(true);
-
-    return () => {
-      console.log('Unmounting component', { orderId, isOpen, hasPrinted });
-      mounted.current = false;
-    };
-  }, [orderId]);
-
-  const handleOpenChange = (open: boolean) => {
-    console.log('handleOpenChange called', { 
-      newOpen: open, 
-      currentOpen: isOpen,
-      hasPrinted, 
-      isClosing,
-      orderId,
-      mounted: mounted.current 
-    });
-    
-    if (!mounted.current) {
-      console.log('Component not mounted, ignoring state change');
-      return;
-    }
-
-    if (!open && !isClosing) {
-      console.log('Preventing automatic close');
-      setIsOpen(true);
-      return;
-    }
-
-    if (!open && isClosing) {
-      if (!hasPrinted) {
-        console.log('Attempting to close without printing');
-        const shouldClose = window.confirm("Are you sure you want to cancel this sale? The order will be voided.");
-        
-        if (shouldClose) {
-          console.log('User confirmed cancellation');
-          setIsOpen(false);
-          clearOrder();
-          toast.success("Sale cancelled successfully");
-        } else {
-          console.log('User cancelled - keeping drawer open');
-          setIsClosing(false);
-          setIsOpen(true);
-        }
-      } else {
-        console.log('Closing after successful print');
-        setIsOpen(false);
-      }
-      return;
-    }
-
-    console.log('Setting open state', { open });
-    setIsOpen(open);
-  };
+  const mountedRef = React.useRef(false);
 
   const { currentDate, currentTime } = getCurrentDateAndTime();
   
+  // Ensure proper initialization on mount
+  React.useEffect(() => {
+    console.log('Receipt component mounted', {
+      customerName,
+      itemCount: orderItems.length,
+      amountPaid,
+      mountCount: mountedRef.current
+    });
+    
+    mountedRef.current = true;
+    setIsOpen(true);
+    setIsClosing(false);
+    setHasPrinted(false);
+    setIsPrinting(false);
+
+    return () => {
+      console.log('Receipt component unmounting', {
+        hasPrinted,
+        isClosing,
+        mountCount: mountedRef.current
+      });
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Handle drawer state changes
+  const handleDrawerStateChange = React.useCallback((open: boolean) => {
+    console.log('Drawer state change requested:', { 
+      currentlyOpen: isOpen, 
+      requestedOpen: open,
+      isClosing,
+      hasPrinted,
+      mountCount: mountedRef.current
+    });
+    
+    if (!open && !isClosing) {
+      console.log('Preventing unauthorized drawer close');
+      return;
+    }
+    
+    setIsOpen(open);
+  }, [isOpen, isClosing, hasPrinted]);
+
   const subTotal1 = orderItems.reduce(
     (total, item) => total + item.price * item.qty,
     0
@@ -126,112 +100,77 @@ export default function ReceiptPrint2({
 
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
-    onBeforeGetContent: async () => {
-      console.log('Starting print process');
-      
+    onBeforeGetContent: () => {
+      console.log('Starting print process...', { isPrinting, hasPrinted });
       if (!orderItems || orderItems.length === 0) {
-        console.error('No items to print');
+        console.error('Print failed: No items to print');
         toast.error("No items to print");
         return Promise.reject(new Error("No items to print"));
       }
-
       setIsPrinting(true);
-      try {
-        console.log('Creating sales records', {
-          orderId,
-          itemCount: orderItems.length,
-          customerName
-        });
-        
-        const result = await createSalesRecords(
-          orderId,
-          orderItems,
-          customerName,
-          customerEmail
-        );
-
-        console.log('Sales records creation result:', result);
-
-        if (!result.success) {
-          console.error('Failed to create sales records:', result.message);
-          toast.error(result.message || "Failed to create sales records");
-          return Promise.reject(new Error("Failed to create sales records"));
-        }
-
-        return Promise.resolve();
-      } catch (error) {
-        console.error("Error creating sales:", error);
-        toast.error("Failed to create sales records");
-        return Promise.reject(error);
-      } finally {
-        setIsPrinting(false);
-      }
+      return Promise.resolve();
     },
     onAfterPrint: () => {
-      if (mounted.current) {
-        console.log('Print completed successfully');
-        setHasPrinted(true);
-        toast.success("Receipt printed and sale completed successfully");
-      }
+      console.log('Print completed successfully');
+      setIsPrinting(false);
+      setHasPrinted(true);
+      toast.success("Receipt printed successfully");
     }
   });
 
-  const clearOrder = React.useCallback(() => {
-    if (!mounted.current) return;
+  const handleClose = React.useCallback(() => {
+    console.log('Attempting to close receipt...', {
+      isPrinting,
+      hasPrinted,
+      isClosing
+    });
 
-    try {
-      console.log('clearOrder called', {
-        orderId,
-        isOpen,
-        hasPrinted,
-        isClosing
-      });
-      
-      if (hasPrinted) {
+    if (isPrinting) {
+      console.log('Close prevented: Receipt is printing');
+      return;
+    }
+
+    if (hasPrinted) {
+      console.log('Closing receipt after successful print');
+      setIsClosing(true);
+      setIsOpen(false);
+      // Delay the cleanup to ensure drawer animation completes
+      setTimeout(() => {
         dispatch(removeAllProductsFromOrderLine());
         setSuccess(false);
-        console.log('Order cleared successfully');
-      } else {
-        console.log('Skipping order clear - receipt not printed yet');
-      }
-    } catch (error) {
-      console.error("Error clearing order:", error);
-      toast.error("Failed to clear order");
-    }
-  }, [dispatch, setSuccess, orderId, isOpen, hasPrinted, isClosing]);
-
-  const handleClose = () => {
-    console.log('handleClose called', { 
-      hasPrinted,
-      isOpen,
-      isClosing,
-      orderId
-    });
-    
-    if (hasPrinted) {
-      setIsClosing(true);
-      handleOpenChange(false);
-      clearOrder();
+        onComplete?.();
+      }, 300);
     } else {
+      console.log('Attempting to cancel sale without printing');
       const shouldClose = window.confirm("Are you sure you want to cancel this sale? The order will be voided.");
       if (shouldClose) {
+        console.log('Sale cancelled by user');
         setIsClosing(true);
-        handleOpenChange(false);
-        clearOrder();
+        setIsOpen(false);
+        // Delay the cleanup to ensure drawer animation completes
+        setTimeout(() => {
+          dispatch(removeAllProductsFromOrderLine());
+          setSuccess(false);
+          onComplete?.();
+        }, 300);
       } else {
-        setIsClosing(false);
+        console.log('Sale cancellation aborted by user');
       }
     }
-  };
+  }, [isPrinting, hasPrinted, isClosing, dispatch, setSuccess, onComplete]);
+
+  // Don't render if no items
+  if (!orderItems || orderItems.length === 0) {
+    console.log('Receipt not rendered: No items');
+    return null;
+  }
 
   return (
     <Drawer 
-      open={isOpen} 
-      onOpenChange={handleOpenChange}
-      modal={true}
-      shouldScaleBackground={true}
+      open={isOpen}
+      onOpenChange={handleDrawerStateChange}
     >
-      <DrawerContent className="focus-visible:outline-none">
+      <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>Receipt Preview</DrawerTitle>
           <DrawerDescription>
@@ -240,12 +179,13 @@ export default function ReceiptPrint2({
         </DrawerHeader>
         <div className="mx-auto max-w-[300px]">
           <div ref={componentRef}>
+            {/* Receipt content remains the same */}
             <DrawerHeader className="p-2">
-              <DrawerTitle className="uppercase tracking-widest text-center text-[16px]" id="receipt-title">
+              <DrawerTitle className="uppercase tracking-widest text-center text-[16px]">
                 KAREN PHARMACY 
               </DrawerTitle>
               <div className="flex flex-col items-center justify-center border-b pb-1">
-                <p className="text-[12px]"> Bojongo - Douala</p>
+                <p className="text-[12px]">Bojongo - Douala</p>
                 <p className="text-[12px]">Tel: +237 675 708 688</p>
               </div>
               <h1 className="uppercase tracking-widest text-center text-[14px] my-1">RECEIPT</h1>
@@ -253,11 +193,6 @@ export default function ReceiptPrint2({
                 <p>Date: {currentDate}</p>
                 <p>Time: {currentTime}</p>
               </div>
-              {orderNumber && (
-                <div className="text-[10px] py-1 border-b">
-                  <p>Order No: #{orderNumber}</p>
-                </div>
-              )}
             </DrawerHeader>
             <div className="px-1 pb-0 text-center">
               <div className="space-y-3 border-b pb-2 px-2">
@@ -296,9 +231,8 @@ export default function ReceiptPrint2({
           </div>
           <DrawerFooter>
             <Button 
-              onClick={handlePrint} 
+              onClick={handlePrint}
               disabled={isPrinting}
-              aria-label={isPrinting ? "Processing..." : hasPrinted ? "Print Receipt Again" : "Print Receipt & Complete Sale"}
             >
               {isPrinting ? (
                 <>
@@ -316,7 +250,6 @@ export default function ReceiptPrint2({
                 variant="outline" 
                 onClick={handleClose}
                 disabled={isPrinting}
-                aria-label={hasPrinted ? "Close Receipt" : "Cancel Sale"}
               >
                 {hasPrinted ? 'Close' : 'Cancel Sale'}
               </Button>

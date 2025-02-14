@@ -148,10 +148,10 @@ export async function processPaymentAndOrder(
         orderNumber,
         orderType: orderData.orderType,
         source: orderData.source,
-        orderAmount: orderData.orderAmount,
+        orderAmount: Math.round(orderData.orderAmount), // Convert to integer
         customerId: customerData.customerId,
-        customerName: customerData.customerName,
-        customerEmail: customerData.customerEmail,
+        customerName: customerData.customerName || 'Walk-in Customer',
+        customerEmail: customerData.customerEmail || customerData.email || null, // Handle both possible email fields
         lineOrderItems: {
           create: orderData.orderItems.map(item => ({
             productId: item.id,
@@ -174,59 +174,6 @@ export async function processPaymentAndOrder(
     return {
       success: false,
       message: error.message || "Failed to create order"
-    };
-  }
-}
-
-// New function to create sales records
-export async function createSalesRecords(
-  orderId: string,
-  orderItems: OrderLineItem[],
-  customerName: string,
-) {
-  try {
-    // Process items in chunks to avoid timeouts
-    const CHUNK_SIZE = 5;
-    for (let i = 0; i < orderItems.length; i += CHUNK_SIZE) {
-      const chunk = orderItems.slice(i, i + CHUNK_SIZE);
-      
-      await prisma.$transaction(async (tx: TransactionClient) => {
-        for (const item of chunk) {
-          // Update stock
-          await tx.product.update({
-            where: { id: item.id },
-            data: { stockQty: { decrement: item.qty } }
-          });
-
-          // Create sale record
-          await tx.sale.create({
-            data: {
-              orderId: orderId,
-              productId: item.id,
-              qty: item.qty,
-              salePrice: item.price,
-              productName: item.name,
-              productImage: item.productThumbnail || '',
-              customerName: customerName || 'Walk-in Customer',
-              orderNumber: generateOrderNumber(),
-              total: item.qty * item.price
-            }
-          });
-        }
-      });
-      
-      // Small delay between chunks
-      if (i + CHUNK_SIZE < orderItems.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    }
-
-    return { success: true };
-  } catch (error: any) {
-    console.error("Sales creation error:", error);
-    return {
-      success: false,
-      message: error.message || "Failed to create sales records"
     };
   }
 }
@@ -258,12 +205,15 @@ export async function createLineOrder(
       return { item, availableBatches };
     }));
 
+    // Get the customer email from either customerEmail or email field
+    const customerEmail = customerData.customerEmail || customerData.email || null;
+
     // Create the base order first
     const lineOrder = await prisma.lineOrder.create({
       data: {
         customerId: customerData.customerId,
-        customerName: customerData.customerName,
-        customerEmail: customerData.customerEmail,
+        customerName: customerData.customerName || 'Walk-in Customer',
+        customerEmail,
         firstName: customerData.firstName,
         lastName: customerData.lastName,
         phone: customerData.phone,
@@ -276,7 +226,7 @@ export async function createLineOrder(
         country: customerData.country,
         paymentMethod: customerData.method ?? 'NONE' as PaymentMethod,
         orderNumber: generateOrderNumber(),
-        orderAmount,
+        orderAmount: Math.round(orderAmount), // Convert to integer as per schema
         orderType,
         source,
         status: source === "pos" ? "PENDING" : "PROCESSING",
@@ -318,6 +268,23 @@ export async function createLineOrder(
               price: item.price,
               qty: item.qty,
               productThumbnail: item.productThumbnail,
+            }
+          });
+
+          // Create sale record with all required fields
+          await tx.sale.create({
+            data: {
+              orderId: lineOrder.id,
+              orderNumber: lineOrder.orderNumber,
+              productId: item.id,
+              qty: item.qty,
+              salePrice: item.price,
+              total: item.price * item.qty,
+              productName: item.name,
+              productImage: item.productThumbnail || '',
+              customerName: customerData.customerName || 'Walk-in Customer',
+              customerEmail, // Use the same email value as the order
+              paymentMethod: customerData.method ?? 'NONE'
             }
           });
         }
