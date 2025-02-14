@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -43,9 +43,11 @@ async function backfillSales() {
             await prisma.sale.create({
               data: {
                 orderId: order.id,
+                orderNumber: order.orderNumber,
                 productId: item.productId,
                 qty: item.qty,
                 salePrice: item.price,
+                total: item.price * item.qty,
                 productName: item.name,
                 productImage: item.productThumbnail || '',
                 customerName: order.customerName || 'Walk-in Customer',

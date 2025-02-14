@@ -40,10 +40,9 @@ type NotificationProps = {
   statusText: string;
 };
 
-type TransactionClient = Omit<
-  PrismaClient,
-  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
->;
+type TransactionClient = Omit<PrismaClient, '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'> & {
+  sale: PrismaClient['sale']
+};
 
 export async function createNotification(data: NotificationProps) {
   try {
@@ -184,7 +183,6 @@ export async function createSalesRecords(
   orderId: string,
   orderItems: OrderLineItem[],
   customerName: string,
-  customerEmail: string
 ) {
   try {
     // Process items in chunks to avoid timeouts
@@ -210,10 +208,9 @@ export async function createSalesRecords(
               productName: item.name,
               productImage: item.productThumbnail || '',
               customerName: customerName || 'Walk-in Customer',
-              customerEmail: customerEmail || '',
               orderNumber: generateOrderNumber(),
               total: item.qty * item.price
-            },
+            }
           });
         }
       });
