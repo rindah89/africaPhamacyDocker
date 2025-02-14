@@ -337,31 +337,52 @@ export default function PointOfSale({
     console.log('Payment completion handler called', result);
     
     if (result.success && result.order) {
-      console.log('Setting order details', {
+      console.log('Payment successful, updating states with:', {
         orderNumber: result.order.orderNumber,
         orderId: result.order.id,
-        amountPaid: result.amountPaid
+        amountPaid: result.amountPaid,
+        itemCount: orderLineItems.length
       });
 
-      // Batch state updates to prevent race conditions
-      const updates = {
-        orderNumber: result.order.orderNumber,
-        orderId: result.order.id,
-        amountPaid: result.amountPaid || 0,
-        showReceipt: true,
-        success: true,
-        showPaymentModal: false
-      };
+      // Use state updater functions to ensure state updates are atomic
+      setOrderNumber(prev => {
+        console.log('Updating orderNumber:', { prev, new: result.order.orderNumber });
+        return result.order.orderNumber;
+      });
+      
+      setCreatedOrderId(prev => {
+        console.log('Updating createdOrderId:', { prev, new: result.order.id });
+        return result.order.id;
+      });
+      
+      setAmountPaid(prev => {
+        console.log('Updating amountPaid:', { prev, new: result.amountPaid || 0 });
+        return result.amountPaid || 0;
+      });
+      
+      setShowReceipt(prev => {
+        console.log('Updating showReceipt:', { prev, new: true });
+        return true;
+      });
+      
+      setSuccess(prev => {
+        console.log('Updating success:', { prev, new: true });
+        return true;
+      });
+      
+      setShowPaymentModal(false);
 
-      // Update all states synchronously
-      setOrderNumber(updates.orderNumber);
-      setCreatedOrderId(updates.orderId);
-      setAmountPaid(updates.amountPaid);
-      setShowReceipt(updates.showReceipt);
-      setSuccess(updates.success);
-      setShowPaymentModal(updates.showPaymentModal);
-
-      console.log('States updated', updates);
+      // Add a check to verify states were updated correctly
+      setTimeout(() => {
+        console.log('State verification after updates:', {
+          orderNumber,
+          createdOrderId,
+          amountPaid,
+          showReceipt,
+          success,
+          itemCount: orderLineItems.length
+        });
+      }, 0);
     } else {
       console.error('Payment completion failed:', result);
       toast.error('Payment processing failed');
@@ -369,14 +390,24 @@ export default function PointOfSale({
   };
 
   function clearOrder() {
-    console.log('Clearing order', { showReceipt, createdOrderId });
-    dispatch(removeAllProductsFromOrderLine());
-    setSuccess(false);
-    setShowReceipt(false);
-    setCreatedOrderId('');
-    setOrderNumber('');
-    setAmountPaid(0);
-    console.log('Order cleared');
+    console.log('clearOrder called with states:', { 
+      showReceipt, 
+      createdOrderId,
+      hasItems: orderLineItems.length > 0
+    });
+
+    // Only clear if we're not showing the receipt
+    if (!showReceipt) {
+      console.log('Clearing order states');
+      dispatch(removeAllProductsFromOrderLine());
+      setSuccess(false);
+      setShowReceipt(false);
+      setCreatedOrderId('');
+      setOrderNumber('');
+      setAmountPaid(0);
+    } else {
+      console.log('Skipping order clear - receipt is being shown');
+    }
   }
 
   // Memoize the receipt component with stable key

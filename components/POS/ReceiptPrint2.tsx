@@ -46,7 +46,6 @@ export default function ReceiptPrint2({
     customerName 
   });
 
-  // Use refs to track component state
   const componentRef = React.useRef<HTMLDivElement>(null);
   const mounted = React.useRef(true);
   const [isOpen, setIsOpen] = React.useState(true);
@@ -55,7 +54,6 @@ export default function ReceiptPrint2({
   const [isClosing, setIsClosing] = React.useState(false);
   const dispatch = useAppDispatch();
 
-  // Handle mount/unmount
   React.useEffect(() => {
     console.log('Mount effect running', { orderId, isOpen });
     mounted.current = true;
@@ -65,9 +63,8 @@ export default function ReceiptPrint2({
       console.log('Unmounting component', { orderId, isOpen, hasPrinted });
       mounted.current = false;
     };
-  }, [orderId]);  // Add orderId as dependency to ensure proper mounting
+  }, [orderId]);
 
-  // Handle drawer state changes
   const handleOpenChange = (open: boolean) => {
     console.log('handleOpenChange called', { 
       newOpen: open, 
@@ -83,39 +80,34 @@ export default function ReceiptPrint2({
       return;
     }
 
-    // Always keep open unless explicitly closing
     if (!open && !isClosing) {
       console.log('Preventing automatic close');
       setIsOpen(true);
       return;
     }
 
-    // If trying to close without printing
-    if (!open && !hasPrinted && isClosing) {
-      console.log('Attempting to close without printing');
-      const shouldClose = window.confirm("Are you sure you want to cancel this sale? The order will be voided.");
-      
-      if (shouldClose) {
-        console.log('User confirmed cancellation');
-        setIsOpen(false);
-        clearOrder();
-        toast.success("Sale cancelled successfully");
+    if (!open && isClosing) {
+      if (!hasPrinted) {
+        console.log('Attempting to close without printing');
+        const shouldClose = window.confirm("Are you sure you want to cancel this sale? The order will be voided.");
+        
+        if (shouldClose) {
+          console.log('User confirmed cancellation');
+          setIsOpen(false);
+          clearOrder();
+          toast.success("Sale cancelled successfully");
+        } else {
+          console.log('User cancelled - keeping drawer open');
+          setIsClosing(false);
+          setIsOpen(true);
+        }
       } else {
-        console.log('User cancelled - keeping drawer open');
-        setIsClosing(false);
-        setIsOpen(true);
+        console.log('Closing after successful print');
+        setIsOpen(false);
       }
       return;
     }
 
-    // If closing after printing
-    if (!open && hasPrinted && isClosing) {
-      console.log('Closing after successful print');
-      setIsOpen(false);
-      return;
-    }
-
-    // For all other state changes
     console.log('Setting open state', { open });
     setIsOpen(open);
   };
@@ -151,7 +143,6 @@ export default function ReceiptPrint2({
           customerName
         });
         
-        // Create sales records before printing
         const result = await createSalesRecords(
           orderId,
           orderItems,
@@ -195,9 +186,14 @@ export default function ReceiptPrint2({
         hasPrinted,
         isClosing
       });
-      dispatch(removeAllProductsFromOrderLine());
-      setSuccess(false);
-      console.log('Order cleared successfully');
+      
+      if (hasPrinted) {
+        dispatch(removeAllProductsFromOrderLine());
+        setSuccess(false);
+        console.log('Order cleared successfully');
+      } else {
+        console.log('Skipping order clear - receipt not printed yet');
+      }
     } catch (error) {
       console.error("Error clearing order:", error);
       toast.error("Failed to clear order");
@@ -217,8 +213,14 @@ export default function ReceiptPrint2({
       handleOpenChange(false);
       clearOrder();
     } else {
-      setIsClosing(true);
-      handleOpenChange(false);
+      const shouldClose = window.confirm("Are you sure you want to cancel this sale? The order will be voided.");
+      if (shouldClose) {
+        setIsClosing(true);
+        handleOpenChange(false);
+        clearOrder();
+      } else {
+        setIsClosing(false);
+      }
     }
   };
 
