@@ -43,7 +43,6 @@ async function backfillSales() {
             await prismaClient.sale.create({
               data: {
                 orderId: order.id,
-                orderNumber: order.orderNumber,
                 productId: item.productId,
                 qty: item.qty,
                 salePrice: item.price,
