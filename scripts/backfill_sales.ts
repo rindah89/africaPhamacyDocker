@@ -1,3 +1,4 @@
+import { PrismaClient } from '@prisma/client';
 
 const prismaClient = new PrismaClient();
 
@@ -42,11 +43,9 @@ async function backfillSales() {
             await prismaClient.sale.create({
               data: {
                 orderId: order.id,
-                orderNumber: order.orderNumber,
                 productId: item.productId,
                 qty: item.qty,
                 salePrice: item.price,
-                total: item.price * item.qty,
                 productName: item.name,
                 productImage: item.productThumbnail || '',
                 customerName: order.customerName || 'Walk-in Customer',
