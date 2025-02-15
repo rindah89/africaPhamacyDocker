@@ -22,10 +22,7 @@ export default function SalesPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [tableRef, setTableRef] = useState<Table<any>>();
   const [filteredData, setFilteredData] = useState<any[]>([]);
-  const [date, setDate] = React.useState<DateRange | undefined>({
-    from: new Date(),
-    to: addDays(new Date(), 1),
-  });
+  const [date, setDate] = React.useState<DateRange | undefined>(undefined);
   const [time, setTime] = React.useState({
     from: { hours: "00", minutes: "00" },
     to: { hours: "23", minutes: "59" },
@@ -38,20 +35,21 @@ export default function SalesPage() {
         setIsLoading(true);
         setError(null);
 
+        let data;
         if (!date?.from || !date?.to) {
-          setSales([]);
-          setFilteredData([]);
-          return;
+          // If no date range is selected, get all sales
+          data = await getAllSales();
+        } else {
+          // Create Date objects with the selected times
+          const startDate = new Date(date.from);
+          startDate.setHours(parseInt(time.from.hours), parseInt(time.from.minutes), 0);
+
+          const endDate = new Date(date.to);
+          endDate.setHours(parseInt(time.to.hours), parseInt(time.to.minutes), 59);
+
+          data = await getAllSales(startDate, endDate);
         }
-
-        // Create Date objects with the selected times
-        const startDate = new Date(date.from);
-        startDate.setHours(parseInt(time.from.hours), parseInt(time.from.minutes), 0);
-
-        const endDate = new Date(date.to);
-        endDate.setHours(parseInt(time.to.hours), parseInt(time.to.minutes), 59);
-
-        const data = await getAllSales(startDate, endDate);
+        
         setSales(data || []);
         setFilteredData(data || []);
       } catch (err) {

@@ -1,14 +1,12 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prismaClient = new PrismaClient();
+import prisma from '@/lib/db';
 
 async function backfillSales() {
   try {
     console.log('Starting sales backfill process...');
     
     // Get all orders that don't have associated sales records
-    const ordersWithoutSales = await prismaClient.lineOrder.findMany({
+    const ordersWithoutSales = await prisma.lineOrder.findMany({
       where: {
         sales: {
           none: {}  // Orders with no sales records
@@ -28,7 +26,7 @@ async function backfillSales() {
     let totalProcessed = 0;
     let totalSuccess = 0;
     let totalFailed = 0;
-    const CHUNK_SIZE = 5; // Process 5 orders at a time
+    const CHUNK_SIZE = 5;
 
     // Process orders in chunks
     for (let i = 0; i < ordersWithoutSales.length; i += CHUNK_SIZE) {
@@ -38,7 +36,7 @@ async function backfillSales() {
         try {
           // Create sales records for each line item
           for (const item of order.lineOrderItems) {
-            await prismaClient.sale.create({
+            await prisma.sale.create({
               data: {
                 orderId: order.id,
                 orderNumber: order.orderNumber,
@@ -57,6 +55,7 @@ async function backfillSales() {
           }
 
           totalSuccess++;
+          console.log(`Successfully processed order ${order.orderNumber}`);
         } catch (error) {
           totalFailed++;
           console.error(`Failed to process order ${order.orderNumber}:`, error);
@@ -80,8 +79,6 @@ async function backfillSales() {
   } catch (error) {
     console.error('Error during backfill process:', error);
     throw error;
-  } finally {
-    await prismaClient.$disconnect();
   }
 }
 
@@ -90,8 +87,12 @@ export async function POST() {
     const result = await backfillSales();
     return NextResponse.json(result);
   } catch (error) {
+    console.error('Backfill API error:', error);
     return NextResponse.json(
-      { error: 'Failed to backfill sales records' },
+      { 
+        error: 'Failed to backfill sales records',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
