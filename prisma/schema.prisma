@@ -310,6 +310,8 @@ model Sale {
   qty          Int
   salePrice    Float
   productName  String
+  orderNumber  String?      // Optional order number field
+  total        Float?       // Optional total field
   productImage String
   customerName String
   customerEmail String? 
