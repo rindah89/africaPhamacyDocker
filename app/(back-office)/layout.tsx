@@ -17,7 +17,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
       <Sidebar session={session} notifications={notifications} />
       <div className="flex flex-col">
         <Navbar session={session} />
-        <div className="py-4 px-6 max-w-5xl mx-auto  w-full ">{children}</div>
+        <main className="flex-1 overflow-x-hidden py-4 px-6">{children}</main>
       </div>
     </div>
   );

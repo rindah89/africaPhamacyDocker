@@ -1,3 +1,5 @@
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
 
 const prismaClient = new PrismaClient();
 
@@ -31,12 +33,9 @@ async function backfillSales() {
     // Process orders in chunks
     for (let i = 0; i < ordersWithoutSales.length; i += CHUNK_SIZE) {
       const orderChunk = ordersWithoutSales.slice(i, i + CHUNK_SIZE);
-      console.log(`\nProcessing chunk ${i / CHUNK_SIZE + 1} of ${Math.ceil(ordersWithoutSales.length / CHUNK_SIZE)}`);
 
       for (const order of orderChunk) {
         try {
-          console.log(`\nProcessing order ${order.orderNumber} (${order.lineOrderItems.length} items)...`);
-
           // Create sales records for each line item
           for (const item of order.lineOrderItems) {
             await prismaClient.sale.create({
@@ -51,15 +50,13 @@ async function backfillSales() {
                 productImage: item.productThumbnail || '',
                 customerName: order.customerName || 'Walk-in Customer',
                 customerEmail: order.customerEmail || '',
-                createdAt: order.createdAt, // Use the order's creation date
+                createdAt: order.createdAt,
                 updatedAt: order.createdAt
               }
             });
-            console.log(`Created sale record for ${item.name}`);
           }
 
           totalSuccess++;
-          console.log(`Successfully processed order ${order.orderNumber}`);
         } catch (error) {
           totalFailed++;
           console.error(`Failed to process order ${order.orderNumber}:`, error);
@@ -69,40 +66,33 @@ async function backfillSales() {
 
       // Add a small delay between chunks to prevent overload
       if (i + CHUNK_SIZE < ordersWithoutSales.length) {
-        console.log('Waiting 1 second before next chunk...');
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
 
-    console.log('\nBackfill Summary:');
-    console.log(`Total Orders Processed: ${totalProcessed}`);
-    console.log(`Successfully Processed: ${totalSuccess}`);
-    console.log(`Failed to Process: ${totalFailed}`);
-
-    // Verify the results
-    const verificationCheck = await prismaClient.lineOrder.findMany({
-      where: {
-        sales: {
-          none: {}
-        }
-      },
-      select: {
-        id: true
-      }
-    });
-
-    console.log(`\nVerification Check:`);
-    console.log(`Orders still without sales records: ${verificationCheck.length}`);
+    return {
+      totalProcessed,
+      totalSuccess,
+      totalFailed,
+      ordersWithoutSales: ordersWithoutSales.length
+    };
 
   } catch (error) {
     console.error('Error during backfill process:', error);
+    throw error;
   } finally {
     await prismaClient.$disconnect();
   }
 }
 
-// Run the backfill
-console.log('Starting backfill process...');
-backfillSales()
-  .then(() => console.log('Backfill process completed'))
-  .catch(error => console.error('Backfill process failed:', error)); 
+export async function POST() {
+  try {
+    const result = await backfillSales();
+    return NextResponse.json(result);
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to backfill sales records' },
+      { status: 500 }
+    );
+  }
+} 

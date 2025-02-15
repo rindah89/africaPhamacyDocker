@@ -8,25 +8,61 @@ import { getAllSales } from "@/actions/sales";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoney } from "@/lib/formatMoney";
 import { Button } from "@/components/ui/button";
-import { FileDown } from "lucide-react";
+import { FileDown, Calendar, RefreshCw } from "lucide-react";
 import { Table } from "@tanstack/react-table";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { addDays } from "date-fns";
+import { DateRange } from "react-day-picker";
+import { toast } from "sonner";
 
 export default function SalesPage() {
   const [sales, setSales] = React.useState<any[]>([]);
   const [selectedSales, setSelectedSales] = useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [tableRef, setTableRef] = useState<Table<any>>();
   const [filteredData, setFilteredData] = useState<any[]>([]);
+  const [date, setDate] = React.useState<DateRange | undefined>({
+    from: new Date(),
+    to: addDays(new Date(), 1),
+  });
+  const [time, setTime] = React.useState({
+    from: { hours: "00", minutes: "00" },
+    to: { hours: "23", minutes: "59" },
+  });
+  const [isBackfilling, setIsBackfilling] = useState(false);
 
   React.useEffect(() => {
     const loadSales = async () => {
-      const data = await getAllSales();
-      setSales(data || []);
-      setFilteredData(data || []);
-      setIsLoading(false);
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        if (!date?.from || !date?.to) {
+          setSales([]);
+          setFilteredData([]);
+          return;
+        }
+
+        // Create Date objects with the selected times
+        const startDate = new Date(date.from);
+        startDate.setHours(parseInt(time.from.hours), parseInt(time.from.minutes), 0);
+
+        const endDate = new Date(date.to);
+        endDate.setHours(parseInt(time.to.hours), parseInt(time.to.minutes), 59);
+
+        const data = await getAllSales(startDate, endDate);
+        setSales(data || []);
+        setFilteredData(data || []);
+      } catch (err) {
+        setError("Failed to load sales data. Please try refreshing the page.");
+        console.error("Error loading sales:", err);
+      } finally {
+        setIsLoading(false);
+      }
     };
     loadSales();
-  }, []);
+  }, [date, time]);
 
   // Sort sales by date (most recent first)
   const sortedSales = useMemo(() => 
@@ -56,56 +92,120 @@ export default function SalesPage() {
   const handleExportPDF = useMemo(() => {
     return () => {
       const dataToExport = selectedSales.length > 0 ? selectedSales : filteredData;
-      const dateRange = tableRef?.getState().columnFilters.find(f => f.id === 'createdAt')?.value;
-      exportToPDF(dataToExport, dateRange ? {
-        from: new Date(dateRange.from),
-        to: new Date(dateRange.to)
-      } : undefined);
+      const dateFilter = tableRef?.getState().columnFilters.find(f => f.id === 'createdAt')?.value as { from?: string; to?: string } | undefined;
+      
+      if (dateFilter?.from && dateFilter?.to) {
+        exportToPDF(dataToExport, {
+          from: new Date(dateFilter.from),
+          to: new Date(dateFilter.to)
+        });
+      } else {
+        exportToPDF(dataToExport);
+      }
     };
   }, [selectedSales, filteredData, tableRef]);
 
+  const handleBackfill = async () => {
+    try {
+      setIsBackfilling(true);
+      const response = await fetch('/api/sales/backfill', {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to backfill sales');
+      }
+
+      const result = await response.json();
+      
+      // Show success message using Sonner
+      toast.success("Backfill Complete", {
+        description: `Processed ${result.totalProcessed} orders: ${result.totalSuccess} successful, ${result.totalFailed} failed.`
+      });
+
+      // Refresh the sales data
+      if (date?.from && date?.to) {
+        const startDate = new Date(date.from);
+        startDate.setHours(parseInt(time.from.hours), parseInt(time.from.minutes), 0);
+
+        const endDate = new Date(date.to);
+        endDate.setHours(parseInt(time.to.hours), parseInt(time.to.minutes), 59);
+
+        const data = await getAllSales(startDate, endDate);
+        setSales(data || []);
+        setFilteredData(data || []);
+      }
+    } catch (error) {
+      console.error('Backfill error:', error);
+      toast.error("Error", {
+        description: "Failed to backfill sales records. Please try again."
+      });
+    } finally {
+      setIsBackfilling(false);
+    }
+  };
+
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="text-center space-y-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p>Loading sales data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="text-center space-y-2 text-red-600">
+          <p>{error}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div className="grid gap-4 md:grid-cols-2 flex-1 mr-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Items Sold</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalItems.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Sales Revenue</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatMoney(totalSales)}</div>
-            </CardContent>
-          </Card>
-        </div>
-        <Button 
-          onClick={handleExportPDF} 
-          className="flex items-center gap-2"
-          variant="outline"
-        >
-          <FileDown className="h-4 w-4" />
-          Export Report
-        </Button>
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Items Sold</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalItems.toLocaleString()}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Sales Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatMoney(totalSales)}</div>
+          </CardContent>
+        </Card>
       </div>
 
       <div>
+        <div className="flex items-center justify-end gap-2 mb-4">
+          <Button
+            onClick={handleBackfill}
+            className="flex items-center gap-2"
+            variant="outline"
+            disabled={isBackfilling}
+          >
+            <RefreshCw className={`h-4 w-4 ${isBackfilling ? 'animate-spin' : ''}`} />
+            {isBackfilling ? 'Backfilling...' : 'Backfill Sales'}
+          </Button>
+        </div>
         <TableHeader
           title="Sales"
           linkTitle="Add Sale"
           href="/pos"
           data={sortedSales}
           model="sale"
+          customExportPDF={handleExportPDF}
         />
         <DataTable 
           columns={columns} 

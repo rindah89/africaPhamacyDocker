@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { getAllProducts } from "@/actions/products";
 import { cacheProducts, getCachedProducts } from "@/lib/indexedDB";
 import { useInterval } from "@/hooks/use-interval";
+import { Toaster } from 'sonner';
 
 function DataFetcher() {
   console.log('DataFetcher: Component mounted');
@@ -74,6 +75,7 @@ export default function DashboardLayout({
     <>
       <DataFetcher />
       {children}
+      <Toaster richColors />
     </>
   );
 } 
