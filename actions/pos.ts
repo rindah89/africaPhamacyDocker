@@ -141,36 +141,143 @@ export async function processPaymentAndOrder(
   orderNumber: string,
   amountPaid: number
 ) {
+  console.log('🚀 Starting processPaymentAndOrder:', {
+    orderNumber,
+    amountPaid,
+    customerName: customerData.customerName,
+    itemCount: orderData.orderItems.length,
+    totalAmount: orderData.orderAmount
+  });
+
   try {
-    // Create order and line items only
-    const order = await prisma.lineOrder.create({
-      data: {
-        orderNumber,
-        orderType: orderData.orderType,
-        source: orderData.source,
-        orderAmount: Math.round(orderData.orderAmount), // Convert to integer
-        customerId: customerData.customerId,
-        customerName: customerData.customerName || 'Walk-in Customer',
-        customerEmail: customerData.customerEmail || customerData.email || null, // Handle both possible email fields
-        lineOrderItems: {
-          create: orderData.orderItems.map(item => ({
-            productId: item.id,
-            name: item.name,
-            qty: item.qty,
-            price: item.price,
-            productThumbnail: item.productThumbnail
-          }))
+    // Use transaction to ensure all operations succeed or fail together
+    const order = await prisma.$transaction(async (tx) => {
+      console.log('📦 Creating order in transaction');
+      
+      // Create order and line items
+      const newOrder = await tx.lineOrder.create({
+        data: {
+          orderNumber,
+          orderType: orderData.orderType,
+          source: orderData.source,
+          orderAmount: Math.round(orderData.orderAmount),
+          amountPaid: Math.round(amountPaid),
+          customerId: customerData.customerId,
+          customerName: customerData.customerName || 'Walk-in Customer',
+          customerEmail: customerData.customerEmail || customerData.email || null,
+          lineOrderItems: {
+            create: orderData.orderItems.map(item => ({
+              productId: item.id,
+              name: item.name,
+              qty: item.qty,
+              price: item.price,
+              productThumbnail: item.productThumbnail
+            }))
+          }
+        },
+        include: {
+          lineOrderItems: true
         }
-      },
-      include: {
-        lineOrderItems: true
+      });
+
+      console.log('✅ Order created successfully:', {
+        orderId: newOrder.id,
+        orderNumber: newOrder.orderNumber,
+        itemCount: newOrder.lineOrderItems.length
+      });
+
+      // Process each order item
+      for (const item of orderData.orderItems) {
+        console.log(`📝 Processing order item: ${item.name}`);
+        
+        // Get available batches ordered by expiry date (FIFO)
+        const batches = await tx.productBatch.findMany({
+          where: {
+            productId: item.id,
+            status: true,
+            quantity: { gt: 0 }
+          },
+          orderBy: { expiryDate: 'asc' }
+        });
+
+        console.log(`Found ${batches.length} active batches for ${item.name}`);
+
+        let remainingQty = item.qty;
+        // Deduct quantities from batches
+        for (const batch of batches) {
+          if (remainingQty <= 0) break;
+
+          const deductionQty = Math.min(batch.quantity, remainingQty);
+          await tx.productBatch.update({
+            where: { id: batch.id },
+            data: { quantity: { decrement: deductionQty } }
+          });
+          remainingQty -= deductionQty;
+          
+          console.log(`Updated batch ${batch.id}: deducted ${deductionQty} units`);
+        }
+
+        // Update product's total stock quantity
+        await tx.product.update({
+          where: { id: item.id },
+          data: { stockQty: { decrement: item.qty } }
+        });
+
+        console.log(`Updated product stock for ${item.name}`);
+
+        // Create sale record
+        await tx.sale.create({
+          data: {
+            orderId: newOrder.id,
+            orderNumber: newOrder.orderNumber,
+            productId: item.id,
+            qty: item.qty,
+            salePrice: item.price,
+            total: item.price * item.qty,
+            productName: item.name,
+            productImage: item.productThumbnail || '',
+            customerName: customerData.customerName || 'Walk-in Customer',
+            customerEmail: customerData.customerEmail || customerData.email || null,
+            paymentMethod: customerData.method ?? 'NONE'
+          }
+        });
+
+        console.log(`Created sale record for ${item.name}`);
+
+        // Check if stock is below alert quantity
+        const updatedProduct = await tx.product.findUnique({
+          where: { id: item.id }
+        });
+
+        if (updatedProduct && updatedProduct.stockQty <= updatedProduct.alertQty) {
+          console.log(`⚠️ Low stock alert for ${updatedProduct.name}: ${updatedProduct.stockQty} units remaining`);
+          await createNotification({
+            message: updatedProduct.stockQty === 0
+              ? `The stock of ${updatedProduct.name} is out. Current stock: ${updatedProduct.stockQty}.`
+              : `The stock of ${updatedProduct.name} has gone below threshold. Current stock: ${updatedProduct.stockQty}.`,
+            status: updatedProduct.stockQty === 0 ? "DANGER" : "WARNING",
+            statusText: updatedProduct.stockQty === 0 ? "Stock Out" : "Warning",
+          });
+        }
       }
+
+      return newOrder;
+    });
+
+    console.log('🎉 Order processing completed successfully:', {
+      orderId: order.id,
+      orderNumber: order.orderNumber
     });
 
     revalidatePath("/pos");
     return { success: true, order };
   } catch (error: any) {
-    console.error("Order creation error:", error);
+    console.error("❌ Order creation error:", error);
+    console.error("Error details:", {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
     return {
       success: false,
       message: error.message || "Failed to create order"

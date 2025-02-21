@@ -339,15 +339,29 @@ export default function PointOfSale({
 
   const handlePaymentComplete = async (result: any) => {
     console.log('Payment completion handler called with result:', result);
-    console.log('Preparing to show receipt...', {
+    
+    if (!result || typeof result.amountPaid !== 'number') {
+      console.error('Invalid payment result:', result);
+      toast.error('Payment processing error');
+      return;
+    }
+
+    if (!validatedCustomerData || !orderData) {
+      console.error('Missing order data:', { validatedCustomerData, orderData });
+      toast.error('Order data missing');
+      return;
+    }
+
+    // Set all required data before showing receipt
+    setAmountPaid(result.amountPaid);
+    setShowPaymentModal(false);
+    setSuccess(true);
+    
+    console.log('Receipt data prepared:', {
       amountPaid: result.amountPaid,
       customerName: validatedCustomerData?.customerName,
-      itemCount: orderLineItems.length
+      orderItems: orderLineItems.length
     });
-    setAmountPaid(result.amountPaid || 0);
-    setSuccess(true);
-    setShowPaymentModal(false);
-    setReceiptKey(prev => prev + 1);
   };
 
   function clearOrder() {
@@ -707,6 +721,9 @@ export default function PointOfSale({
           customerName={validatedCustomerData?.customerName || ''}
           customerEmail={validatedCustomerData?.customerEmail || ''}
           amountPaid={amountPaid}
+          orderData={orderData}
+          customerData={validatedCustomerData}
+          orderNumber={orderNumber}
           onComplete={() => {
             console.log('Receipt handling completed, cleaning up...');
             clearOrder();

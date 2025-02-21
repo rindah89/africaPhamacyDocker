@@ -11,6 +11,7 @@ import ProductWithCart from "./ProductWithCart";
 import HorizontalProduct from "./HorizontalProduct";
 import VerticalProduct from "./VerticalProduct";
 import { ProductWithReviews } from "./ProductListing";
+
 export default function CarouselListing({
   products,
   cardType,
@@ -50,24 +51,20 @@ export default function CarouselListing({
       transitionDuration={1000}
       containerClass="carousel-container"
       removeArrowOnDeviceType={["tablet", "mobile"]}
-      // deviceType={}
       dotListClass="custom-dot-list-style"
       itemClass="px-4"
     >
-      {products.map((product, i) => {
-        return (
-          <>
-            {cardType === "carousel" ? (
-              <CarouselProduct product={product} key={i} />
-            ) : cardType === "cart" ? (
-              <ProductWithCart item={product} key={i} />
-            ) : cardType === "horizontal" ? (
-              <HorizontalProduct product={product} key={i} />
-            ) : (
-              <VerticalProduct product={product} key={i} />
-            )}
-          </>
-        );
+      {products.map((product) => {
+        if (cardType === "carousel") {
+          return <CarouselProduct product={product} key={product.id} />;
+        }
+        if (cardType === "cart") {
+          return <ProductWithCart item={product} key={product.id} />;
+        }
+        if (cardType === "horizontal") {
+          return <HorizontalProduct product={product} key={product.id} />;
+        }
+        return <VerticalProduct product={product} key={product.id} />;
       })}
     </Carousel>
   );

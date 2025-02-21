@@ -17,14 +17,18 @@ import { removeAllProductsFromOrderLine } from "@/redux/slices/pointOfSale";
 import { OrderLineItem } from "@/redux/slices/pointOfSale";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
+import { processPaymentAndOrder } from "@/actions/pos";
 
 interface ReceiptPrintProps {
   setSuccess: (value: boolean) => void;
   orderItems: OrderLineItem[];
   customerName: string;
   customerEmail: string;
-  amountPaid?: number;
+  amountPaid: number;
   onComplete?: () => void;
+  orderData: any;
+  customerData: any;
+  orderNumber: string;
 }
 
 export default function ReceiptPrint2({ 
@@ -32,43 +36,64 @@ export default function ReceiptPrint2({
   orderItems,
   customerName,
   customerEmail,
-  amountPaid = 0,
-  onComplete
+  amountPaid,
+  onComplete,
+  orderData,
+  customerData,
+  orderNumber
 }: ReceiptPrintProps) {
+  console.log('🧾 ReceiptPrint2 component rendering:', {
+    hasItems: Boolean(orderItems?.length),
+    customerName,
+    amountPaid,
+    orderNumber
+  });
+
   const componentRef = React.useRef<HTMLDivElement>(null);
-  const [isOpen, setIsOpen] = React.useState(true);
+  const [isOpen, setIsOpen] = React.useState(false);
   const [isPrinting, setIsPrinting] = React.useState(false);
   const [hasPrinted, setHasPrinted] = React.useState(false);
   const [isClosing, setIsClosing] = React.useState(false);
+  const [isProcessing, setIsProcessing] = React.useState(false);
   const dispatch = useAppDispatch();
   const mountedRef = React.useRef(false);
 
   const { currentDate, currentTime } = getCurrentDateAndTime();
   
-  // Ensure proper initialization on mount
+  // Validate required props on mount
   React.useEffect(() => {
-    console.log('Receipt component mounted', {
-      customerName,
-      itemCount: orderItems.length,
+    console.log('🔍 Validating receipt props:', {
+      itemCount: orderItems?.length,
       amountPaid,
+      isOpen,
+      hasPrinted,
       mountCount: mountedRef.current
     });
-    
-    mountedRef.current = true;
-    setIsOpen(true);
-    setIsClosing(false);
-    setHasPrinted(false);
-    setIsPrinting(false);
+
+    if (!orderItems?.length || typeof amountPaid !== 'number') {
+      console.error('❌ Invalid receipt props:', { 
+        itemCount: orderItems?.length, 
+        amountPaid,
+        type: typeof amountPaid
+      });
+      return;
+    }
+
+    // Short delay before opening to ensure clean mount
+    const timer = setTimeout(() => {
+      console.log('🔓 Opening receipt drawer');
+      setIsOpen(true);
+      setIsClosing(false);
+      setHasPrinted(false);
+      setIsPrinting(false);
+    }, 50);
 
     return () => {
-      console.log('Receipt component unmounting', {
-        hasPrinted,
-        isClosing,
-        mountCount: mountedRef.current
-      });
+      clearTimeout(timer);
+      console.log('🧹 Receipt component cleanup');
       mountedRef.current = false;
     };
-  }, []);
+  }, [orderItems, amountPaid]);
 
   // Handle drawer state changes
   const handleDrawerStateChange = React.useCallback((open: boolean) => {
@@ -100,18 +125,47 @@ export default function ReceiptPrint2({
 
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
-    onBeforeGetContent: () => {
-      console.log('Starting print process...', { isPrinting, hasPrinted });
+    onBeforeGetContent: async () => {
+      console.log('🖨️ Starting print process...', { isPrinting, hasPrinted });
       if (!orderItems || orderItems.length === 0) {
-        console.error('Print failed: No items to print');
+        console.error('❌ Print failed: No items to print');
         toast.error("No items to print");
         return Promise.reject(new Error("No items to print"));
       }
+
       setIsPrinting(true);
-      return Promise.resolve();
+      setIsProcessing(true);
+
+      try {
+        console.log('🔄 Processing order before print...');
+        const result = await processPaymentAndOrder(
+          orderData,
+          customerData,
+          orderNumber,
+          amountPaid
+        );
+
+        if (!result.success) {
+          console.error('❌ Order processing failed:', result.message);
+          toast.error(result.message || "Failed to process order");
+          return Promise.reject(new Error(result.message));
+        }
+
+        console.log('✅ Order processed successfully:', {
+          orderId: result.order?.id,
+          orderNumber: result.order?.orderNumber
+        });
+        return Promise.resolve();
+      } catch (error: any) {
+        console.error('❌ Order processing error:', error);
+        toast.error(error.message || "Failed to process order");
+        return Promise.reject(error);
+      } finally {
+        setIsProcessing(false);
+      }
     },
     onAfterPrint: () => {
-      console.log('Print completed successfully');
+      console.log('✅ Print completed successfully');
       setIsPrinting(false);
       setHasPrinted(true);
       toast.success("Receipt printed successfully");
@@ -119,19 +173,20 @@ export default function ReceiptPrint2({
   });
 
   const handleClose = React.useCallback(() => {
-    console.log('Attempting to close receipt...', {
+    console.log('🔒 Attempting to close receipt...', {
       isPrinting,
       hasPrinted,
-      isClosing
+      isClosing,
+      isProcessing
     });
 
-    if (isPrinting) {
-      console.log('Close prevented: Receipt is printing');
+    if (isPrinting || isProcessing) {
+      console.log('⚠️ Close prevented: Receipt is printing or processing');
       return;
     }
 
     if (hasPrinted) {
-      console.log('Closing receipt after successful print');
+      console.log('✅ Closing receipt after successful print');
       setIsClosing(true);
       setIsOpen(false);
       // Delay the cleanup to ensure drawer animation completes
@@ -139,12 +194,13 @@ export default function ReceiptPrint2({
         dispatch(removeAllProductsFromOrderLine());
         setSuccess(false);
         onComplete?.();
+        console.log('🧹 Receipt cleanup completed');
       }, 300);
     } else {
-      console.log('Attempting to cancel sale without printing');
+      console.log('⚠️ Attempting to cancel sale without printing');
       const shouldClose = window.confirm("Are you sure you want to cancel this sale? The order will be voided.");
       if (shouldClose) {
-        console.log('Sale cancelled by user');
+        console.log('❌ Sale cancelled by user');
         setIsClosing(true);
         setIsOpen(false);
         // Delay the cleanup to ensure drawer animation completes
@@ -152,16 +208,17 @@ export default function ReceiptPrint2({
           dispatch(removeAllProductsFromOrderLine());
           setSuccess(false);
           onComplete?.();
+          console.log('🧹 Receipt cleanup completed after cancellation');
         }, 300);
       } else {
-        console.log('Sale cancellation aborted by user');
+        console.log('↩️ Sale cancellation aborted by user');
       }
     }
-  }, [isPrinting, hasPrinted, isClosing, dispatch, setSuccess, onComplete]);
+  }, [isPrinting, hasPrinted, isClosing, isProcessing, dispatch, setSuccess, onComplete]);
 
   // Don't render if no items
   if (!orderItems || orderItems.length === 0) {
-    console.log('Receipt not rendered: No items');
+    console.log('⚠️ Receipt not rendered: No items');
     return null;
   }
 

@@ -39,12 +39,16 @@ export default function PaymentModal({
 
   useEffect(() => {
     if (isOpen) {
-      console.log('PaymentModal opened', { totalAmount, orderNumber });
+      console.log('🔓 PaymentModal opened:', { 
+        totalAmount, 
+        orderNumber,
+        customerName: customerData?.customerName
+      });
       setAmountPaid('');
       setChange(0);
       setProcessing(false);
     }
-  }, [isOpen, totalAmount, orderNumber]);
+  }, [isOpen, totalAmount, orderNumber, customerData]);
 
   const handleAmountPaidChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^0-9]/g, '');
@@ -58,46 +62,41 @@ export default function PaymentModal({
   };
 
   const handleComplete = async () => {
-    console.log('Payment completion started', { 
+    console.log('💰 Payment validation started:', { 
       amountPaid, 
       totalAmount, 
       orderNumber,
-      orderData,
-      customerData 
+      customerName: customerData?.customerName,
+      itemCount: orderData?.orderItems?.length
     });
 
     const numericAmount = parseInt(amountPaid) || 0;
     if (numericAmount < totalAmount) {
-      console.log('Payment amount insufficient', { numericAmount, totalAmount });
+      console.log('⚠️ Payment amount insufficient:', { numericAmount, totalAmount });
       toast.error("Amount paid must be equal to or greater than total amount");
       return;
     }
 
     setProcessing(true);
     try {
-      console.log('Processing payment...');
-      const result = await processPaymentAndOrder(
-        orderData,
-        customerData,
-        orderNumber,
-        numericAmount
-      );
-
-      console.log('Payment process result:', result);
-
-      if (result.success) {
-        onPaymentComplete({ amountPaid: numericAmount });
-        
-        onClose();
-        
-        toast.success("Payment processed successfully");
-      } else {
-        console.error('Payment failed:', result.message);
-        toast.error(result.message || "Failed to process payment");
-      }
+      // Only validate payment amount and complete the modal
+      console.log('✅ Payment amount validated, proceeding to receipt');
+      onPaymentComplete({
+        amountPaid: numericAmount,
+        orderNumber: orderNumber,
+        success: true
+      });
+      
+      onClose();
+      toast.success("Payment validated");
     } catch (error: any) {
-      console.error("Payment processing error:", error);
-      toast.error(error.message || "Failed to process payment");
+      console.error("❌ Payment validation error:", error);
+      console.error("Error details:", {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+      toast.error(error.message || "Failed to validate payment");
     } finally {
       setProcessing(false);
     }
