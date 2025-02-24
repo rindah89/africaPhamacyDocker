@@ -1,0 +1,45 @@
+import Link from "next/link";
+import React from "react";
+import Image from "next/image";
+import {
+  ChevronLeft,
+  Home,
+  LineChart,
+  Package,
+  Package2,
+  PanelLeft,
+  PlusCircle,
+  Search,
+  Settings,
+  ShoppingCart,
+  Upload,
+  Users2,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import CategoryForm from "@/components/dashboard/Forms/CategoryForm";
+import FormHeader from "@/components/dashboard/Forms/FormHeader";
+import { getCategoryById } from "@/actions/category";
+import { getAllMainCategories } from "@/actions/main-category";
+
+export default async function page({
+  params: { id },
+}: {
+  params: { id: string };
+}) {
+  const category = await getCategoryById(id);
+  const allMainCategories = (await getAllMainCategories()) || [];
+  const mainCategories = allMainCategories.map((item) => {
+    return {
+      label: item.title,
+      value: item.id,
+    };
+  });
+  return (
+    <CategoryForm
+      mainCategories={mainCategories}
+      editingId={id}
+      initialData={category}
+    />
+  );
+}

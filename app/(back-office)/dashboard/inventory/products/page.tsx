@@ -1,0 +1,25 @@
+import DataTable from "@/components/DataTableComponents/DataTable";
+import TableHeader from "@/components/dashboard/Tables/TableHeader";
+import React from "react";
+import { columns } from "./columns";
+import { getAllProductsNoLimit } from "@/actions/products";
+
+export default async function page() {
+  console.log('Products page: Starting to fetch products...');
+  const products = (await getAllProductsNoLimit()) || [];
+  console.log('Products page: Products received:', products.length);
+  
+  return (
+    <div>
+      <TableHeader
+        title="Products"
+        linkTitle="Add Product"
+        href="/dashboard/inventory/products/new"
+        data={products}
+        model="product"
+      />
+      {/* <CustomDataTable categories={categories} /> */}
+      <DataTable columns={columns} data={products} />
+    </div>
+  );
+}

@@ -1,0 +1,452 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+model MainCategory {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  slug        String    @unique
+  categories Category[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime? @updatedAt
+}
+model Category {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  slug        String    @unique
+  description String?
+  imageUrl    String?
+  status      Boolean   @default(true)
+  mainCategoryId  String @db.ObjectId
+  mainCategory    MainCategory  @relation(fields: [mainCategoryId], references: [id])
+  subCategories   SubCategory[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime? @updatedAt
+}
+
+model SubCategory {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  slug        String    @unique
+  categoryId  String @db.ObjectId
+  category    Category    @relation(fields: [categoryId], references: [id])
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime? @updatedAt
+}
+
+model Banner {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String @default("")
+  imageUrl   String
+  bannerLink String
+  status     Boolean
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum AdvertSize {
+  FULL
+  HALF
+  QUARTER
+}
+model Advert {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  imageUrl    String
+  status      Boolean   @default(true)
+  link        String
+  size        AdvertSize @default(QUARTER)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime? @updatedAt
+}
+
+// Brand model
+model Brand {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  slug      String    @unique
+  status    Boolean
+  logo      String
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// Unit model
+model Unit {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  abbreviation String
+  products     Product[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+
+
+// Supplier model
+model Supplier {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  imageUrl    String?
+  companyName String?   @unique
+  vatNumber   String?
+  email       String?   @unique
+  phone       String
+  address     String?
+  city        String?
+  status      Boolean?
+  products    Product[]
+  purchaseOrders PurchaseOrder[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+
+
+model Product {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  slug             String   @unique
+  productCode      String
+  stockQty         Int
+  productCost      Float
+  productPrice     Float
+  supplierPrice     Float @default(100)
+  alertQty         Int
+  productTax       Float
+  taxMethod        String
+  productImages    String[]
+  status           Boolean
+  productThumbnail String
+  productDetails   String
+  content           String?
+  isFeatured       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relationships
+  subCategory   SubCategory @relation(fields: [subCategoryId], references: [id])
+  subCategoryId String   @db.ObjectId
+
+  adjustments      AdjustmentItem[]
+  purchaseOrders   PurchaseOrderItem[]
+  reviews  Review[]
+  batches  ProductBatch[]
+
+  brand         Brand           @relation(fields: [brandId], references: [id])
+  brandId       String          @db.ObjectId
+  unit          Unit            @relation(fields: [unitId], references: [id])
+  unitId        String          @db.ObjectId
+  supplier      Supplier        @relation(fields: [supplierId], references: [id])
+  supplierId    String          @db.ObjectId
+  lineOrderItems LineOrderItem[]
+  sales          Sale[]
+}
+
+// New model for managing product batches
+model ProductBatch {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  batchNumber   String
+  quantity      Int
+  expiryDate    DateTime
+  deliveryDate  DateTime?
+  costPerUnit   Float
+  notes         String?
+  status        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relationships
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId     String    @db.ObjectId
+  adjustments   AdjustmentItem[]
+
+  @@unique([productId, batchNumber])
+}
+
+model Role {
+  id              String  @id @default(auto()) @map("_id") @db.ObjectId
+  displayName     String // Human-friendly name for UI
+  roleName        String  @unique // Programmatic name for code
+  description     String?
+  // Relationships
+  users           User[]
+
+  // Module Permissions
+  canViewDashboard Boolean @default(false)
+  canViewUsers   Boolean @default(false)
+  canViewRoles     Boolean @default(false)
+  canViewSales     Boolean @default(false)
+  canViewCustomers     Boolean @default(false)
+  canViewOrders     Boolean @default(false)
+  canViewPos     Boolean @default(false)
+  canViewStockPurchase     Boolean @default(false)
+  canViewStockAdjustment     Boolean @default(false)
+  canViewApi     Boolean @default(false)
+  canViewReports     Boolean @default(false)
+  canViewSettings     Boolean @default(false)
+  canViewMainCategories   Boolean @default(false)
+  canViewCategories   Boolean @default(false)
+  canViewSubCategories   Boolean @default(false)
+  canViewBrands   Boolean @default(false)
+  canViewAdverts   Boolean @default(false)
+  canViewBanners   Boolean @default(false)
+  canViewUnits   Boolean @default(false)
+  canViewProducts   Boolean @default(false)  
+  canViewSuppliers   Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id            String  @id @default(auto()) @map("_id") @db.ObjectId
+  email         String  @unique
+  password      String
+  plainPassword String?
+  firstName     String
+  lastName      String
+  name          String
+  phone         String
+  profileImage  String?
+  inviteSent    Boolean @default(false)
+  resetToken    Int?
+  passwordResetCount Int @default(0)
+  // Foreign key to Role
+  roleId        String  @db.ObjectId
+  role          Role    @relation(fields: [roleId], references: [id])
+
+  status    Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  customer  Customer[]
+  reviews  Review[]
+}
+
+model LineOrderItem {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  productId        String   @db.ObjectId
+  orderId          String   @db.ObjectId
+  name             String
+  price            Float
+  qty              Int
+  productThumbnail String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relationships
+  product   Product   @relation(fields: [productId], references: [id])
+  lineOrder LineOrder @relation(fields: [orderId], references: [id])
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  DELIVERED
+  FAILED
+}
+enum PurchaseOrderStatus {
+  PAID
+  PARTIAL
+  UNPAID
+}
+model LineOrder {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  customerId   String   @db.ObjectId
+  customerName String
+  
+  orderNumber  String @unique
+  customerEmail String?
+  orderAmount Int?
+  amountPaid Int?
+  orderType String?
+  source String  @default("pos")
+  status       OrderStatus @default(DELIVERED)
+  paymentMethod PaymentMethod @default(NONE)
+// ECOMMERCE
+// Personal Details
+  firstName     String?
+  lastName      String?
+  email         String?
+  phone         String?
+  // shipping details
+  streetAddress String?
+  city          String?
+  country       String?
+  apartment     String?
+  state     String?
+  zipCode       String?
+
+
+  // Relationships
+  lineOrderItems LineOrderItem[]
+  sales          Sale[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum PaymentMethod {
+  NONE
+  CASH
+  MOBILE_MONEY
+  ORANGE_MONEY
+  INSURANCE
+}
+
+model Sale {
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  orderId      String       @db.ObjectId
+  productId    String       @db.ObjectId
+  qty          Int
+  salePrice    Float
+  productName  String
+  orderNumber  String?      // Optional order number field
+  total        Float?       // Optional total field
+  productImage String
+  customerName String
+  customerEmail String? 
+  paymentMethod PaymentMethod? // Updated to use PaymentMethod enum
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  // Relationships
+  product   Product   @relation(fields: [productId], references: [id])
+  lineOrder LineOrder @relation(fields: [orderId], references: [id])
+}
+
+model Address {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  street     String
+  city       String
+  state      String
+  postalCode String
+  country    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+model Customer {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @db.ObjectId
+  additionalInfo String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relationships
+  user            User   @relation(fields: [userId], references: [id])
+  billingAddress  String
+  shippingAddress String
+}
+model Feedback {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  title        String
+  message      String
+  orderItemIds String[]
+  userId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum NotificationStatus {
+  WARNING
+  DANGER
+  INFO
+}
+model Notification {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  message      String
+  status    NotificationStatus @default(WARNING)
+  statusText String
+  read       Boolean @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+
+model Adjustment {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  refNo       String @unique @default("AAAAB")
+  reason      String 
+  items       AdjustmentItem[]
+  
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model AdjustmentItem {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  adjustment  Adjustment @relation(fields: [adjustmentId], references: [id])
+  adjustmentId String   @db.ObjectId
+  productId   String   @db.ObjectId
+  product     Product   @relation(fields: [productId], references: [id])
+  batchId     String?   @db.ObjectId
+  batch       ProductBatch? @relation(fields: [batchId], references: [id])
+  quantity    Int
+  type        String
+  currentStock Int
+  productName  String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model PurchaseOrder {
+   id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  supplierId  String   @db.ObjectId
+  supplier    Supplier          @relation(fields: [supplierId], references: [id])
+  status      PurchaseOrderStatus @default(PAID)
+  discount  Int?
+  notes String?
+  tax  Int?
+  refNo String
+  totalAmount Int
+  balanceAmount Int 
+  shippingCost  Int?
+  items       PurchaseOrderItem[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model PurchaseOrderItem {
+   id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  purchaseOrder  PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId String   @db.ObjectId
+  productId      String   @db.ObjectId
+  product        Product       @relation(fields: [productId], references: [id])
+  quantity       Int
+  productName String
+  unitCost Int
+  subTotal Int
+  currentStock Int
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model Review {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  rating    Int
+  comment   String
+  status    Boolean  @default(true)
+  productId String   @db.ObjectId
+  product   Product  @relation(fields: [productId], references: [id])
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Counter {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique
+  value     Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
