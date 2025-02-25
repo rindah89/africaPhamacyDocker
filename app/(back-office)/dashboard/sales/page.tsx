@@ -10,7 +10,6 @@ import { formatMoney } from "@/lib/formatMoney";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { Table } from "@tanstack/react-table";
-import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 
 export default function SalesPage() {
