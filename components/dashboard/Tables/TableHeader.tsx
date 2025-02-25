@@ -48,8 +48,6 @@ import { createBulkBrands } from "@/actions/brand";
 import { createBulkSuppliers } from "@/actions/supplier";
 import { createBulkUnits } from "@/actions/unit";
 import { createBulkProducts } from "@/actions/products";
-import PrintSalesModal from "@/components/dashboard/Reports/PrintSalesModal";
-
 type TableHeaderProps = {
   title: string;
   href: string;
@@ -251,31 +249,13 @@ export default function TableHeader({
         <div className="flex items-center gap-2">
           {model === "product" && title === "Inventory Report" && (
             <Button
-              onClick={() => exportToPDF(data)}
-              className="flex items-center gap-2"
               variant="outline"
+              size="sm"
+              className="h-8 px-2 lg:px-3"
+              onClick={() => customExportPDF?.(data)}
             >
-              <FileDown className="h-4 w-4" />
-              Export PDF
-            </Button>
-          )}
-          {model === "sale" ? (
-            <PrintSalesModal
-              trigger={
-                <Button variant="outline" className="flex items-center gap-2">
-                  <FileDown className="h-4 w-4" />
-                  Print Sales
-                </Button>
-              }
-            />
-          ) : (
-            <Button
-              onClick={handleExportData}
-              className="flex items-center gap-2"
-              variant="outline"
-            >
-              <RiFileExcel2Line className="h-4 w-4" />
-              Export Excel
+              <FileDown className="mr-2 h-4 w-4" />
+              PDF
             </Button>
           )}
           {showImport && (

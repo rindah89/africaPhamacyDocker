@@ -269,7 +269,7 @@ model LineOrder {
   orderNumber  String @unique
   customerEmail String?
   orderAmount Int?
-  amountPaid Int?
+  amountPaid Int
   orderType String?
   source String  @default("pos")
   status       OrderStatus @default(DELIVERED)

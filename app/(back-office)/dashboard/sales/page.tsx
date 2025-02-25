@@ -3,13 +3,16 @@
 import DataTable from "@/components/DataTableComponents/DataTable";
 import TableHeader from "@/components/dashboard/Tables/TableHeader";
 import React, { useState, useMemo } from "react";
-import { columns } from "./columns";
+import { columns, exportToPDF } from "./columns";
 import { getAllSales } from "@/actions/sales";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoney } from "@/lib/formatMoney";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { FileDown, Calendar, RefreshCw } from "lucide-react";
 import { Table } from "@tanstack/react-table";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+import { addDays } from "date-fns";
+import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
 
 export default function SalesPage() {
@@ -19,6 +22,11 @@ export default function SalesPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [tableRef, setTableRef] = useState<Table<any>>();
   const [filteredData, setFilteredData] = useState<any[]>([]);
+  const [date, setDate] = React.useState<DateRange | undefined>(undefined);
+  const [time, setTime] = React.useState({
+    from: { hours: "00", minutes: "00" },
+    to: { hours: "23", minutes: "59" },
+  });
   const [isBackfilling, setIsBackfilling] = useState(false);
 
   React.useEffect(() => {
@@ -26,7 +34,22 @@ export default function SalesPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await getAllSales();
+
+        let data;
+        if (!date?.from || !date?.to) {
+          // If no date range is selected, get all sales
+          data = await getAllSales();
+        } else {
+          // Create Date objects with the selected times
+          const startDate = new Date(date.from);
+          startDate.setHours(parseInt(time.from.hours), parseInt(time.from.minutes), 0);
+
+          const endDate = new Date(date.to);
+          endDate.setHours(parseInt(time.to.hours), parseInt(time.to.minutes), 59);
+
+          data = await getAllSales(startDate, endDate);
+        }
+        
         setSales(data || []);
         setFilteredData(data || []);
       } catch (err) {
@@ -37,7 +60,7 @@ export default function SalesPage() {
       }
     };
     loadSales();
-  }, []);
+  }, [date, time]);
 
   // Sort sales by date (most recent first)
   const sortedSales = useMemo(() => 
@@ -63,6 +86,23 @@ export default function SalesPage() {
     };
   }, [selectedSales, filteredData]);
 
+  // Custom export function that passes selected sales and date range
+  const handleExportPDF = useMemo(() => {
+    return () => {
+      const dataToExport = selectedSales.length > 0 ? selectedSales : filteredData;
+      const dateFilter = tableRef?.getState().columnFilters.find(f => f.id === 'createdAt')?.value as { from?: string; to?: string } | undefined;
+      
+      if (dateFilter?.from && dateFilter?.to) {
+        exportToPDF(dataToExport, {
+          from: new Date(dateFilter.from),
+          to: new Date(dateFilter.to)
+        });
+      } else {
+        exportToPDF(dataToExport);
+      }
+    };
+  }, [selectedSales, filteredData, tableRef]);
+
   const handleBackfill = async () => {
     try {
       setIsBackfilling(true);
@@ -82,9 +122,17 @@ export default function SalesPage() {
       });
 
       // Refresh the sales data
-      const data = await getAllSales();
-      setSales(data || []);
-      setFilteredData(data || []);
+      if (date?.from && date?.to) {
+        const startDate = new Date(date.from);
+        startDate.setHours(parseInt(time.from.hours), parseInt(time.from.minutes), 0);
+
+        const endDate = new Date(date.to);
+        endDate.setHours(parseInt(time.to.hours), parseInt(time.to.minutes), 59);
+
+        const data = await getAllSales(startDate, endDate);
+        setSales(data || []);
+        setFilteredData(data || []);
+      }
     } catch (error) {
       console.error('Backfill error:', error);
       toast.error("Error", {
@@ -155,6 +203,7 @@ export default function SalesPage() {
           href="/pos"
           data={sortedSales}
           model="sale"
+          customExportPDF={handleExportPDF}
         />
         <DataTable 
           columns={columns} 
