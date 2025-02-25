@@ -2097,7 +2097,3 @@ export async function searchPOSProducts(searchQuery: string) {
     return [];
   }
 }
-
-
-
-

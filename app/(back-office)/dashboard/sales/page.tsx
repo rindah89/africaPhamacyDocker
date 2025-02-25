@@ -8,12 +8,13 @@ import { getAllSales } from "@/actions/sales";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoney } from "@/lib/formatMoney";
 import { Button } from "@/components/ui/button";
-import { FileDown, Calendar, RefreshCw } from "lucide-react";
+import { FileDown, Calendar, RefreshCw, Printer } from "lucide-react";
 import { Table } from "@tanstack/react-table";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { addDays } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
+import PrintSalesModal from "@/components/dashboard/Reports/PrintSalesModal";
 
 export default function SalesPage() {
   const [sales, setSales] = React.useState<any[]>([]);
@@ -186,16 +187,27 @@ export default function SalesPage() {
       </div>
 
       <div>
-        <div className="flex items-center justify-end gap-2 mb-4">
-          <Button
-            onClick={handleBackfill}
-            className="flex items-center gap-2"
-            variant="outline"
-            disabled={isBackfilling}
-          >
-            <RefreshCw className={`h-4 w-4 ${isBackfilling ? 'animate-spin' : ''}`} />
-            {isBackfilling ? 'Backfilling...' : 'Backfill Sales'}
-          </Button>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <div></div> {/* Empty div for flex spacing */}
+          <div className="flex items-center gap-2">
+            <PrintSalesModal 
+              trigger={
+                <Button variant="default" className="flex items-center gap-2">
+                  <Printer className="h-4 w-4" />
+                  Print Sales
+                </Button>
+              } 
+            />
+            <Button
+              onClick={handleBackfill}
+              className="flex items-center gap-2"
+              variant="outline"
+              disabled={isBackfilling}
+            >
+              <RefreshCw className={`h-4 w-4 ${isBackfilling ? 'animate-spin' : ''}`} />
+              {isBackfilling ? 'Backfilling...' : 'Backfill Sales'}
+            </Button>
+          </div>
         </div>
         <TableHeader
           title="Sales"
