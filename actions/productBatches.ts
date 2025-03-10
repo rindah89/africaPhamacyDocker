@@ -78,21 +78,78 @@ export async function updateProductBatch(id: string, data: Partial<ProductBatchP
       throw new Error("Batch not found");
     }
 
-    const updatedBatch = await prisma.productBatch.update({
-      where: { id },
-      data: {
-        quantity: data.quantity,
-        expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
-        deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : undefined,
-        costPerUnit: data.costPerUnit,
-        notes: data.notes,
-        status: data.status,
-      },
-    });
+    // Calculate quantity difference
+    const quantityDifference = (data.quantity !== undefined) 
+      ? data.quantity - originalBatch.quantity 
+      : 0;
 
-    // Update the product's total stock if quantity changed
-    if (data.quantity !== undefined && data.quantity !== originalBatch.quantity) {
-      const quantityDifference = data.quantity - originalBatch.quantity;
+    // If quantity is being reduced, just update the batch
+    if (quantityDifference <= 0) {
+      const updatedBatch = await prisma.productBatch.update({
+        where: { id },
+        data: {
+          quantity: data.quantity,
+          expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
+          deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : undefined,
+          costPerUnit: data.costPerUnit,
+          notes: data.notes,
+          status: data.status,
+        },
+      });
+
+      // Update the product's total stock if quantity changed
+      if (quantityDifference !== 0) {
+        await prisma.product.update({
+          where: { id: originalBatch.productId },
+          data: {
+            stockQty: {
+              increment: quantityDifference
+            }
+          }
+        });
+      }
+
+      revalidatePath("/dashboard/inventory/products");
+      return updatedBatch;
+    } 
+    // If quantity is being increased, create a new batch for the additional quantity
+    else {
+      // First, update the original batch with all non-quantity data
+      const updatedBatch = await prisma.productBatch.update({
+        where: { id },
+        data: {
+          expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
+          deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : undefined,
+          costPerUnit: data.costPerUnit,
+          notes: data.notes,
+          status: data.status,
+        },
+      });
+
+      // Generate a new batch number
+      const batchCounter = await prisma.counter.upsert({
+        where: { name: 'batchNumber' },
+        update: { value: { increment: 1 } },
+        create: { name: 'batchNumber', value: 1 }
+      });
+      
+      const batchNumber = `BAT${batchCounter.value.toString().padStart(6, '0')}`;
+      
+      // Create a new batch for the additional quantity
+      await prisma.productBatch.create({
+        data: {
+          batchNumber,
+          quantity: quantityDifference,
+          expiryDate: data.expiryDate ? new Date(data.expiryDate) : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Use provided expiry date or default to 1 year
+          deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : new Date(),
+          costPerUnit: data.costPerUnit || originalBatch.costPerUnit,
+          notes: data.notes || `Additional stock for batch ${originalBatch.batchNumber}`,
+          status: true,
+          productId: originalBatch.productId,
+        }
+      });
+      
+      // Update the product's total stock
       await prisma.product.update({
         where: { id: originalBatch.productId },
         data: {
@@ -101,10 +158,10 @@ export async function updateProductBatch(id: string, data: Partial<ProductBatchP
           }
         }
       });
-    }
 
-    revalidatePath("/dashboard/inventory/products");
-    return updatedBatch;
+      revalidatePath("/dashboard/inventory/products");
+      return updatedBatch;
+    }
   } catch (error) {
     console.error("Error updating product batch:", error);
     throw error;

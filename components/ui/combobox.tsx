@@ -6,17 +6,11 @@ import { Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command"
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { Input } from "@/components/ui/input"
 
 interface ComboboxProps {
   items: { value: string; label: string }[]
@@ -52,37 +46,47 @@ export function Combobox({ items, value, onChange, placeholder = "Select an opti
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
-        <Command shouldFilter={false} className="w-full">
-          <CommandInput 
-            placeholder="Search..." 
-            onValueChange={(search) => {
-              setSearchQuery(search)
-              if (!open) setOpen(true)
-            }}
-          />
-          <CommandEmpty>No items found.</CommandEmpty>
-          <CommandGroup className="max-h-[200px] overflow-y-auto">
-            {filteredItems.map((item) => (
-              <CommandItem
-                key={item.value}
-                value={item.label}
-                onSelect={() => {
-                  onChange(item)
-                  setOpen(false)
-                  setSearchQuery("")
-                }}
-                className="flex items-center gap-2 px-4 py-2 cursor-pointer aria-selected:bg-slate-100 hover:bg-slate-100 transition-colors"
-              >
-                <div className="min-w-[16px]">
-                  {value?.value === item.value && (
-                    <Check className="h-4 w-4" />
+        <div className="flex flex-col">
+          <div className="flex items-center border-b px-3">
+            <Input
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+            />
+          </div>
+          
+          <div className="max-h-[200px] overflow-y-auto">
+            {filteredItems.length === 0 ? (
+              <div className="py-6 text-center text-sm">No items found.</div>
+            ) : (
+              filteredItems.map((item) => (
+                <div
+                  key={item.value}
+                  onClick={() => {
+                    console.log("Item clicked:", item);
+                    onChange(item);
+                    setOpen(false);
+                    setSearchQuery("");
+                  }}
+                  className={cn(
+                    "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-slate-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+                    value?.value === item.value && "bg-slate-100"
                   )}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="min-w-[16px]">
+                      {value?.value === item.value && (
+                        <Check className="h-4 w-4" />
+                      )}
+                    </div>
+                    <span>{item.label}</span>
+                  </div>
                 </div>
-                <span>{item.label}</span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </Command>
+              ))
+            )}
+          </div>
+        </div>
       </PopoverContent>
     </Popover>
   )

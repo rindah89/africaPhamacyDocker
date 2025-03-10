@@ -126,61 +126,76 @@ export default function AdjustmentForm({ products, initialData, editingId }: Adj
 
   const handleProductSelect = async (selected: { value: string; label: string } | null) => {
     console.log("AdjustmentForm handleProductSelect called with:", selected);
+    
+    if (!selected) {
+      console.log("No product selected, clearing selection");
+      setSelectedProduct(null);
+      return;
+    }
+    
+    console.log("Product selected:", selected);
+    
+    // Set selected product immediately to provide visual feedback
     setSelectedProduct(selected);
     
-    if (selected) {
-      const product = products.find((p) => p.id === selected.value);
-      console.log("Found product:", product);
-      if (!product) {
-        console.warn("No product found for value:", selected.value);
-        return;
-      }
+    const product = products.find((p) => p.id === selected.value);
+    console.log("Found product:", product);
+    if (!product) {
+      console.warn("No product found for value:", selected.value);
+      setSelectedProduct(null);
+      return;
+    }
 
-      const existingItem = items.find((item) => item.productId === product.id);
-      if (existingItem) {
-        console.log("Product already exists in items");
-        toast.error("Product already added");
+    const existingItem = items.find((item) => item.productId === product.id);
+    if (existingItem) {
+      console.log("Product already exists in items");
+      toast.error("Product already added");
+      setSelectedProduct(null);
+      return;
+    }
+
+    try {
+      console.log("Fetching batches for product:", product.id);
+      const response = await fetch(`/api/products/${selected.value}/batches`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch batches: ${response.status} ${response.statusText}`);
+      }
+      
+      const batches = await response.json();
+      console.log("Fetched batches:", batches);
+      
+      if (batches.length === 0) {
+        console.log("No batches available");
+        toast.error("No batches available for this product");
         setSelectedProduct(null);
         return;
       }
 
-      try {
-        console.log("Fetching batches for product:", product.id);
-        const response = await fetch(`/api/products/${selected.value}/batches`);
-        const batches = await response.json();
-        console.log("Fetched batches:", batches);
-        
-        if (batches.length === 0) {
-          console.log("No batches available");
-          toast.error("No batches available for this product");
-          setSelectedProduct(null);
-          return;
-        }
+      console.log("Setting product batches");
+      setProductBatches(prev => ({
+        ...prev,
+        [selected.value]: batches
+      }));
 
-        console.log("Setting product batches");
-        setProductBatches(prev => ({
-          ...prev,
-          [selected.value]: batches
-        }));
-
-        console.log("Adding item to items list");
-        setItems([
-          ...items,
-          {
-            productId: product.id,
-            productName: product.name,
-            currentStock: product.stockQty,
-            quantity: 1,
-            type: "Subtraction",
-            batchId: batches[0].id,
-          },
-        ]);
-        setSelectedProduct(null);
-      } catch (error) {
-        console.error('Error fetching batches:', error);
-        toast.error('Failed to fetch product batches');
-        setSelectedProduct(null);
-      }
+      console.log("Adding item to items list");
+      setItems(prevItems => [
+        ...prevItems,
+        {
+          productId: product.id,
+          productName: product.name,
+          currentStock: product.stockQty,
+          quantity: 1,
+          type: "Subtraction",
+          batchId: batches[0].id,
+        },
+      ]);
+      
+      // Clear the selected product after adding the item
+      setSelectedProduct(null);
+    } catch (error) {
+      console.error('Error fetching batches:', error);
+      toast.error('Failed to fetch product batches');
+      setSelectedProduct(null);
     }
   };
 
@@ -359,7 +374,10 @@ export default function AdjustmentForm({ products, initialData, editingId }: Adj
                 <Combobox
                   items={productOptions}
                   value={selectedProduct}
-                  onChange={handleProductSelect}
+                  onChange={(selected) => {
+                    console.log("Combobox onChange called with:", selected);
+                    handleProductSelect(selected);
+                  }}
                   placeholder="Select a product"
                 />
               </div>
