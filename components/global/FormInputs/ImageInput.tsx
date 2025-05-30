@@ -25,7 +25,7 @@ export default function ImageInput({
             alt={title}
             className="h-40 w-full rounded-md object-cover"
             height="300"
-            src={imageUrl}
+            src={imageUrl || "/placeholder.svg"}
             width="300"
           />
           <UploadButton

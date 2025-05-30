@@ -262,6 +262,13 @@ export interface ISubCategory extends PrismaSubCategory {
 }
 export interface ILineOrder extends PrismaLineOrder {
   lineOrderItems: LineOrderItem[];
+  // Insurance fields (temporary until Prisma client is regenerated)
+  insuranceClaimId?: string | null;
+  insuranceAmount?: number | null;
+  customerPaidAmount?: number | null;
+  insurancePercentage?: number | null;
+  insuranceProviderName?: string | null;
+  insurancePolicyNumber?: string | null;
 }
 export type ProductResult = {
   id: string;

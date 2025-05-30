@@ -120,9 +120,19 @@ export default function PointOfSale({
 
   const [validatedCustomerData, setValidatedCustomerData] = useState<any>(null);
 
-  const [amountPaid, setAmountPaid] = useState(0);
+  const [amountPaid, setAmountPaid] = useState<number>(0);
 
-  const [receiptKey, setReceiptKey] = React.useState<number>(0);
+  const [receiptKey, setReceiptKey] = useState<number>(0);
+
+  const [insuranceData, setInsuranceData] = useState<{
+    providerId: string;
+    providerName: string;
+    percentage: number;
+    insuranceAmount: number;
+    customerAmount: number;
+    customerName: string;
+    policyNumber: string;
+  } | null>(null);
 
   
 
@@ -354,11 +364,14 @@ export default function PointOfSale({
 
     // Set all required data before showing receipt
     setAmountPaid(result.amountPaid);
+    setInsuranceData(result.insurance || null);
     setShowPaymentModal(false);
     setSuccess(true);
     
     console.log('Receipt data prepared:', {
       amountPaid: result.amountPaid,
+      hasInsurance: !!result.insurance,
+      insuranceProvider: result.insurance?.providerName,
       customerName: validatedCustomerData?.customerName,
       orderItems: orderLineItems.length
     });
@@ -374,6 +387,7 @@ export default function PointOfSale({
     setSuccess(false);
     setOrderNumber('');
     setAmountPaid(0);
+    setInsuranceData(null);
     setValidatedCustomerData(null);
     setOrderData(null);
     console.log('Order state cleared successfully');
@@ -724,6 +738,7 @@ export default function PointOfSale({
           orderData={orderData}
           customerData={validatedCustomerData}
           orderNumber={orderNumber}
+          insuranceData={insuranceData}
           onComplete={() => {
             console.log('Receipt handling completed, cleaning up...');
             clearOrder();

@@ -44,6 +44,10 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
         return 'Mobile Money';
       case 'CASH':
         return 'Cash';
+      case 'INSURANCE':
+        return 'Insurance';
+      case 'ORANGE_MONEY':
+        return 'Orange Money';
       default:
         return method;
     }
@@ -55,6 +59,10 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
         return 'bg-yellow-200';
       case 'CASH':
         return 'bg-green-200';
+      case 'INSURANCE':
+        return 'bg-blue-200';
+      case 'ORANGE_MONEY':
+        return 'bg-orange-200';
       default:
         return 'bg-gray-200';
     }
@@ -219,7 +227,42 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
                       {Number(totalSum)} FCFA
                     </p>
                   </li>
-                  <li className="flex items-center justify-between">
+                  
+                  {/* Insurance Information */}
+                  {order.paymentMethod === 'INSURANCE' && order.insuranceAmount && (
+                    <>
+                      <li className="flex items-center justify-between border-t pt-2">
+                        <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                          Insurance Coverage ({order.insurancePercentage}%)
+                        </p>
+                        <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                          -{Number(order.insuranceAmount)} FCFA
+                        </p>
+                      </li>
+                      {order.insuranceProviderName && (
+                        <li className="flex items-center justify-between">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Provider: {order.insuranceProviderName}
+                          </p>
+                          {order.insurancePolicyNumber && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Policy: {order.insurancePolicyNumber}
+                            </p>
+                          )}
+                        </li>
+                      )}
+                      <li className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                          Customer Paid
+                        </p>
+                        <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                          {Number(order.customerPaidAmount || order.amountPaid)} FCFA
+                        </p>
+                      </li>
+                    </>
+                  )}
+                  
+                  <li className="flex items-center justify-between border-t pt-2">
                     <p className="text-base font-medium text-gray-900 dark:text-white">
                       Total
                     </p>
@@ -232,6 +275,11 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
                   <p className="italic">
                     Amount in words: {numberToWords(Number(totalSum))} CFA Francs
                   </p>
+                  {order.paymentMethod === 'INSURANCE' && (
+                    <p className="italic text-xs mt-2 text-blue-600 dark:text-blue-400">
+                      Insurance claim processed for {order.insuranceProviderName}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

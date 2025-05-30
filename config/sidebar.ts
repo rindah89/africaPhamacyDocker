@@ -139,6 +139,13 @@ export const sidebarLinks: ISidebarLink[] = [
     access: "canViewOrders",
   },
   {
+    title: "Insurance Partners",
+    href: "/dashboard/insurance-partners",
+    icon: Package,
+    dropdown: false,
+    access: "canViewOrders",
+  },
+  {
     title: "POS",
     href: "/pos",
     icon: Presentation,

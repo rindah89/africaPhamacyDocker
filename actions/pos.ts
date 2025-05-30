@@ -139,14 +139,24 @@ export async function processPaymentAndOrder(
   orderData: OrderData, 
   customerData: CustomerData,
   orderNumber: string,
-  amountPaid: number
+  amountPaid: number,
+  insuranceData?: {
+    providerId: string;
+    providerName: string;
+    percentage: number;
+    insuranceAmount: number;
+    customerAmount: number;
+    customerName: string;
+    policyNumber: string;
+  } | null
 ) {
   console.log('🚀 Starting processPaymentAndOrder:', {
     orderNumber,
     amountPaid,
     customerName: customerData.customerName,
     itemCount: orderData.orderItems.length,
-    totalAmount: orderData.orderAmount
+    totalAmount: orderData.orderAmount,
+    hasInsurance: !!insuranceData
   });
 
   try {
@@ -165,6 +175,13 @@ export async function processPaymentAndOrder(
           customerId: customerData.customerId,
           customerName: customerData.customerName || 'Walk-in Customer',
           customerEmail: customerData.customerEmail || customerData.email || null,
+          paymentMethod: insuranceData ? 'INSURANCE' : customerData.method ?? 'NONE',
+          // Insurance fields (will be updated after claim creation)
+          insuranceAmount: insuranceData?.insuranceAmount || null,
+          customerPaidAmount: insuranceData?.customerAmount || null,
+          insurancePercentage: insuranceData?.percentage || null,
+          insuranceProviderName: insuranceData?.providerName || null,
+          insurancePolicyNumber: insuranceData?.policyNumber || null,
           lineOrderItems: {
             create: orderData.orderItems.map(item => ({
               productId: item.id,
@@ -185,6 +202,59 @@ export async function processPaymentAndOrder(
         orderNumber: newOrder.orderNumber,
         itemCount: newOrder.lineOrderItems.length
       });
+
+      // Create insurance claim first if insurance data is provided
+      let createdClaim = null;
+      if (insuranceData) {
+        console.log('🏥 Creating insurance claim');
+        
+        // Generate claim number
+        const claimNumber = `CLM-${Date.now()}`;
+        
+        createdClaim = await tx.insuranceClaim.create({
+          data: {
+            claimNumber,
+            orderNumber: newOrder.orderNumber,
+            customerName: insuranceData.customerName,
+            policyNumber: insuranceData.policyNumber,
+            totalAmount: orderData.orderAmount,
+            insurancePercentage: insuranceData.percentage,
+            insuranceAmount: insuranceData.insuranceAmount,
+            customerAmount: insuranceData.customerAmount,
+            providerId: insuranceData.providerId,
+            claimItems: {
+              create: orderData.orderItems.map(item => ({
+                productName: item.name,
+                quantity: item.qty,
+                unitPrice: item.price,
+                totalPrice: item.price * item.qty
+              }))
+            }
+          },
+          include: {
+            provider: true,
+            claimItems: true
+          }
+        });
+
+        console.log('✅ Insurance claim created:', {
+          claimId: createdClaim.id,
+          claimNumber: createdClaim.claimNumber,
+          providerName: insuranceData.providerName,
+          insuranceAmount: insuranceData.insuranceAmount
+        });
+
+        // Update the order with the insurance claim ID
+        await tx.lineOrder.update({
+          where: { id: newOrder.id },
+          data: { insuranceClaimId: createdClaim.id }
+        });
+
+        console.log('✅ Order updated with insurance claim ID:', {
+          orderId: newOrder.id,
+          claimId: createdClaim.id
+        });
+      }
 
       // Process each order item
       for (const item of orderData.orderItems) {
@@ -225,7 +295,16 @@ export async function processPaymentAndOrder(
 
         console.log(`Updated product stock for ${item.name}`);
 
-        // Create sale record
+        // Calculate insurance amounts per item (proportional to item price)
+        const itemTotal = item.price * item.qty;
+        const itemInsuranceAmount = insuranceData 
+          ? (itemTotal * insuranceData.percentage) / 100 
+          : null;
+        const itemCustomerAmount = insuranceData 
+          ? itemTotal - itemInsuranceAmount 
+          : null;
+
+        // Create sale record with insurance data if applicable
         await tx.sale.create({
           data: {
             orderId: newOrder.id,
@@ -233,16 +312,25 @@ export async function processPaymentAndOrder(
             productId: item.id,
             qty: item.qty,
             salePrice: item.price,
-            total: item.price * item.qty,
+            total: itemTotal,
             productName: item.name,
             productImage: item.productThumbnail || '',
             customerName: customerData.customerName || 'Walk-in Customer',
             customerEmail: customerData.customerEmail || customerData.email || null,
-            paymentMethod: customerData.method ?? 'NONE'
+            paymentMethod: insuranceData ? 'INSURANCE' : customerData.method ?? 'NONE',
+            // Insurance fields (null if no insurance)
+            insuranceClaimId: createdClaim?.id || null,
+            insuranceAmount: itemInsuranceAmount,
+            customerPaidAmount: itemCustomerAmount,
+            insurancePercentage: insuranceData?.percentage || null,
           }
         });
 
-        console.log(`Created sale record for ${item.name}`);
+        console.log(`Created sale record for ${item.name}`, {
+          hasInsurance: !!insuranceData,
+          itemInsuranceAmount,
+          itemCustomerAmount
+        });
 
         // Check if stock is below alert quantity
         const updatedProduct = await tx.product.findUnique({
@@ -266,10 +354,12 @@ export async function processPaymentAndOrder(
 
     console.log('🎉 Order processing completed successfully:', {
       orderId: order.id,
-      orderNumber: order.orderNumber
+      orderNumber: order.orderNumber,
+      hasInsurance: !!insuranceData
     });
 
     revalidatePath("/pos");
+    revalidatePath("/dashboard/insurance-partners");
     return { success: true, order };
   } catch (error: any) {
     console.error("❌ Order creation error:", error);

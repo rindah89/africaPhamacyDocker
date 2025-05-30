@@ -29,6 +29,15 @@ interface ReceiptPrintProps {
   orderData: any;
   customerData: any;
   orderNumber: string;
+  insuranceData?: {
+    providerId: string;
+    providerName: string;
+    percentage: number;
+    insuranceAmount: number;
+    customerAmount: number;
+    customerName: string;
+    policyNumber: string;
+  } | null;
 }
 
 export default function ReceiptPrint2({ 
@@ -40,7 +49,8 @@ export default function ReceiptPrint2({
   onComplete,
   orderData,
   customerData,
-  orderNumber
+  orderNumber,
+  insuranceData
 }: ReceiptPrintProps) {
   console.log('🧾 ReceiptPrint2 component rendering:', {
     hasItems: Boolean(orderItems?.length),
@@ -142,7 +152,8 @@ export default function ReceiptPrint2({
           orderData,
           customerData,
           orderNumber,
-          amountPaid
+          amountPaid,
+          insuranceData
         );
 
         if (!result.success) {
@@ -270,6 +281,33 @@ export default function ReceiptPrint2({
                   <p className="whitespace-nowrap">{totalSum} F</p>
                 </div>
               </div>
+              
+              {/* Insurance Information */}
+              {insuranceData && (
+                <div className="px-2 border-t pt-2">
+                  <div className="text-center text-[10px] font-medium mb-1">INSURANCE BREAKDOWN</div>
+                  <div className="flex justify-between text-[10px] mx-4 mb-1">
+                    <span>Provider:</span>
+                    <span>{insuranceData.providerName}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] mx-4 mb-1">
+                    <span>Coverage:</span>
+                    <span>{insuranceData.percentage}%</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] mx-4 mb-1">
+                    <span>Insurance Amount:</span>
+                    <span>{insuranceData.insuranceAmount.toLocaleString("fr-CM")} F</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] mx-4 mb-1">
+                    <span>Customer Amount:</span>
+                    <span className="font-medium">{insuranceData.customerAmount.toLocaleString("fr-CM")} F</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] mx-4 mb-2">
+                    <span>Policy No:</span>
+                    <span>{insuranceData.policyNumber}</span>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="px-2 border-t pt-2">
               <div className="flex justify-between text-[10px] mx-4 mb-1">

@@ -206,6 +206,7 @@ model Role {
   canViewUnits   Boolean @default(false)
   canViewProducts   Boolean @default(false)  
   canViewSuppliers   Boolean @default(false)
+  canViewInsurancePartners Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -274,6 +275,15 @@ model LineOrder {
   source String  @default("pos")
   status       OrderStatus @default(DELIVERED)
   paymentMethod PaymentMethod @default(NONE)
+  
+  // Insurance-related fields (optional for backwards compatibility)
+  insuranceClaimId String? @db.ObjectId // Link to insurance claim if applicable
+  insuranceAmount Float? // Total amount covered by insurance (null for non-insurance orders)
+  customerPaidAmount Float? // Total amount paid by customer (null for non-insurance orders)
+  insurancePercentage Float? // Insurance coverage percentage (null for non-insurance orders)
+  insuranceProviderName String? // Insurance provider name for display (null for non-insurance orders)
+  insurancePolicyNumber String? // Insurance policy number (null for non-insurance orders)
+  
 // ECOMMERCE
 // Personal Details
   firstName     String?
@@ -292,6 +302,7 @@ model LineOrder {
   // Relationships
   lineOrderItems LineOrderItem[]
   sales          Sale[]
+  insuranceClaim InsuranceClaim? @relation(fields: [insuranceClaimId], references: [id])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -317,11 +328,20 @@ model Sale {
   customerName String
   customerEmail String? 
   paymentMethod PaymentMethod? // Updated to use PaymentMethod enum
+  
+  // Insurance-related fields (optional for backwards compatibility)
+  insuranceClaimId String? @db.ObjectId // Link to insurance claim if applicable
+  insuranceAmount Float? // Amount covered by insurance (null for non-insurance sales)
+  customerPaidAmount Float? // Amount actually paid by customer (null for non-insurance sales)
+  insurancePercentage Float? // Insurance coverage percentage (null for non-insurance sales)
+  
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+  
   // Relationships
   product   Product   @relation(fields: [productId], references: [id])
   lineOrder LineOrder @relation(fields: [orderId], references: [id])
+  insuranceClaim InsuranceClaim? @relation(fields: [insuranceClaimId], references: [id])
 }
 
 model Address {
@@ -441,6 +461,117 @@ model Review {
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Insurance Provider model
+model InsuranceProvider {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  code          String   @unique // Insurance provider code (e.g., "NHIF", "AAR", etc.)
+  email         String?
+  phone         String?
+  address       String?
+  contactPerson String?
+  status        Boolean  @default(true)
+  logoUrl       String?
+  website       String?
+  
+  // Relationships
+  claims        InsuranceClaim[]
+  reports       MonthlyInsuranceReport[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+enum ClaimStatus {
+  PENDING    // Claim created, waiting for month-end processing
+  SUBMITTED  // Included in monthly report and submitted to insurance
+  PAID       // Insurance company has paid the claim
+}
+
+// Insurance Claim model - simplified for Cameroonian workflow
+model InsuranceClaim {
+  id                String      @id @default(auto()) @map("_id") @db.ObjectId
+  claimNumber       String      @unique
+  orderNumber       String?     // Link to order if applicable
+  customerName      String      // Customer who used insurance
+  customerPhone     String?
+  policyNumber      String      // Insurance policy number
+  totalAmount       Float       // Total bill amount
+  insurancePercentage Float     // Percentage covered by insurance (entered at POS)
+  insuranceAmount   Float       // Amount covered by insurance
+  customerAmount    Float       // Amount paid by customer
+  claimDate         DateTime    @default(now())
+  processedDate     DateTime?   // When included in monthly report
+  paidDate          DateTime?   // When marked as paid by insurance
+  status            ClaimStatus @default(PENDING)
+  notes             String?
+  
+  // Foreign keys
+  providerId        String      @db.ObjectId
+  provider          InsuranceProvider @relation(fields: [providerId], references: [id])
+  
+  // Relationships
+  claimItems        InsuranceClaimItem[]
+  sales             Sale[]      // Sales associated with this claim
+  lineOrders        LineOrder[] // Orders associated with this claim
+  monthlyReportId   String?     @db.ObjectId
+  monthlyReport     MonthlyInsuranceReport? @relation(fields: [monthlyReportId], references: [id])
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+// Insurance Claim Item model - individual items in a claim
+model InsuranceClaimItem {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  productName   String
+  productCode   String?
+  quantity      Int
+  unitPrice     Float
+  totalPrice    Float
+  
+  // Foreign key to Claim
+  claimId       String   @db.ObjectId
+  claim         InsuranceClaim @relation(fields: [claimId], references: [id])
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+enum ReportStatus {
+  DRAFT      // Report being prepared
+  SUBMITTED  // Report sent to insurance company
+  PAID       // Insurance company has processed payment
+}
+
+// Monthly Insurance Report model - for batch processing
+model MonthlyInsuranceReport {
+  id              String     @id @default(auto()) @map("_id") @db.ObjectId
+  reportNumber    String     @unique
+  month           Int        // 1-12
+  year            Int
+  totalClaims     Int
+  totalAmount     Float      // Total amount claimed
+  insuranceAmount Float      // Total amount to be paid by insurance
+  generatedDate   DateTime   @default(now())
+  submittedDate   DateTime?
+  paidDate        DateTime?
+  status          ReportStatus @default(DRAFT)
+  notes           String?
+  
+  // Foreign keys
+  providerId      String     @db.ObjectId
+  provider        InsuranceProvider @relation(fields: [providerId], references: [id])
+  
+  // Relationships
+  claims          InsuranceClaim[]
+  
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  
+  @@unique([providerId, month, year])
 }
 
 model Counter {

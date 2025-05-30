@@ -26,7 +26,7 @@ export default function MultipleImageInput({
             alt={title}
             className="h-40 w-full rounded-md object-cover"
             height="300"
-            src={imageUrls[0]}
+            src={imageUrls[0] || "/placeholder.svg"}
             width="300"
           />
           <div className="grid grid-cols-3 gap-2">
@@ -37,7 +37,7 @@ export default function MultipleImageInput({
                     alt="Product image"
                     className="aspect-square w-full rounded-md object-cover"
                     height="84"
-                    src={imageUrl}
+                    src={imageUrl || "/placeholder.svg"}
                     width="84"
                   />
                 </div>
