@@ -1,27 +1,21 @@
+export const dynamic = 'force-dynamic';
 import DataTable from "@/components/DataTableComponents/DataTable";
 import TableHeader from "@/components/dashboard/Tables/TableHeader";
 import React, { Suspense } from "react";
 import { columns } from "./columns";
-import { getAllOrdersPaginated, getAllOrdersNoFilter } from "@/actions/pos";
+import { getAllOrdersPaginated } from "@/actions/pos";
 import Loading from "./loading";
-import TestOrders from "./test-orders";
 
 async function OrdersContent() {
   try {
     console.log("🔄 Starting to load orders...");
     const startTime = Date.now();
     
-    // Try both methods to see if filtering is the issue
-    const paginatedResult = await getAllOrdersPaginated(1, 50);
-    const allOrdersResult = await getAllOrdersNoFilter();
+    const paginatedResult = await getAllOrdersPaginated(1, 50); // Default to page 1, limit 50
     
-    console.log(`Paginated orders: ${paginatedResult?.orders?.length || 0}`);
-    console.log(`All orders (no filter): ${allOrdersResult?.length || 0}`);
+    console.log(`Paginated orders loaded: ${paginatedResult?.orders?.length || 0}`);
     
-    // Use whichever gives us results
-    const orders = (paginatedResult?.orders && paginatedResult.orders.length > 0 
-      ? paginatedResult.orders 
-      : allOrdersResult) || [];
+    const orders = paginatedResult?.orders || [];
     
     const loadTime = Date.now() - startTime;
     console.log(`✅ Orders loaded successfully in ${loadTime}ms. Count: ${orders.length}`);
@@ -58,11 +52,6 @@ async function OrdersContent() {
 export default function page() {
   return (
     <div>
-      {/* Temporary debugging component - remove after testing */}
-      <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
-        <h3 className="text-sm font-medium mb-2">Debug Panel (Remove in production)</h3>
-        <TestOrders />
-      </div>
       
       <Suspense fallback={<Loading />}>
         <OrdersContent />

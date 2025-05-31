@@ -597,22 +597,48 @@ export async function getAllOrdersPaginated(page = 1, limit = 20) {
           createdAt: "desc",
         },
         select: {
+          // Core fields
           id: true,
-          orderNumber: true,
+          customerId: true,
           customerName: true,
-          customerEmail: true,
-          customerPhone: true,
+          orderNumber: true,
+          customerEmail: true, 
+          
+          // Order details
+          orderAmount: true,
+          amountPaid: true,
+          orderType: true,
+          source: true,
+          status: true,
+          paymentMethod: true,
+
+          // ECOMMERCE Personal Details
+          firstName: true,
+          lastName: true,
+          email: true, 
+          phone: true,
+          
+          // ECOMMERCE Shipping Details
           streetAddress: true,
           apartment: true,
           city: true,
+          state: true,
           country: true,
           zipCode: true,
-          orderAmount: true,
-          status: true,
-          paymentMethod: true,
-          notes: true,
+
+          // Insurance-related fields
+          insuranceClaimId: true,
+          insuranceAmount: true,
+          customerPaidAmount: true,
+          insurancePercentage: true,
+          insuranceProviderName: true,
+          insurancePolicyNumber: true,
+          
+          // Timestamps
           createdAt: true,
           updatedAt: true,
+
+          // Relation
           lineOrderItems: {
             select: {
               id: true,
@@ -622,7 +648,7 @@ export async function getAllOrdersPaginated(page = 1, limit = 20) {
               price: true,
               productThumbnail: true,
             },
-            take: 5 // Limit items for better performance
+            take: 5
           }
         },
       });
