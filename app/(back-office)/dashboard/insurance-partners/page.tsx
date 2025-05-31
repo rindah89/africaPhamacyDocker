@@ -6,6 +6,10 @@ import ProvidersTab from "@/components/dashboard/Insurance/ProvidersTab";
 import ClaimsTab from "@/components/dashboard/Insurance/ClaimsTab";
 import ReportsTab from "@/components/dashboard/Insurance/ReportsTab";
 import AnalyticsCards from "@/components/dashboard/Insurance/AnalyticsCards";
+import DetailedAnalytics from "@/components/dashboard/Insurance/DetailedAnalytics";
+
+// Force dynamic rendering to ensure fresh data
+export const dynamic = 'force-dynamic';
 
 export default async function InsurancePartnersPage() {
   // Fetch all data in parallel
@@ -16,10 +20,17 @@ export default async function InsurancePartnersPage() {
     getInsuranceAnalytics()
   ]);
 
-  const providers = providersResult.success ? providersResult.data : [];
-  const claims = claimsResult.success ? claimsResult.data : [];
-  const reports = reportsResult.success ? reportsResult.data : [];
+  const providers = providersResult.success ? providersResult.data || [] : [];
+  const claims = claimsResult.success ? claimsResult.data || [] : [];
+  const reports = reportsResult.success ? reportsResult.data || [] : [];
   const analytics = analyticsResult.success ? analyticsResult.data : null;
+
+  // Debug: Log the claims data to see if orderId is included
+  console.log('Claims data loaded:', claims.map(claim => ({
+    claimNumber: claim.claimNumber,
+    orderNumber: claim.orderNumber,
+    orderId: claim.orderId || 'MISSING'
+  })));
 
   return (
     <div className="p-6 space-y-6">
@@ -36,38 +47,31 @@ export default async function InsurancePartnersPage() {
       {/* Main Content Tabs */}
       <Tabs defaultValue="providers" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="providers">Providers ({providers.length})</TabsTrigger>
-          <TabsTrigger value="claims">Claims ({claims.length})</TabsTrigger>
-          <TabsTrigger value="reports">Monthly Reports ({reports.length})</TabsTrigger>
+          <TabsTrigger value="providers">Providers ({providers?.length})</TabsTrigger>
+          <TabsTrigger value="claims">Claims ({claims?.length})</TabsTrigger>
+          <TabsTrigger value="reports">Monthly Reports ({reports?.length})</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="providers" className="space-y-4">
-          <ProvidersTab providers={providers} />
+          <ProvidersTab providers={providers as any} />
         </TabsContent>
 
         <TabsContent value="claims" className="space-y-4">
-          <ClaimsTab claims={claims} />
+          <ClaimsTab claims={claims as any} />
         </TabsContent>
 
         <TabsContent value="reports" className="space-y-4">
-          <ReportsTab reports={reports} providers={providers} />
+          <ReportsTab reports={reports as any} providers={providers as any} />
         </TabsContent>
 
         <TabsContent value="analytics" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Insurance Analytics</CardTitle>
-              <CardDescription>
-                Detailed analytics and insights for insurance operations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Detailed analytics coming soon...
-              </div>
-            </CardContent>
-          </Card>
+          <DetailedAnalytics 
+            providers={providers} 
+            claims={claims} 
+            reports={reports} 
+            analytics={analytics || null} 
+          />
         </TabsContent>
       </Tabs>
     </div>

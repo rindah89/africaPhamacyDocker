@@ -18,6 +18,8 @@ import {
   subMonths,
   startOfMonth,
 } from "date-fns";
+import { withCache, cacheKeys } from "@/lib/cache";
+
 interface Sale {
   salePrice: number;
   qty: number;
@@ -53,64 +55,75 @@ function calculateSalesSummary(sales: Sale[]): SalesSummary {
   return summary;
 }
 export async function getAnalytics() {
-  try {
-    // Get sales for the last 30 days only to limit data
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  return withCache(cacheKeys.analytics(), async () => {
+    try {
+      // Get sales for the last 30 days only to limit data
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const [sales, ordersCount, productsCount] = await Promise.all([
-      prisma.sale.findMany({
-        where: {
-          createdAt: {
-            gte: thirtyDaysAgo
+      // Use Promise.all for parallel execution and optimize queries
+      const [salesData, ordersCount, productsCount] = await Promise.all([
+        // Optimized sales query with aggregation
+        prisma.sale.aggregate({
+          where: {
+            createdAt: {
+              gte: thirtyDaysAgo
+            }
+          },
+          _sum: {
+            salePrice: true,
+            qty: true,
+          },
+          _count: {
+            id: true,
           }
-        },
-        select: {
-          salePrice: true,
-          qty: true,
-        },
-      }),
-      prisma.lineOrder.count(),
-      prisma.product.count(),
-    ]);
+        }),
+        // Use count for better performance
+        prisma.lineOrder.count(),
+        // Cache this count as it changes rarely
+        prisma.product.count({
+          where: {
+            status: true
+          }
+        }),
+      ]);
 
-    const salesSummary = calculateSalesSummary(sales);
-    
-    const analytics = [
-      {
-        title: "Total Sales (30 days)",
-        count: salesSummary.salesCount,
-        countUnit: "",
-        detailLink: "/dashboard/sales",
-        icon: BarChartHorizontal,
-      },
-      {
-        title: "Revenue (30 days)",
-        count: salesSummary.totalRevenue,
-        countUnit: " ",
-        detailLink: "/dashboard/sales",
-        icon: DollarSign,
-      },
-      {
-        title: "Total Orders",
-        count: ordersCount,
-        countUnit: "",
-        detailLink: "/dashboard/sales/orders",
-        icon: Combine,
-      },
-      {
-        title: "Total Products",
-        count: productsCount,
-        countUnit: "",
-        detailLink: "/dashboard/inventory/products",
-        icon: LayoutGrid,
-      },
-    ];
-    return analytics as AnalyticsProps[];
-  } catch (error) {
-    console.log(error);
-    return null;
-  }
+      const analytics = [
+        {
+          title: "Total Sales (30 days)",
+          count: salesData._count.id || 0,
+          countUnit: "",
+          detailLink: "/dashboard/sales",
+          icon: BarChartHorizontal,
+        },
+        {
+          title: "Revenue (30 days)",
+          count: salesData._sum.salePrice || 0,
+          countUnit: " ",
+          detailLink: "/dashboard/sales",
+          icon: DollarSign,
+        },
+        {
+          title: "Total Orders",
+          count: ordersCount,
+          countUnit: "",
+          detailLink: "/dashboard/sales/orders",
+          icon: Combine,
+        },
+        {
+          title: "Total Products",
+          count: productsCount,
+          countUnit: "",
+          detailLink: "/dashboard/inventory/products",
+          icon: LayoutGrid,
+        },
+      ];
+      return analytics as AnalyticsProps[];
+    } catch (error) {
+      console.log(error);
+      return null;
+    }
+  }, 5 * 60 * 1000); // Cache for 5 minutes
 }
 
 export const getSalesCountForPastSevenDaysOld = async (): Promise<
@@ -401,93 +414,76 @@ async function fixNullOrderNumbers() {
   }
 }
 
-export const getRevenueByMainCategoryPastSixMonths = async (): Promise<
-  MonthlyMainCategoryRevenue[]
-> => {
-  console.log('getRevenueByMainCategoryPastSixMonths: Starting function');
-  
-  try {
-    // Calculate the start date for the 6-month period
-    const sixMonthsAgo = subMonths(new Date(), 5);
-    const startOfSixMonthsAgo = startOfMonth(sixMonthsAgo);
+export const getRevenueByMainCategoryPastSixMonths = async (): Promise<MonthlyMainCategoryRevenue[]> => {
+  return withCache(cacheKeys.revenueByCategory(), async () => {
+    try {
+      console.log('Starting getRevenueByMainCategoryPastSixMonths...');
+      
+      // Get the last 6 months
+      const currentDate = new Date();
+      const sixMonthsAgo = subMonths(currentDate, 6);
+      
+      console.log('Date range:', { from: sixMonthsAgo, to: currentDate });
 
-    // Now fetch the main categories and their sales data
-    const mainCategories = await prisma.mainCategory.findMany({
-      include: {
-        categories: {
-          include: {
-            subCategories: {
-              include: {
-                products: {
-                  include: {
-                    sales: {
-                      where: {
-                        createdAt: {
-                          gte: startOfSixMonthsAgo
-                        }
-                      },
-                      select: {
-                        salePrice: true,
-                        createdAt: true
-                      }
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+      // Optimized query using raw SQL for better performance
+      const salesData = await prisma.$queryRaw`
+        SELECT 
+          mc.title as mainCategoryTitle,
+          DATE_FORMAT(s.createdAt, '%Y-%m') as month,
+          SUM(s.salePrice) as totalRevenue,
+          COUNT(s.id) as salesCount
+        FROM Sale s
+        JOIN Product p ON s.productId = p.id
+        JOIN SubCategory sc ON p.subCategoryId = sc.id
+        JOIN Category c ON sc.categoryId = c.id
+        JOIN MainCategory mc ON c.mainCategoryId = mc.id
+        WHERE s.createdAt >= ${sixMonthsAgo} AND s.createdAt <= ${currentDate}
+        GROUP BY mc.id, mc.title, DATE_FORMAT(s.createdAt, '%Y-%m')
+        ORDER BY month DESC
+      ` as any[];
 
-    // Initialize monthly revenue map
-    const monthlyRevenueMap: { [month: string]: MonthlyMainCategoryRevenue } = {};
+      console.log('Raw sales data:', salesData.length, 'records');
 
-    // Setup the months
-    for (let i = 0; i < 6; i++) {
-      const date = subMonths(new Date(), i);
-      const month = format(date, "MMMM");
-      monthlyRevenueMap[month] = { month };
+      // Process the data into the required format
+      const monthlyRevenueMap: { [key: string]: MonthlyMainCategoryRevenue } = {};
 
-      // Initialize all category revenues to 0
-      mainCategories.forEach((mainCategory) => {
-        const categoryKey = getFirstWord(mainCategory.title);
-        monthlyRevenueMap[month][categoryKey] = 0;
+      // Initialize months
+      for (let i = 0; i < 6; i++) {
+        const monthDate = subMonths(currentDate, i);
+        const monthKey = format(monthDate, "MMMM");
+        monthlyRevenueMap[monthKey] = { month: monthKey };
+      }
+
+      // Process sales data
+      salesData.forEach((sale: any) => {
+        const monthDate = new Date(sale.month + '-01');
+        const monthKey = format(monthDate, "MMMM");
+        const categoryKey = getFirstWord(sale.mainCategoryTitle);
+        
+        if (monthlyRevenueMap[monthKey]) {
+          monthlyRevenueMap[monthKey][categoryKey] = 
+            (monthlyRevenueMap[monthKey][categoryKey] as number || 0) + parseFloat(sale.totalRevenue);
+        }
       });
+
+      // Convert to array and sort in reverse chronological order
+      const mainCategoryRevenueArray: MonthlyMainCategoryRevenue[] =
+        Object.values(monthlyRevenueMap).reverse();
+
+      console.log('Processed revenue data:', mainCategoryRevenueArray.length, 'months');
+      return mainCategoryRevenueArray;
+    } catch (error) {
+      console.error('Error in getRevenueByMainCategoryPastSixMonths:', error);
+      // Return empty data structure instead of throwing
+      const monthlyRevenueMap: { [key: string]: MonthlyMainCategoryRevenue } = {};
+      for (let i = 0; i < 6; i++) {
+        const monthDate = subMonths(new Date(), i);
+        const monthKey = format(monthDate, "MMMM");
+        monthlyRevenueMap[monthKey] = { month: monthKey };
+      }
+      return Object.values(monthlyRevenueMap).reverse();
     }
-
-    // Calculate revenue for each category and month
-    mainCategories.forEach((mainCategory) => {
-      const categoryKey = getFirstWord(mainCategory.title);
-      let totalSales = 0;
-
-      mainCategory.categories.forEach((category) => {
-        category.subCategories.forEach((subCategory) => {
-          subCategory.products.forEach((product) => {
-            product.sales.forEach((sale) => {
-              totalSales++;
-              const saleMonth = format(sale.createdAt, "MMMM");
-              if (monthlyRevenueMap[saleMonth]) {
-                monthlyRevenueMap[saleMonth][categoryKey] =
-                  (monthlyRevenueMap[saleMonth][categoryKey] as number) +
-                  sale.salePrice;
-              }
-            });
-          });
-        });
-      });
-      console.log(`Processed ${totalSales} sales for category ${categoryKey}`);
-    });
-
-    // Convert to array and sort in reverse chronological order
-    const mainCategoryRevenueArray: MonthlyMainCategoryRevenue[] =
-      Object.values(monthlyRevenueMap).reverse();
-
-    return mainCategoryRevenueArray;
-  } catch (error) {
-    console.error('Error in getRevenueByMainCategoryPastSixMonths:', error);
-    throw error;
-  }
+  }, 10 * 60 * 1000); // Cache for 10 minutes
 };
 
 export async function getProductsCount() {

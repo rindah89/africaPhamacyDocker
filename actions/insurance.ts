@@ -162,11 +162,26 @@ export async function getInsuranceClaims() {
         provider: true,
         claimItems: true,
         monthlyReport: true,
+        lineOrders: {
+          select: {
+            id: true,
+            orderNumber: true,
+            orderAmount: true,
+            status: true,
+          },
+          take: 1 // Usually there's only one order per claim
+        }
       },
       orderBy: { createdAt: "desc" },
     });
 
-    return { success: true, data: claims };
+    // Transform the data to include orderId from the related lineOrder
+    const transformedClaims = claims.map(claim => ({
+      ...claim,
+      orderId: claim.lineOrders?.[0]?.id || null, // Get the first (and usually only) related order ID
+    }));
+
+    return { success: true, data: transformedClaims };
   } catch (error: any) {
     console.error("Error fetching insurance claims:", error);
     return { success: false, error: error.message };

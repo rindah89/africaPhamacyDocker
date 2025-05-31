@@ -1,27 +1,35 @@
-import { getAllProducts, getProductBySlug } from "@/actions/products";
-
+import { getOrderByNumber } from "@/actions/orders";
 import { NextResponse } from "next/server";
+
 type Params = {
   slug: string;
 };
+
 export async function GET(request: Request, context: { params: Params }) {
-  const slug = context.params.slug;
+  const orderNumber = context.params.slug;
+  
   try {
-    const product = await getProductBySlug(slug);
-    return NextResponse.json(
-      {
-        data: product,
-        success: true,
-        error: null,
-      },
-      { status: 200 }
-    );
+    const order = await getOrderByNumber(orderNumber);
+    
+    if (!order) {
+      return NextResponse.json(
+        {
+          data: null,
+          success: false,
+          error: "Order not found",
+        },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(order, { status: 200 });
   } catch (error) {
+    console.error("Error fetching order:", error);
     return NextResponse.json(
       {
         data: null,
         success: false,
-        error,
+        error: "Failed to fetch order details",
       },
       { status: 500 }
     );

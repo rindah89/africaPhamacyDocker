@@ -1,6 +1,7 @@
 "use server";
 
-import { prisma } from "@/lib/db";
+import prisma from "@/lib/db";
+import { withCache, cacheKeys } from "@/lib/cache";
 import { revalidatePath } from "next/cache";
 import { OrderLineItem } from "@/redux/slices/pointOfSale";
 import { NotificationStatus, Prisma, PrismaClient, Product, LineOrder } from "@prisma/client";
@@ -528,16 +529,163 @@ export async function createLineOrder(
 export async function getOrders() {
   try {
     const allOrders = await prisma.lineOrder.findMany({
+      where: {
+        lineOrderItems: {
+          some: {} // Only fetch orders that have line items
+        }
+      },
       orderBy: {
         createdAt: "desc",
       },
+      take: 100, // Limit to 100 orders for better performance
+      include: {
+        lineOrderItems: {
+          take: 5, // Limit line items per order
+          select: {
+            id: true,
+            productId: true,
+            name: true,
+            qty: true,
+            price: true,
+            productThumbnail: true,
+          }
+        },
+      },
+    });
+    return allOrders;
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    throw new Error("Failed to fetch orders");
+  }
+}
+
+// Get all orders without filtering (for debugging)
+export async function getAllOrdersNoFilter() {
+  try {
+    const allOrders = await prisma.lineOrder.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 100,
       include: {
         lineOrderItems: true,
       },
     });
-    const orders = allOrders.filter((order: LineOrder & { lineOrderItems: any[] }) => order.lineOrderItems.length > 0);
-    return orders;
+    return allOrders;
   } catch (error) {
-    console.log(error);
+    console.error("Error fetching orders:", error);
+    throw new Error("Failed to fetch orders");
   }
+}
+
+// Optimized orders fetching with pagination
+export async function getAllOrdersPaginated(page = 1, limit = 20) {
+  return withCache(cacheKeys.orders(page, limit), async () => {
+    try {
+      const skip = (page - 1) * limit;
+      
+      // Get orders with pagination and only essential data
+      const orders = await prisma.lineOrder.findMany({
+        where: {
+          lineOrderItems: {
+            some: {} // Only include orders that have line items
+          }
+        },
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: "desc",
+        },
+        select: {
+          id: true,
+          orderNumber: true,
+          customerName: true,
+          customerEmail: true,
+          customerPhone: true,
+          streetAddress: true,
+          apartment: true,
+          city: true,
+          country: true,
+          zipCode: true,
+          orderAmount: true,
+          status: true,
+          paymentMethod: true,
+          notes: true,
+          createdAt: true,
+          updatedAt: true,
+          lineOrderItems: {
+            select: {
+              id: true,
+              productId: true,
+              name: true,
+              qty: true,
+              price: true,
+              productThumbnail: true,
+            },
+            take: 5 // Limit items for better performance
+          }
+        },
+      });
+
+      // Get total count for pagination
+      const totalCount = await prisma.lineOrder.count({
+        where: {
+          lineOrderItems: {
+            some: {}
+          }
+        }
+      });
+
+      return {
+        orders,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        currentPage: page
+      };
+
+    } catch (error) {
+      console.log(error);
+      return null;
+    }
+  }, 3 * 60 * 1000); // Cache for 3 minutes
+}
+
+// Optimized orders fetching for minimal data (for dropdowns, etc.)
+export async function getOrdersMinimal(page = 1, limit = 10) {
+  return withCache(cacheKeys.ordersMinimal(page, limit), async () => {
+    try {
+      const skip = (page - 1) * limit;
+      
+      const orders = await prisma.lineOrder.findMany({
+        where: {
+          lineOrderItems: {
+            some: {}
+          }
+        },
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: "desc",
+        },
+        select: {
+          id: true,
+          orderNumber: true,
+          customerName: true,
+          status: true,
+          orderAmount: true,
+          createdAt: true,
+          _count: {
+            select: {
+              lineOrderItems: true
+            }
+          }
+        },
+      });
+
+      return orders;
+    } catch (error) {
+      console.log(error);
+      return null;
+    }
+  }, 5 * 60 * 1000); // Cache for 5 minutes
 }

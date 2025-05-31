@@ -104,70 +104,71 @@ export async function createProduct(data: ProductProps) {
 
 }
 
-export async function getAllProducts() {
-
+export async function getAllProducts(page = 1, limit = 50) {
   try {
-
+    const skip = (page - 1) * limit;
+    
     const products = await prisma.product.findMany({
-
+      skip,
+      take: limit,
       orderBy: {
-
         createdAt: "desc",
-
       },
-
-      include: {
-
-        subCategory: true,
-
-        reviews: {
-
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        productThumbnail: true,
+        productPrice: true,
+        stockQty: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        subCategory: {
           select: {
-
             id: true,
-
-            rating: true,
-
+            title: true,
+            slug: true,
           }
-
         },
-
-        batches: {
-
-          where: {
-
-            status: true
-
-          },
-
+        // Only get aggregated review data instead of all reviews
+        _count: {
           select: {
-
-            id: true,
-
-            quantity: true,
-
-            costPerUnit: true,
-
+            reviews: true,
           }
-
+        },
+        // Only get available batches count
+        batches: {
+          where: {
+            status: true,
+            quantity: {
+              gt: 0
+            }
+          },
+          select: {
+            id: true,
+            quantity: true,
+            costPerUnit: true,
+          },
+          take: 5 // Limit batches to most recent 5
         }
-
       },
-
     });
 
+    // Get total count for pagination
+    const totalCount = await prisma.product.count();
 
-
-    return products;
+    return {
+      products,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page
+    };
 
   } catch (error) {
-
     console.log(error);
-
     return null;
-
   }
-
 }
 
 export async function getAllProductsNoLimit() {
@@ -2095,5 +2096,44 @@ export async function searchPOSProducts(searchQuery: string) {
     console.error("POS search error details:", error);
     console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
     return [];
+  }
+}
+
+// Optimized version for dashboard/listing where we need minimal data
+export async function getProductsMinimal(page = 1, limit = 20) {
+  try {
+    const skip = (page - 1) * limit;
+    
+    const products = await prisma.product.findMany({
+      skip,
+      take: limit,
+      where: {
+        status: true,
+        stockQty: {
+          gt: 0
+        }
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        productThumbnail: true,
+        productPrice: true,
+        stockQty: true,
+        subCategory: {
+          select: {
+            title: true,
+          }
+        }
+      },
+    });
+
+    return products;
+  } catch (error) {
+    console.log(error);
+    return null;
   }
 }

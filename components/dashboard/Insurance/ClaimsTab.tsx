@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, MoreHorizontal, FileText, Clock, CheckCircle, Send } from "lucide-react";
+import { Search, MoreHorizontal, FileText, Clock, CheckCircle, Send, Eye } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -30,11 +30,14 @@ import {
 import { updateClaimStatus } from "@/actions/insurance";
 import { toast } from "sonner";
 import { ClaimStatus } from "@prisma/client";
+import ConfirmationDialog, { getClaimStatusConfirmation } from "./ConfirmationDialog";
+import { useRouter } from "next/navigation";
 
 interface Claim {
   id: string;
   claimNumber: string;
   orderNumber?: string;
+  orderId?: string; // Add orderId to navigate directly
   customerName: string;
   customerPhone?: string;
   policyNumber: string;
@@ -66,12 +69,20 @@ interface Claim {
 
 interface ClaimsTabProps {
   claims: Claim[];
+  onDataChange?: () => void; // Optional callback to refresh data
 }
 
-export default function ClaimsTab({ claims }: ClaimsTabProps) {
+export default function ClaimsTab({ claims, onDataChange }: ClaimsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{
+    claimId: string;
+    newStatus: ClaimStatus;
+    claimNumber: string;
+  } | null>(null);
+  const router = useRouter();
 
   const filteredClaims = claims.filter(claim => {
     const matchesSearch = 
@@ -86,9 +97,11 @@ export default function ClaimsTab({ claims }: ClaimsTabProps) {
   });
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('fr-CM', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'XAF',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 
@@ -126,19 +139,66 @@ export default function ClaimsTab({ claims }: ClaimsTabProps) {
     }
   };
 
-  const handleStatusUpdate = async (claimId: string, newStatus: ClaimStatus) => {
+  const handleStatusUpdate = (claimId: string, newStatus: ClaimStatus, claimNumber: string) => {
+    setPendingAction({ claimId, newStatus, claimNumber });
+    setConfirmationOpen(true);
+  };
+
+  const executeStatusUpdate = async () => {
+    if (!pendingAction) return;
+    
     setIsLoading(true);
     try {
-      const result = await updateClaimStatus(claimId, newStatus);
+      console.log('Updating claim status:', {
+        claimId: pendingAction.claimId,
+        newStatus: pendingAction.newStatus,
+        claimNumber: pendingAction.claimNumber
+      });
+      
+      const result = await updateClaimStatus(pendingAction.claimId, pendingAction.newStatus);
+      
+      console.log('Update result:', result);
+      
       if (result.success) {
-        toast.success("Claim status updated successfully");
+        toast.success(`Claim ${pendingAction.claimNumber} marked as ${pendingAction.newStatus.toLowerCase()}`);
+        // The server action already calls revalidatePath, so data will refresh automatically
+        if (onDataChange) {
+          onDataChange();
+        }
+        // No need for manual reload as revalidatePath handles the refresh
       } else {
+        console.error('Update failed:', result.error);
         toast.error(result.error || "Failed to update claim status");
       }
     } catch (error) {
-      toast.error("An error occurred while updating the claim status");
+      console.error('Error updating claim status:', error);
+      toast.error("An error occurred while updating the claim status. Please try again.");
     } finally {
       setIsLoading(false);
+      setPendingAction(null);
+    }
+  };
+
+  const handleViewOrder = (claim: Claim) => {
+    console.log('handleViewOrder called with claim:', {
+      id: claim.id,
+      orderId: claim.orderId,
+      orderNumber: claim.orderNumber,
+      claimNumber: claim.claimNumber
+    });
+    
+    // Navigate directly to the orders page
+    if (claim.orderId) {
+      console.log(`Navigating to: /dashboard/orders/${claim.orderId}`);
+      router.push(`/dashboard/orders/${claim.orderId}`);
+    } else if (claim.orderNumber) {
+      console.log(`Navigating to orders with search: ${claim.orderNumber}`);
+      // If we only have orderNumber, we'll need to search for it
+      // For now, navigate to the orders list page
+      router.push(`/dashboard/orders?search=${claim.orderNumber}`);
+    } else {
+      console.warn('No orderId or orderNumber found for claim:', claim.claimNumber);
+      toast.error('Unable to find associated order for this claim');
     }
   };
 
@@ -297,20 +357,55 @@ export default function ClaimsTab({ claims }: ClaimsTabProps) {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="w-48">
+                          {/* View Order Action - Always available if order exists */}
+                          {claim.orderNumber && (
+                            <DropdownMenuItem 
+                              onClick={() => handleViewOrder(claim)}
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Order
+                            </DropdownMenuItem>
+                          )}
+                          
+                          {/* Mark as Submitted - Available for PENDING claims */}
+                          {claim.status === ClaimStatus.PENDING && (
+                            <DropdownMenuItem 
+                              onClick={() => handleStatusUpdate(claim.id, ClaimStatus.SUBMITTED, claim.claimNumber)}
+                              disabled={isLoading}
+                              className="focus:bg-blue-50 focus:text-blue-900"
+                            >
+                              <Send className="mr-2 h-4 w-4" />
+                              Mark as Submitted
+                            </DropdownMenuItem>
+                          )}
+                          
+                          {/* Mark as Paid - Available for SUBMITTED claims */}
                           {claim.status === ClaimStatus.SUBMITTED && (
                             <DropdownMenuItem 
-                              onClick={() => handleStatusUpdate(claim.id, ClaimStatus.PAID)}
+                              onClick={() => handleStatusUpdate(claim.id, ClaimStatus.PAID, claim.claimNumber)}
                               disabled={isLoading}
+                              className="focus:bg-green-50 focus:text-green-900"
                             >
                               <CheckCircle className="mr-2 h-4 w-4" />
                               Mark as Paid
                             </DropdownMenuItem>
                           )}
+                          
+                          {/* Status Info for PAID claims */}
                           {claim.status === ClaimStatus.PAID && claim.paidDate && (
                             <DropdownMenuItem disabled>
                               <CheckCircle className="mr-2 h-4 w-4" />
                               Paid on {formatDate(claim.paidDate)}
+                            </DropdownMenuItem>
+                          )}
+
+                          
+                          {/* If no order exists, show info */}
+                          {!claim.orderNumber && (
+                            <DropdownMenuItem disabled>
+                              <Eye className="mr-2 h-4 w-4 opacity-50" />
+                              No order linked
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
@@ -323,6 +418,17 @@ export default function ClaimsTab({ claims }: ClaimsTabProps) {
           </Table>
         </div>
       </CardContent>
+      
+      {/* Confirmation Dialog */}
+      {pendingAction && (
+        <ConfirmationDialog
+          open={confirmationOpen}
+          onOpenChange={setConfirmationOpen}
+          {...getClaimStatusConfirmation(pendingAction.newStatus, pendingAction.claimNumber)}
+          onConfirm={executeStatusUpdate}
+          isLoading={isLoading}
+        />
+      )}
     </Card>
   );
 } 

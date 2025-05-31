@@ -8,29 +8,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getOrders } from "@/actions/pos";
+import { getAllOrdersPaginated } from "@/actions/pos";
 import { convertIsoToDateString } from "@/lib/covertDateToDateString";
 import Image from "next/image";
-import { Eye, Trash2 } from "lucide-react";
+import { Eye, Trash2, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { generateSlug } from "@/lib/generateSlug";
 import { cn } from "@/lib/utils";
+
 export default async function page() {
-  const orders = (await getOrders()) || [];
+  try {
+    const result = await getAllOrdersPaginated(1, 50);
+    const orders = result?.orders || [];
 
-  const actualOrders = orders.filter(
-    (order) => order.lineOrderItems.length > 0
-  );
-  const achievedOrders = orders.filter(
-    (order) => order.lineOrderItems.length == 0
-  );
-  return (
-    <div>
-      <h2>All Orders</h2>
+    const actualOrders = orders.filter(
+      (order) => order.lineOrderItems && order.lineOrderItems.length > 0
+    );
+    
+    return (
+      <div>
+        <h2>All Orders</h2>
 
-      <div className="py-8">
-        {actualOrders.length > 0 ? (
+        <div className="py-8">
+          {actualOrders.length > 0 ? (
           <div className="space-y-4">
             {actualOrders.map((order) => {
               const totalSum = order.lineOrderItems.reduce(
@@ -112,12 +113,31 @@ export default async function page() {
               );
             })}
           </div>
-        ) : (
-          <div className="">
-            <h2>No Orders</h2>
-          </div>
-        )}
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Package className="w-16 h-16 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
+              <p className="text-gray-500 mb-4">You haven't received any orders yet.</p>
+              <Link
+                href="/dashboard/orders/new"
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Create First Order
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  } catch (error) {
+    console.error("Error loading orders:", error);
+    return (
+      <div className="p-4">
+        <div className="text-red-500 text-center">
+          <h3>Error Loading Orders</h3>
+          <p>There was an issue loading the orders. Please try refreshing the page.</p>
+        </div>
+      </div>
+    );
+  }
 }

@@ -28,6 +28,67 @@ export async function getOrderById(id: string) {
     console.log(error);
   }
 }
+
+export async function getOrderByNumber(orderNumber: string) {
+  try {
+    const order = await prisma.lineOrder.findFirst({
+      where: {
+        orderNumber,
+      },
+      include: {
+        lineOrderItems: {
+          include: {
+            product: {
+              select: {
+                productCode: true,
+                name: true,
+              }
+            }
+          }
+        },
+        insuranceClaim: {
+          include: {
+            provider: true
+          }
+        }
+      },
+    });
+
+    if (!order) {
+      return null;
+    }
+
+    // Transform the data to match our OrderDetails interface
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      total: order.orderAmount,
+      status: order.status,
+      paymentMethod: order.paymentMethod || 'CASH',
+      createdAt: order.createdAt,
+      customer: {
+        name: order.customerName || 'Walk-in Customer',
+        email: order.customerEmail || undefined,
+        phone: order.phone || undefined,
+        address: order.streetAddress ? 
+          `${order.streetAddress}${order.apartment ? ', ' + order.apartment : ''}, ${order.city || ''}, ${order.country || ''}`.trim() 
+          : undefined,
+      },
+      orderItems: order.lineOrderItems.map(item => ({
+        id: item.id,
+        productName: item.name,
+        productCode: item.product?.productCode || undefined,
+        quantity: item.qty,
+        unitPrice: item.price,
+        totalPrice: item.price * item.qty,
+      })),
+      notes: order.notes || undefined,
+    };
+  } catch (error) {
+    console.log('Error fetching order by number:', error);
+    throw error;
+  }
+}
 export type StatusData = {
   status: OrderStatus;
 };

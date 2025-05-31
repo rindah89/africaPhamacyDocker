@@ -2,6 +2,65 @@
 const nextConfig = {
   // Add asset prefix for production
   assetPrefix: process.env.NODE_ENV === 'production' ? 'https://karenpharmacy.health' : '',
+  
+  // Experimental optimizations
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-icons',
+      'recharts',
+      'react-icons'
+    ],
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
+  },
+
+  // Webpack optimizations
+  webpack: (config, { dev, isServer }) => {
+    // Bundle analyzer
+    if (process.env.ANALYZE === 'true') {
+      const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+      config.plugins.push(
+        new BundleAnalyzerPlugin({
+          analyzerMode: 'static',
+          openAnalyzer: true,
+        })
+      );
+    }
+
+    // Optimize for client bundles
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+
+    // Tree shaking optimizations - let Next.js handle usedExports internally
+    if (config.optimization.sideEffects === undefined) {
+      config.optimization.sideEffects = false;
+    }
+
+    return config;
+  },
+
+  // Output optimization
+  output: 'standalone',
+  
+  // Compression
+  compress: true,
+  
+  // Power optimizations
+  poweredByHeader: false,
+  
   images: {
     domains: ['res.cloudinary.com', 'uploadthing.com', 'kpbojongo.com'], // Add your image domains here
     minimumCacheTTL: 60,
