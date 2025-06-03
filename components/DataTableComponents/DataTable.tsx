@@ -44,7 +44,6 @@ import DateFilters from "./DateFilters";
 import DateRangeFilter from "./DateRangeFilter";
 import TableAnalytics from "./TableAnalytics";
 import { DateRange } from "react-day-picker";
-import { startOfYear } from "date-fns";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -52,8 +51,11 @@ interface DataTableProps<TData, TValue> {
   tableTitle?: string;
   initialSorting?: SortingState;
   onSelectionChange?: (selectedRows: TData[]) => void;
-  onTableCreated?: (table: Table<TData>) => void;
+  onTableCreated?: (table: any) => void;
   onDataFiltered?: (filteredData: TData[]) => void;
+  onProcessedDataChange?: (processedData: TData[]) => void;
+  dateRange?: DateRange;
+  onDateRangeChange?: (dateRange: DateRange | undefined) => void;
 }
 
 export default function DataTable<TData, TValue>({
@@ -63,8 +65,27 @@ export default function DataTable<TData, TValue>({
   initialSorting = [],
   onSelectionChange,
   onTableCreated,
-  onDataFiltered
+  onDataFiltered,
+  onProcessedDataChange,
+  dateRange,
+  onDateRangeChange,
 }: DataTableProps<TData, TValue>) {
+  console.log(`🔄 DataTable (${tableTitle}): Component initializing...`);
+  console.log(`🔄 DataTable (${tableTitle}): Received onDateRangeChange:`, typeof onDateRangeChange, onDateRangeChange);
+  console.log(`🔄 DataTable (${tableTitle}): Received data:`, {
+    dataLength: data?.length || 0,
+    dataType: typeof data,
+    isArray: Array.isArray(data),
+    isEmpty: !data || data.length === 0,
+    columnsCount: columns?.length || 0,
+    tableTitle,
+    firstItem: data?.[0] ? {
+      keys: Object.keys(data[0]),
+      hasId: 'id' in data[0],
+      sample: data[0]
+    } : null
+  });
+  
   const [rowSelection, setRowSelection] = useState({});
   const [columnVisibility, setColumnVisibility] = useState({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -74,12 +95,18 @@ export default function DataTable<TData, TValue>({
   const [filteredData, setFilteredData] = useState(data);
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [isSearch, setIsSearch] = useState(true);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
-    const now = new Date();
-    return {
-      from: startOfYear(now),
-      to: now,
-    };
+
+  useEffect(() => {
+    console.log(`📊 DataTable (${tableTitle}): Primary data prop changed. Resetting searchResults and filteredData.`);
+    setSearchResults(data);
+    setFilteredData(data);
+  }, [data, tableTitle]);
+
+  console.log(`📊 DataTable (${tableTitle}): State initialized:`, {
+    searchResultsLength: searchResults?.length || 0,
+    filteredDataLength: filteredData?.length || 0,
+    isSearch,
+    sortingCount: sorting?.length || 0
   });
 
   // Update selected rows when selection changes
@@ -113,6 +140,16 @@ export default function DataTable<TData, TValue>({
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
   });
+  
+  console.log(`📊 DataTable (${tableTitle}): Table created with:`, {
+    rowCount: table.getRowModel().rows?.length || 0,
+    pageCount: table.getPageCount(),
+    pageSize: table.getState().pagination.pageSize,
+    currentPage: table.getState().pagination.pageIndex,
+    canNextPage: table.getCanNextPage(),
+    canPreviousPage: table.getCanPreviousPage(),
+    totalRowCount: table.getRowCount()
+  });
 
   // Call onTableCreated when table is created
   React.useEffect(() => {
@@ -127,9 +164,18 @@ export default function DataTable<TData, TValue>({
       const currentData = isSearch ? searchResults : filteredData;
       onDataFiltered(currentData);
     }
-  }, [isSearch, searchResults, filteredData, onDataFiltered]);
+    if (onProcessedDataChange) {
+      const processedRows = table.getSortedRowModel().rows.map(row => row.original);
+      onProcessedDataChange(processedRows);
+    }
+  }, [isSearch, searchResults, filteredData, onDataFiltered, onProcessedDataChange, table]);
 
-  return (
+  console.log(`🔄 DataTable (${tableTitle}): Starting render...`);
+  // Explicitly log the function just before passing it to children
+  console.log(`DataTable analitycs: Prop onDateRangeChange before passing to DateRangeFilter:`, typeof onDateRangeChange, onDateRangeChange);
+  const renderStartTime = Date.now();
+
+  const tableElement = (
     <div className="space-y-4">
       {tableTitle && (
         <TableAnalytics
@@ -147,18 +193,12 @@ export default function DataTable<TData, TValue>({
         </div>
         <div className="flex items-center gap-2">
           <DateRangeFilter
-            data={data}
-            onFilter={setFilteredData}
-            setIsSearch={setIsSearch}
             dateRange={dateRange}
-            onDateRangeChange={setDateRange}
+            onDateRangeChange={onDateRangeChange}
           />
           <DateFilters
-            data={data}
-            onFilter={setFilteredData}
-            setIsSearch={setIsSearch}
             dateRange={dateRange}
-            onDateRangeChange={setDateRange}
+            onDateRangeChange={onDateRangeChange}
           />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -226,7 +266,12 @@ export default function DataTable<TData, TValue>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  <div>
+                    <div>No results.</div>
+                    <div className="text-xs text-gray-400 mt-2">
+                      Debug: {data?.length || 0} total items, {table.getRowModel().rows?.length || 0} filtered
+                    </div>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
@@ -236,4 +281,9 @@ export default function DataTable<TData, TValue>({
       <DataTablePagination table={table} />
     </div>
   );
+  
+  const renderTime = Date.now() - renderStartTime;
+  console.log(`✅ DataTable (${tableTitle}): Render completed in ${renderTime}ms`);
+  
+  return tableElement;
 }

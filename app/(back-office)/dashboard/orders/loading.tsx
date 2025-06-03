@@ -1,8 +1,33 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
+  console.log("🔄 OrdersLoading: Loading component is being rendered");
+  console.log("🔄 OrdersLoading: This indicates orders data is still being fetched");
+  
+  const loadingStartTime = Date.now();
+  
+  // Log when component unmounts (when data loads)
+  if (typeof window !== 'undefined') {
+    setTimeout(() => {
+      console.log(`⏱️ OrdersLoading: Loading component has been visible for at least 100ms`);
+    }, 100);
+    
+    setTimeout(() => {
+      console.log(`⏱️ OrdersLoading: Loading component has been visible for at least 1000ms - potential performance issue`);
+    }, 1000);
+    
+    setTimeout(() => {
+      console.log(`⚠️ OrdersLoading: Loading component has been visible for at least 5000ms - likely an error occurred`);
+    }, 5000);
+  }
+  
   return (
     <div className="space-y-6">
+      {/* Debug info */}
+      <div className="text-xs text-gray-400 p-2 bg-gray-50 rounded">
+        Loading orders data... Started at {new Date().toLocaleTimeString()}
+      </div>
+      
       {/* Header skeleton */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between py-4">
         <Skeleton className="h-8 w-32" />

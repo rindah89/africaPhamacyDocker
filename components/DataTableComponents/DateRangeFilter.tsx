@@ -23,29 +23,31 @@ import {
 } from "@/components/ui/popover";
 
 export default function DateRangeFilter({
-  data,
-  onFilter,
-  setIsSearch,
+  // data, // data prop is not strictly needed for date picking, parent handles filtering
+  // onFilter, // onFilter is not needed as parent handles data fetching based on dateRangeChange
+  // setIsSearch, // setIsSearch is not directly relevant to date range selection anymore
   className,
   dateRange,
   onDateRangeChange,
 }: {
-  data: any[];
-  onFilter: any;
-  setIsSearch: any;
+  // data: any[];
+  // onFilter: any;
+  // setIsSearch: any;
   className?: string;
   dateRange: DateRange | undefined;
   onDateRangeChange: (range: DateRange | undefined) => void;
 }) {
+  console.log('DateRangeFilter analitycs: Received onDateRangeChange prop:', typeof onDateRangeChange, onDateRangeChange);
   const handleChange = (selectedDate: DateRange | undefined) => {
-    onDateRangeChange(selectedDate);
-    setIsSearch(false);
-    if (selectedDate?.from && selectedDate?.to) {
-      const startDate = format(selectedDate.from, 'yyyy-MM-dd');
-      const endDate = format(selectedDate.to, 'yyyy-MM-dd');
-      const filteredData = filterByDateRange(data, startDate, endDate);
-      onFilter(filteredData);
-    }
+    onDateRangeChange(selectedDate); // Only call the callback to notify the parent
+    // setIsSearch(false); // Parent will manage search state if needed upon data reload
+    // Client-side filtering based on dates is removed as parent now refetches from server
+    // if (selectedDate?.from && selectedDate?.to) {
+    //   const startDate = format(selectedDate.from, 'yyyy-MM-dd');
+    //   const endDate = format(selectedDate.to, 'yyyy-MM-dd');
+    //   const filteredData = filterByDateRange(data, startDate, endDate);
+    //   onFilter(filteredData);
+    // }
   };
 
   return (

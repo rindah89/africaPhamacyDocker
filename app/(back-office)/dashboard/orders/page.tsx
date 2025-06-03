@@ -3,28 +3,56 @@ import DataTable from "@/components/DataTableComponents/DataTable";
 import TableHeader from "@/components/dashboard/Tables/TableHeader";
 import React, { Suspense } from "react";
 import { columns } from "./columns";
-import { getAllOrdersPaginated } from "@/actions/pos";
+import { getAllOrdersPaginated, getAllOrdersSimple } from "@/actions/pos";
 import Loading from "./loading";
+import Link from "next/link";
 
-async function OrdersContent() {
+// Load More Orders Button Component
+function LoadMoreButton({ totalCount, currentCount }: { totalCount: number; currentCount: number }) {
+  const hasMore = currentCount < totalCount;
+  
+  if (!hasMore) return null;
+
+  return (
+    <div className="flex justify-center mt-6">
+      <Link
+        href="/dashboard/orders?limit=50"
+        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+      >
+        Load More Orders ({totalCount - currentCount} remaining)
+      </Link>
+    </div>
+  );
+}
+
+async function OrdersContent({ searchParams }: { searchParams?: { limit?: string } }) {
+  let paginatedResult = null;
+  let isUsingFallback = false;
+  
+  // Get limit from search params, default to 10 for initial load
+  const requestedLimit = searchParams?.limit ? parseInt(searchParams.limit) : 10;
+  const limit = Math.min(Math.max(requestedLimit, 1), 100); // Between 1 and 100 for performance
+  
   try {
-    console.log("🔄 Starting to load orders...");
-    const startTime = Date.now();
-    
-    const paginatedResult = await getAllOrdersPaginated(1, 50); // Default to page 1, limit 50
-    
-    console.log(`Paginated orders loaded: ${paginatedResult?.orders?.length || 0}`);
+    try {
+      paginatedResult = await getAllOrdersPaginated(1, limit);
+    } catch (mainError) {
+      // Fallback to simple query if main query fails
+      paginatedResult = await getAllOrdersSimple(1, limit);
+      isUsingFallback = true;
+    }
     
     const orders = paginatedResult?.orders || [];
     
-    const loadTime = Date.now() - startTime;
-    console.log(`✅ Orders loaded successfully in ${loadTime}ms. Count: ${orders.length}`);
-    
     return (
       <>
-        <div className="mb-2 text-xs text-gray-500">
-          Loaded {orders.length} orders in {loadTime}ms
-        </div>
+        {isUsingFallback && (
+          <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded text-orange-800">
+            <strong>Performance Notice:</strong> Using simplified query due to database timeout. 
+            Consider optimizing database indexes for better performance.
+          </div>
+        )}
+        
         <TableHeader
           title="Orders"
           linkTitle="Add Order"
@@ -32,11 +60,13 @@ async function OrdersContent() {
           data={orders}
           model="order"
         />
+        
         <DataTable tableTitle="orders" columns={columns} data={orders} />
+        
+        <LoadMoreButton totalCount={paginatedResult?.totalCount || 0} currentCount={orders.length} />
       </>
     );
   } catch (error) {
-    console.error("❌ Error loading orders:", error);
     return (
       <div className="p-4">
         <div className="text-red-500 text-center">
@@ -49,12 +79,11 @@ async function OrdersContent() {
   }
 }
 
-export default function page() {
+export default function page({ searchParams }: { searchParams?: { limit?: string } }) {
   return (
     <div>
-      
       <Suspense fallback={<Loading />}>
-        <OrdersContent />
+        <OrdersContent searchParams={searchParams} />
       </Suspense>
     </div>
   );

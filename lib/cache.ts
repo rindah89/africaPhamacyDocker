@@ -66,16 +66,20 @@ export async function withCache<T>(
 ): Promise<T> {
   // Check if cached data exists
   const cached = cache.get<T>(key);
+  
   if (cached !== null) {
-    console.log(`Cache hit for key: ${key}`);
     return cached;
   }
 
   // Execute function and cache result
-  console.log(`Cache miss for key: ${key}`);
-  const data = await fn();
-  cache.set(key, data, ttl);
-  return data;
+  try {
+    const data = await fn();
+    cache.set(key, data, ttl);
+    return data;
+  } catch (error) {
+    console.error(`Cache error for key ${key}:`, error);
+    throw error;
+  }
 }
 
 // Specific cache keys generator
@@ -88,7 +92,11 @@ export const cacheKeys = {
   salesChart: () => 'sales:chart:7days',
   orders: (page: number, limit: number) => `orders:${page}:${limit}`,
   ordersMinimal: (page: number, limit: number) => `orders:minimal:${page}:${limit}`,
-  orderCount: () => 'orders:count'
+  orderCount: () => 'orders:count',
+  sales: (page: number, limit: number, startDate?: string, endDate?: string) => 
+    `sales:${page}:${limit}:${startDate || 'all'}:${endDate || 'all'}`,
+  salesMinimal: (page: number, limit: number) => `sales:minimal:${page}:${limit}`,
+  salesCount: () => 'sales:count'
 };
 
 // Cache invalidation helpers
@@ -107,6 +115,15 @@ export const invalidateCache = {
     const keys = Array.from((cache as any).cache.keys());
     keys.forEach(key => {
       if (key.startsWith('orders:') || key.startsWith('order:')) {
+        cache.delete(key);
+      }
+    });
+  },
+  sales: () => {
+    // Clear all sales-related cache
+    const keys = Array.from((cache as any).cache.keys());
+    keys.forEach(key => {
+      if (key.startsWith('sales:')) {
         cache.delete(key);
       }
     });

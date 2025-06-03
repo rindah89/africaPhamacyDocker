@@ -18,17 +18,66 @@ import { generateSlug } from "@/lib/generateSlug";
 import { cn } from "@/lib/utils";
 
 export default async function page() {
+  console.log("🔄 OrdersGridView: Component starting to render");
+  const componentStartTime = Date.now();
+  
   try {
+    console.log("🔄 OrdersGridView: Calling getAllOrdersPaginated(1, 50)");
+    const fetchStartTime = Date.now();
+    
     const result = await getAllOrdersPaginated(1, 50);
+    
+    const fetchTime = Date.now() - fetchStartTime;
+    console.log(`✅ OrdersGridView: getAllOrdersPaginated completed in ${fetchTime}ms`);
+    
+    console.log("📊 OrdersGridView: Raw result inspection:", {
+      resultExists: !!result,
+      resultType: typeof result,
+      isNull: result === null,
+      isUndefined: result === undefined,
+      hasOrders: result && 'orders' in result,
+      ordersIsArray: result && Array.isArray(result.orders),
+      ordersLength: result?.orders?.length || 0,
+      totalCount: result?.totalCount || 0,
+      totalPages: result?.totalPages || 0,
+      currentPage: result?.currentPage || 0
+    });
+    
     const orders = result?.orders || [];
+    console.log(`📊 OrdersGridView: Extracted orders array - length: ${orders.length}`);
+
+    if (orders.length > 0) {
+      console.log(`📊 OrdersGridView: Sample order inspection:`, {
+        firstOrder: {
+          id: orders[0]?.id,
+          orderNumber: orders[0]?.orderNumber,
+          customerName: orders[0]?.customerName,
+          lineOrderItems: orders[0]?.lineOrderItems,
+          lineItemsLength: orders[0]?.lineOrderItems?.length || 0,
+          createdAt: orders[0]?.createdAt
+        }
+      });
+    }
 
     const actualOrders = orders.filter(
       (order) => order.lineOrderItems && order.lineOrderItems.length > 0
     );
     
+    console.log(`📊 OrdersGridView: Filtered orders:`, {
+      originalCount: orders.length,
+      filteredCount: actualOrders.length,
+      filterCriteria: "orders with lineOrderItems.length > 0"
+    });
+    
+    const componentTime = Date.now() - componentStartTime;
+    console.log(`✅ OrdersGridView: Component data processing completed in ${componentTime}ms`);
+    
     return (
       <div>
         <h2>All Orders</h2>
+        <div className="mb-2 text-xs text-gray-500">
+          Debug: Found {orders.length} total orders, {actualOrders.length} with items (processed in {componentTime}ms)
+        </div>
 
         <div className="py-8">
           {actualOrders.length > 0 ? (
@@ -118,6 +167,9 @@ export default async function page() {
               <Package className="w-16 h-16 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
               <p className="text-gray-500 mb-4">You haven't received any orders yet.</p>
+              <div className="text-sm text-gray-400 mt-4">
+                Debug info: {orders.length} total orders fetched, {actualOrders.length} with line items
+              </div>
               <Link
                 href="/dashboard/orders/new"
                 className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
@@ -130,12 +182,21 @@ export default async function page() {
       </div>
     );
   } catch (error) {
-    console.error("Error loading orders:", error);
+    const errorTime = Date.now() - componentStartTime;
+    console.error(`❌ OrdersGridView: Error after ${errorTime}ms:`, error);
+    console.error("❌ OrdersGridView: Error details:", {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
     return (
       <div className="p-4">
         <div className="text-red-500 text-center">
-          <h3>Error Loading Orders</h3>
-          <p>There was an issue loading the orders. Please try refreshing the page.</p>
+          <h3>Error Loading Orders (Grid View)</h3>
+          <p>There was an issue loading the orders in grid view. Please try refreshing the page.</p>
+          <p className="text-sm mt-2">Error: {error instanceof Error ? error.message : 'Unknown error'}</p>
+          <p className="text-xs mt-1 text-gray-500">Error occurred after {errorTime}ms</p>
         </div>
       </div>
     );
