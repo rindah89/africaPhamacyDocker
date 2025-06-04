@@ -2023,18 +2023,15 @@ export async function getBestSellingProducts(productCount: number) {
           slug: true,
           productThumbnail: true,
           productPrice: true,
-          // Add any other product fields displayed in BestSellingProducts component
-          _count: { // Optionally, get the count of sales if needed
+          sales: {
             select: {
-              sales: true
+              salePrice: true,
+              qty: true
             }
           }
         }
-        // Removed: include: { sales: { ... } } to avoid fetching all sales details
       });
       
-      // topSellingProducts will not be null, it will be an empty array if no products are found.
-      // The check `if (!topSellingProducts)` is misleading as findMany returns Product[]
       return topSellingProducts;
     } catch (error) {
       console.error("Error in getBestSellingProducts:", error);

@@ -104,9 +104,9 @@ const BarcodeSheet = ({ selectedBatches }: BarcodeSheetProps) => {
       </Button>
 
       <div ref={componentRef}>
-        <div className="flex flex-col gap-0">
+        <div className="flex flex-col">
           {rows.map((row, rowIndex) => (
-            <div key={rowIndex} className="flex flex-row gap-0 justify-center">
+            <div key={rowIndex} className="flex flex-row justify-between h-[38px]">
               {row.map((batch, colIndex) => (
                 batch ? (
                   <BarcodeItem
@@ -118,7 +118,7 @@ const BarcodeSheet = ({ selectedBatches }: BarcodeSheetProps) => {
                     supplierName={batch.product.supplier?.name}
                   />
                 ) : (
-                  <div key={`empty-${rowIndex}-${colIndex}`} className="w-[94px] p-0.5 h-[37px]" />
+                  <div key={`empty-${rowIndex}-${colIndex}`} className="w-[94px] h-[37px]" />
                 )
               ))}
             </div>

@@ -51,8 +51,9 @@ async function getAdverts() {
 
 async function getProducts() {
   try {
-    const products = await getAllProducts();
-    return (products || []).slice(0, 20);
+    const result = await getAllProducts();
+    const products = result?.products || [];
+    return products.slice(0, 20);
   } catch (error) {
     console.error('Error fetching products:', error);
     return [];

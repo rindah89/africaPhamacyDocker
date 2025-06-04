@@ -8,7 +8,7 @@ import Image from "next/image";
 
 import Link from "next/link";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 import { Button } from "../ui/button";
 
@@ -43,6 +43,10 @@ import ReceiptPrint2 from "./ReceiptPrint2";
 import PaymentModal from "./PaymentModal";
 
 import { searchPOSProducts } from "@/actions/products";
+
+import BarcodeScanner, { BarcodeScannerRef } from "./BarcodeScanner";
+
+import KeyboardShortcuts from "./KeyboardShortcuts";
 
 
 
@@ -112,7 +116,7 @@ export default function PointOfSale({
 
   const [createdOrderId, setCreatedOrderId] = useState<string>("");
 
-  const [barcodeInput, setBarcodeInput] = useState('');
+
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
@@ -135,6 +139,10 @@ export default function PointOfSale({
   } | null>(null);
 
   
+
+  // Refs for keyboard shortcuts
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const barcodeScannerRef = useRef<BarcodeScannerRef>(null);
 
   const dispatch = useAppDispatch();
 
@@ -160,62 +168,30 @@ export default function PointOfSale({
 
 
 
-  // Handle barcode scan
+  // Handle product scanned from barcode scanner
+  const handleProductScanned = (product: Product) => {
+    const newOrderLineItem = {
+      id: product.id,
+      name: product.name,
+      price: product.productPrice,
+      qty: 1,
+      productThumbnail: product.productThumbnail,
+      stock: product.stockQty,
+    };
+    dispatch(addProductToOrderLine(newOrderLineItem));
+  };
 
-  const handleBarcodeScan = (e: React.KeyboardEvent<HTMLInputElement>) => {
-
-    if (e.key === 'Enter') {
-
-      if (!barcodeInput || barcodeInput.trim() === '') {
-
-        toast.error('Please scan or enter a barcode');
-
-        return;
-
-      }
-
-      const scannedProduct = products.find(p => p.productCode === barcodeInput);
-
-      if (scannedProduct) {
-
-        if (scannedProduct.stockQty <= 0) {
-
-          toast.error(`${scannedProduct.name} is out of stock`);
-
-        } else {
-
-          const newOrderLineItem = {
-
-            id: scannedProduct.id,
-
-            name: scannedProduct.name,
-
-            price: scannedProduct.productPrice,
-
-            qty: 1,
-
-            productThumbnail: scannedProduct.productThumbnail,
-
-            stock: scannedProduct.stockQty,
-
-          };
-
-          dispatch(addProductToOrderLine(newOrderLineItem));
-
-          toast.success(`Added ${scannedProduct.name}`);
-
-        }
-
-      } else {
-
-        toast.error(`Invalid barcode: ${barcodeInput} - Product not found`);
-
-      }
-
-      setBarcodeInput(''); // Clear input after scan
-
+  // Keyboard shortcut handlers
+  const handleFocusBarcode = () => {
+    if (barcodeScannerRef.current?.focusInput) {
+      barcodeScannerRef.current.focusInput();
     }
+  };
 
+  const handleFocusSearch = () => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
   };
 
 
@@ -490,6 +466,8 @@ export default function PointOfSale({
 
               <Input
 
+                ref={searchInputRef}
+
                 type="text"
 
                 placeholder="Search products..."
@@ -503,22 +481,6 @@ export default function PointOfSale({
                   handleSearch(e.target.value);
 
                 }}
-
-                className="w-full"
-
-              />
-
-              <Input
-
-                type="text"
-
-                placeholder="Scan barcode..."
-
-                value={barcodeInput}
-
-                onChange={(e) => setBarcodeInput(e.target.value)}
-
-                onKeyDown={handleBarcodeScan}
 
                 className="w-full"
 
@@ -589,6 +551,26 @@ export default function PointOfSale({
             toolTipText="Add New Customer"
 
             href="/dashboard/sales/customers/new"
+
+          />
+
+        </div>
+
+        
+
+        {/* Barcode Scanner Component */}
+
+        <div className="pt-4">
+
+          <BarcodeScanner
+
+            ref={barcodeScannerRef}
+
+            products={products}
+
+            onProductScanned={handleProductScanned}
+
+            className="mb-4"
 
           />
 
@@ -757,6 +739,15 @@ export default function PointOfSale({
         orderData={orderData}
         customerData={validatedCustomerData}
         orderNumber={orderNumber}
+      />
+
+      {/* Keyboard Shortcuts */}
+      <KeyboardShortcuts
+        onFocusBarcode={handleFocusBarcode}
+        onFocusSearch={handleFocusSearch}
+        onClearOrder={clearOrder}
+        onPlaceOrder={handleCreateOrder}
+        canPlaceOrder={orderLineItems.length > 0 && !processing}
       />
 
     </div>

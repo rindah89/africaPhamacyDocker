@@ -74,11 +74,11 @@ export default function BestSellingProducts({
             {products && products.length > 0 ? (
               <TableBody className="">
                 {products.map((product) => {
-                  const sales = product.sales;
-                  const totalSales = product.sales.reduce((acc, item) => {
+                  const sales = product.sales || [];
+                  const totalSales = sales.reduce((acc, item) => {
                     return acc + item.salePrice * item.qty;
                   }, 0);
-                  const salesCount = product.sales.length;
+                  const salesCount = sales.length;
                   return (
                     <TableRow key={product.id}>
                       <TableCell className="hidden sm:table-cell">
