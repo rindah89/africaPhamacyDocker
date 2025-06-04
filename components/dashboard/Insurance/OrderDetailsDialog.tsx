@@ -162,7 +162,7 @@ export default function OrderDetailsDialog({
     if (open && orderNumber) {
       fetchOrderDetails();
     }
-  }, [open, orderNumber]);
+  }, [open, orderNumber, fetchOrderDetails]);
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {

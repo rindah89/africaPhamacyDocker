@@ -101,7 +101,7 @@ export default function AdjustmentForm({ products, initialData, editingId }: Adj
     };
 
     fetchBatchesForProducts();
-  }, [items]);
+  }, [items, productBatches]);
 
   // Fetch batches when a new product is selected
   useEffect(() => {

@@ -15,7 +15,9 @@ const SalesChart = dynamic(
     console.log('ChartsSection: Loading SalesChart dynamically');
     return import('./SalesChart').catch(err => {
       console.error('ChartsSection: Failed to load SalesChart:', err);
-      return () => <p>Error loading Sales Chart.</p>;
+      const ErrorComponent = () => <p>Error loading Sales Chart.</p>;
+      ErrorComponent.displayName = 'SalesChartError';
+      return ErrorComponent;
     });
   },
   { 
@@ -26,13 +28,16 @@ const SalesChart = dynamic(
     }
   }
 );
+SalesChart.displayName = 'SalesChart';
 
 const RevenueByCategory = dynamic(
   () => {
     console.log('ChartsSection: Loading RevenueByCategory dynamically');
     return import('./RevenueByCategory').catch(err => {
       console.error('ChartsSection: Failed to load RevenueByCategory:', err);
-      return () => <p>Error loading Revenue By Category Chart.</p>;
+      const ErrorComponent = () => <p>Error loading Revenue By Category Chart.</p>;
+      ErrorComponent.displayName = 'RevenueByCategoryError';
+      return ErrorComponent;
     });
   },
   { 
@@ -43,6 +48,7 @@ const RevenueByCategory = dynamic(
     }
   }
 );
+RevenueByCategory.displayName = 'RevenueByCategory';
 
 function ChartSkeleton() {
   return (

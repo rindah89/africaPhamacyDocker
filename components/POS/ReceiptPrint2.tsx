@@ -103,7 +103,7 @@ export default function ReceiptPrint2({
       console.log('🧹 Receipt component cleanup');
       mountedRef.current = false;
     };
-  }, [orderItems, amountPaid]);
+  }, [orderItems, amountPaid, hasPrinted, isOpen]);
 
   // Handle drawer state changes
   const handleDrawerStateChange = React.useCallback((open: boolean) => {
