@@ -17,28 +17,28 @@ const BarcodeItem = ({ productName, price, productCode, deliveryDate, supplierNa
   const formatDeliveryDate = (date: Date | null | undefined, supplierName?: string) => {
     if (!date) return 'N/A';
     const supplierInitial = supplierName ? supplierName.charAt(0).toUpperCase() : '';
-    return `K${supplierInitial}-${format(date, 'MM/dd/yyyy')}`;
+    return `K${supplierInitial}-${format(date, 'MM/dd')}`;
   };
 
   return (
-    <div className="w-[110px] p-1 text-center text-[8px] border border-dashed border-gray-200 m-0.5">
-      <div className="mb-0.5 font-semibold truncate">{productName}</div>
-      <div className="mb-0.5 truncate">{supplierName || ''}</div>
+    <div className="w-[94px] p-0.5 text-center text-[6px] border border-dashed border-gray-200 flex flex-col justify-between h-[37px]">
+      <div className="mb-px font-semibold truncate leading-tight">{productName}</div>
+      <div className="mb-px truncate leading-tight">{supplierName || ''}</div>
       <div className="flex items-center justify-between">
-        <div className="w-[75%]">
-          <Barcode 
+        <div className="w-[65%]">
+          <Barcode
             value={productCode}
-            width={0.5}
-            height={10}
-            fontSize={6}
+            width={0.4}
+            height={8}
+            fontSize={5}
             margin={0}
             displayValue={false}
-            textMargin={1}
+            textMargin={0}
           />
         </div>
-        <div className="w-[25%] text-right pr-1">{formatMoney(price)}</div>
+        <div className="w-[35%] text-right pr-0.5 text-[7px] leading-tight">{formatMoney(price)}</div>
       </div>
-      <div className="mt-0.5">{formatDeliveryDate(deliveryDate, supplierName)}</div>
+      <div className="mt-px leading-tight">{formatDeliveryDate(deliveryDate, supplierName)}</div>
     </div>
   );
 };
@@ -55,7 +55,7 @@ const BarcodeSheet = ({ selectedBatches }: BarcodeSheetProps) => {
     pageStyle: `
       @page {
         size: A4;
-        margin: 12mm 16mm;
+        margin: 13mm 18mm 15mm 16mm;
       }
       @media print {
         body {
@@ -80,10 +80,15 @@ const BarcodeSheet = ({ selectedBatches }: BarcodeSheetProps) => {
   // Create a grid of 27 rows x 7 columns
   const rows = [];
   for (let i = 0; i < Math.min(barcodeItems.length, 27 * 7); i += 7) {
-    rows.push(barcodeItems.slice(i, i + 7));
+    const row = barcodeItems.slice(i, i + 7);
+    // Pad each row to exactly 7 columns
+    while (row.length < 7) {
+      row.push(null);
+    }
+    rows.push(row);
   }
 
-  // Pad with empty cells if needed to maintain grid structure
+  // Pad with empty rows if needed to maintain 27 rows total
   while (rows.length < 27) {
     rows.push(Array(7).fill(null));
   }
@@ -113,7 +118,7 @@ const BarcodeSheet = ({ selectedBatches }: BarcodeSheetProps) => {
                     supplierName={batch.product.supplier?.name}
                   />
                 ) : (
-                  <div key={`empty-${rowIndex}-${colIndex}`} className="w-[110px] p-1 m-0.5" />
+                  <div key={`empty-${rowIndex}-${colIndex}`} className="w-[94px] p-0.5 h-[37px]" />
                 )
               ))}
             </div>

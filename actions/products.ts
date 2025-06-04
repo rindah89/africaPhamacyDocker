@@ -1,6 +1,6 @@
 "use server";
 
-
+import { withCache, cacheKeys } from "@/lib/cache";
 
 import {
 
@@ -2003,44 +2003,44 @@ export async function getProductsBySearchQuery(
 
 
 export async function getBestSellingProducts(productCount: number) {
-  try {
-    const topSellingProducts = await prisma.product.findMany({
-      take: productCount,
-      where: {
-        status: true, // Only include active products
-      },
-      orderBy: {
-        sales: {
-          _count: "desc",
+  return withCache(cacheKeys.bestSellingProducts(productCount), async () => {
+    console.log(`Fetching ${productCount} best selling products (from cache or fresh)`);
+    try {
+      const topSellingProducts = await prisma.product.findMany({
+        take: productCount,
+        where: {
+          status: true, // Only include active products
+          sales: { some: {} } // Ensure product has at least one sale to be considered
         },
-      },
-      include: {
-        sales: {
-          select: {
-            id: true,
-            qty: true,
-            salePrice: true,
-            productName: true,
-            productImage: true,
-            customerName: true,
-            customerEmail: true,
-            paymentMethod: true,
-            createdAt: true,
+        orderBy: {
+          sales: {
+            _count: "desc",
           },
         },
-      },
-    });
-    
-    if (!topSellingProducts) {
-      console.error("No products found");
-      return [];
+        select: { // Select only necessary product fields
+          id: true,
+          name: true,
+          slug: true,
+          productThumbnail: true,
+          productPrice: true,
+          // Add any other product fields displayed in BestSellingProducts component
+          _count: { // Optionally, get the count of sales if needed
+            select: {
+              sales: true
+            }
+          }
+        }
+        // Removed: include: { sales: { ... } } to avoid fetching all sales details
+      });
+      
+      // topSellingProducts will not be null, it will be an empty array if no products are found.
+      // The check `if (!topSellingProducts)` is misleading as findMany returns Product[]
+      return topSellingProducts;
+    } catch (error) {
+      console.error("Error in getBestSellingProducts:", error);
+      return []; // Return empty array on error to prevent breaking Promise.all
     }
-    
-    return topSellingProducts;
-  } catch (error) {
-    console.error("Error in getBestSellingProducts:", error);
-    return [];
-  }
+  }, 6 * 60 * 60 * 1000); // Cache for 6 hours
 }
 
 export async function searchPOSProducts(searchQuery: string) {

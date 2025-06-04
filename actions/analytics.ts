@@ -166,62 +166,65 @@ export const getSalesCountForPastSevenDaysOld = async (): Promise<
 export const getSalesCountForPastSevenDays = async (): Promise<
   DailySales[]
 > => {
-  console.log('getSalesCountForPastSevenDays: Starting function');
-  const now = new Date();
-  const sevenDaysAgo = subDays(now, 6); // Start from six days ago to include today
+  return withCache(cacheKeys.salesCountPastSevenDays(), async () => {
+    console.log('getSalesCountForPastSevenDays: Starting function (from cache or fresh)');
+    const now = new Date();
+    const sevenDaysAgo = subDays(now, 6); // Start from six days ago to include today
+    sevenDaysAgo.setHours(0,0,0,0); // Normalize to start of day
+    const todayEnd = new Date(now);
+    todayEnd.setHours(23,59,59,999); // Normalize to end of day
 
-  console.log('getSalesCountForPastSevenDays: Date range', {
-    start: sevenDaysAgo,
-    end: now
-  });
+    console.log('getSalesCountForPastSevenDays: Date range', {
+      start: sevenDaysAgo,
+      end: todayEnd
+    });
 
-  // Get all dates for the past 7 days
-  const days = eachDayOfInterval({
-    start: sevenDaysAgo,
-    end: now,
-  });
+    const days = eachDayOfInterval({
+      start: sevenDaysAgo,
+      end: now, // Use now for interval generation to include today correctly
+    });
 
-  // Initialize sales count map with 0 sales for each day
-  const salesCountMap: { [key: string]: number } = {};
-  days.forEach((day) => {
-    const formattedDay = format(day, "EEE do MMM");
-    salesCountMap[formattedDay] = 0;
-  });
+    const salesCountMap: { [key: string]: number } = {};
+    days.forEach((day) => {
+      const formattedDay = format(day, "EEE do MMM");
+      salesCountMap[formattedDay] = 0;
+    });
 
-  console.log('getSalesCountForPastSevenDays: Initialized days map:', salesCountMap);
+    console.log('getSalesCountForPastSevenDays: Initialized days map:', salesCountMap);
 
-  // Fetch sales data for the past 7 days
-  const sales = await prisma.sale.findMany({
-    where: {
-      createdAt: {
-        gte: sevenDaysAgo,
-        lte: now,
+    const sales = await prisma.sale.findMany({
+      where: {
+        createdAt: {
+          gte: sevenDaysAgo,
+          lte: todayEnd, // Use todayEnd for query
+        },
       },
-    },
-    select: {
-      createdAt: true,
-    },
-  });
+      select: {
+        createdAt: true,
+      },
+    });
 
-  console.log('getSalesCountForPastSevenDays: Found sales records:', sales.length);
+    console.log('getSalesCountForPastSevenDays: Found sales records:', sales.length);
 
-  // Update sales count map with actual sales data
-  sales.forEach((sale) => {
-    const formattedDay = format(sale.createdAt, "EEE do MMM");
-    salesCountMap[formattedDay] += 1;
-  });
+    sales.forEach((sale) => {
+      const formattedDay = format(sale.createdAt, "EEE do MMM");
+      // Ensure the day exists in the map (it should due to initialization)
+      if (salesCountMap.hasOwnProperty(formattedDay)) {
+        salesCountMap[formattedDay] += 1;
+      }
+    });
 
-  // Transform the map into the desired array format
-  const salesCountArray: DailySales[] = days.map((day) => {
-    const formattedDay = format(day, "EEE do MMM");
-    return {
-      day: formattedDay,
-      sales: salesCountMap[formattedDay],
-    };
-  });
+    const salesCountArray: DailySales[] = days.map((day) => {
+      const formattedDay = format(day, "EEE do MMM");
+      return {
+        day: formattedDay,
+        sales: salesCountMap[formattedDay],
+      };
+    });
 
-  console.log('getSalesCountForPastSevenDays: Final processed data:', salesCountArray);
-  return salesCountArray;
+    console.log('getSalesCountForPastSevenDays: Final processed data:', salesCountArray);
+    return salesCountArray;
+  }, 2 * 60 * 60 * 1000); // Cache for 2 hours
 };
 
 export interface MainCategorySales {
@@ -419,69 +422,97 @@ export const getRevenueByMainCategoryPastSixMonths = async (): Promise<MonthlyMa
     try {
       console.log('Starting getRevenueByMainCategoryPastSixMonths...');
       
-      // Get the last 6 months
       const currentDate = new Date();
-      const sixMonthsAgo = subMonths(currentDate, 6);
-      
+      const sixMonthsAgo = subMonths(currentDate, 5); // Go back 5 months to include the current month fully
+      sixMonthsAgo.setDate(1); // Start from the beginning of the month
+      sixMonthsAgo.setHours(0, 0, 0, 0); // Normalize to start of the day
+
       console.log('Date range:', { from: sixMonthsAgo, to: currentDate });
 
-      // Optimized query using raw SQL for better performance
-      const salesData = await prisma.$queryRaw`
-        SELECT 
-          mc.title as mainCategoryTitle,
-          DATE_FORMAT(s.createdAt, '%Y-%m') as month,
-          SUM(s.salePrice) as totalRevenue,
-          COUNT(s.id) as salesCount
-        FROM Sale s
-        JOIN Product p ON s.productId = p.id
-        JOIN SubCategory sc ON p.subCategoryId = sc.id
-        JOIN Category c ON sc.categoryId = c.id
-        JOIN MainCategory mc ON c.mainCategoryId = mc.id
-        WHERE s.createdAt >= ${sixMonthsAgo} AND s.createdAt <= ${currentDate}
-        GROUP BY mc.id, mc.title, DATE_FORMAT(s.createdAt, '%Y-%m')
-        ORDER BY month DESC
-      ` as any[];
-
-      console.log('Raw sales data:', salesData.length, 'records');
-
-      // Process the data into the required format
-      const monthlyRevenueMap: { [key: string]: MonthlyMainCategoryRevenue } = {};
-
-      // Initialize months
-      for (let i = 0; i < 6; i++) {
-        const monthDate = subMonths(currentDate, i);
-        const monthKey = format(monthDate, "MMMM");
-        monthlyRevenueMap[monthKey] = { month: monthKey };
-      }
-
-      // Process sales data
-      salesData.forEach((sale: any) => {
-        const monthDate = new Date(sale.month + '-01');
-        const monthKey = format(monthDate, "MMMM");
-        const categoryKey = getFirstWord(sale.mainCategoryTitle);
-        
-        if (monthlyRevenueMap[monthKey]) {
-          monthlyRevenueMap[monthKey][categoryKey] = 
-            (monthlyRevenueMap[monthKey][categoryKey] as number || 0) + parseFloat(sale.totalRevenue);
-        }
+      const salesData = await prisma.sale.findMany({
+        where: {
+          createdAt: {
+            gte: sixMonthsAgo,
+            lte: currentDate,
+          },
+        },
+        include: {
+          product: {
+            include: {
+              subCategory: {
+                include: {
+                  category: {
+                    include: {
+                      mainCategory: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
       });
 
-      // Convert to array and sort in reverse chronological order
-      const mainCategoryRevenueArray: MonthlyMainCategoryRevenue[] =
-        Object.values(monthlyRevenueMap).reverse();
+      console.log('Fetched sales data:', salesData.length, 'records');
+
+      const monthlyRevenueMap: { [key: string]: MonthlyMainCategoryRevenue } = {};
+
+      // Initialize months for the last 6 full months including the current month
+      for (let i = 0; i < 6; i++) {
+        const monthDate = subMonths(currentDate, i);
+        const monthKey = format(monthDate, "MMMM"); // Full month name e.g., "June"
+        if (!monthlyRevenueMap[monthKey]) { // Ensure not to overwrite if multiple calls create same key (though logic prevents this here)
+            monthlyRevenueMap[monthKey] = { month: monthKey };
+        }
+      }
+      
+      salesData.forEach((sale) => {
+        if (sale.product && sale.product.subCategory && sale.product.subCategory.category && sale.product.subCategory.category.mainCategory) {
+          const saleMonth = format(new Date(sale.createdAt), "MMMM");
+          const mainCategoryTitle = sale.product.subCategory.category.mainCategory.title;
+          const categoryKey = getFirstWord(mainCategoryTitle);
+
+          if (monthlyRevenueMap[saleMonth]) {
+            monthlyRevenueMap[saleMonth][categoryKey] = 
+              (monthlyRevenueMap[saleMonth][categoryKey] as number || 0) + sale.salePrice;
+          }
+        }
+      });
+      
+      // Ensure all initialized months are in the final array, even if they have no sales
+      const allMonthsKeys = Object.keys(monthlyRevenueMap);
+      const mainCategoryRevenueArray: MonthlyMainCategoryRevenue[] = allMonthsKeys.map(monthKey => {
+          return monthlyRevenueMap[monthKey];
+      }).sort((a, b) => {
+          // Sort by month, ensuring correct chronological order from most recent to oldest
+          const dateA = new Date(Date.parse(a.month +" 1, 2000")); // Use a dummy year for sorting
+          const dateB = new Date(Date.parse(b.month +" 1, 2000"));
+          // Find the index in our original initialized order
+          const indexA = Array.from({length: 6}, (_, i) => format(subMonths(currentDate, i), "MMMM")).indexOf(a.month);
+          const indexB = Array.from({length: 6}, (_, i) => format(subMonths(currentDate, i), "MMMM")).indexOf(b.month);
+          return indexA - indexB;
+      });
+
 
       console.log('Processed revenue data:', mainCategoryRevenueArray.length, 'months');
       return mainCategoryRevenueArray;
     } catch (error) {
       console.error('Error in getRevenueByMainCategoryPastSixMonths:', error);
-      // Return empty data structure instead of throwing
       const monthlyRevenueMap: { [key: string]: MonthlyMainCategoryRevenue } = {};
       for (let i = 0; i < 6; i++) {
         const monthDate = subMonths(new Date(), i);
         const monthKey = format(monthDate, "MMMM");
         monthlyRevenueMap[monthKey] = { month: monthKey };
       }
-      return Object.values(monthlyRevenueMap).reverse();
+      // Sort months from most recent to oldest in the error case as well
+      return Object.values(monthlyRevenueMap).sort((a,b) => {
+        const indexA = Array.from({length: 6}, (_, i) => format(subMonths(new Date(), i), "MMMM")).indexOf(a.month);
+        const indexB = Array.from({length: 6}, (_, i) => format(subMonths(new Date(), i), "MMMM")).indexOf(b.month);
+        return indexA - indexB;
+      });
     }
   }, 10 * 60 * 1000); // Cache for 10 minutes
 };

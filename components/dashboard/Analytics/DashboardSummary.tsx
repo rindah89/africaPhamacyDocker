@@ -3,9 +3,9 @@ import React from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TransactionsList from "../TransactionsList";
 import BarChartCard from "./BarChartCard";
-import { getOrders } from "@/actions/pos";
+import { getRecentOrdersForDashboard } from "@/actions/pos";
 import OrderSummary from "../OrderSummary";
-import { getCustomers } from "@/actions/orders";
+import { getRecentCustomersForDashboard } from "@/actions/orders";
 import DataTable from "@/components/DataTableComponents/DataTable";
 import { columns } from "@/app/(back-office)/dashboard/sales/customers/columns";
 import { getBestSellingProducts } from "@/actions/products";
@@ -28,10 +28,42 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { MoveUpRight } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+
 export default async function DashboardSummary() {
-  const orders = (await getOrders()) || [];
-  const bestSellingProducts = (await getBestSellingProducts(3)) || [];
-  const customers = (await getCustomers()) || [];
+  const [ordersData, bestSellingProductsData, customersData] = await Promise.all([
+    getRecentOrdersForDashboard(5).catch(e => { 
+      console.error("Failed to fetch recent orders for summary:", e);
+      return { error: true, message: e.message || "Error fetching orders" }; 
+    }),
+    getBestSellingProducts(3).catch(e => { 
+      console.error("Failed to fetch best selling products for summary:", e);
+      return { error: true, message: e.message || "Error fetching products" }; 
+    }),
+    getRecentCustomersForDashboard(5).catch(e => { 
+      console.error("Failed to fetch recent customers for summary:", e);
+      return { error: true, message: e.message || "Error fetching customers" }; 
+    })
+  ]);
+
+  // Helper to render error or fallback for a data section
+  const renderDataSection = (data: any, dataName: string, ContentComponent: React.FC<any>, contentProps: any) => {
+    if (data && data.error) {
+      return (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error loading {dataName}</AlertTitle>
+          <AlertDescription>{typeof data.message === 'string' ? data.message : 'An unknown error occurred.'}</AlertDescription>
+        </Alert>
+      );
+    }
+    if (!data || (Array.isArray(data) && data.length === 0)) {
+      return <p className="text-sm text-muted-foreground p-4">No {dataName.toLowerCase()} to display.</p>;
+    }
+    return <ContentComponent {...contentProps} />;
+  };
+
   return (
     <Tabs defaultValue="orders">
       <div className="flex items-center">
@@ -39,23 +71,25 @@ export default async function DashboardSummary() {
           <TabsTrigger value="orders">Recent Orders</TabsTrigger>
           <TabsTrigger value="products">Best Selling Products</TabsTrigger>
           <TabsTrigger value="customers">Recent Customers</TabsTrigger>
-          <TabsTrigger value="year">Year</TabsTrigger>
+          {/* <TabsTrigger value="year">Year</TabsTrigger> */}
         </TabsList>
       </div>
       <TabsContent value="orders">
-        <OrderSummary orders={orders} />
+        {renderDataSection(ordersData, "Recent Orders", OrderSummary, { orders: Array.isArray(ordersData) ? ordersData : [] })}
       </TabsContent>
       <TabsContent value="products">
-        <BestSellingProducts products={bestSellingProducts} />
+        {renderDataSection(bestSellingProductsData, "Best Selling Products", BestSellingProducts, { products: Array.isArray(bestSellingProductsData) ? bestSellingProductsData : [] })}
       </TabsContent>
       <TabsContent value="customers">
         <Card>
           <CardHeader>
             <div className="flex justify-between items-center">
-              <div className="">
-                <CardTitle>Recent Customers({customers.length})</CardTitle>
+              <div>
+                <CardTitle>Recent Customers ({(Array.isArray(customersData) && !customersData.error ? customersData.length : 0)})</CardTitle>
                 <CardDescription>
-                  View the most recent Customers
+                  {(Array.isArray(customersData) && !customersData.error && customersData.length > 0) 
+                    ? `View the ${customersData.length} most recent Customers` 
+                    : "Recently active customers"}
                 </CardDescription>
               </div>
               <Button asChild size={"sm"}>
@@ -67,13 +101,13 @@ export default async function DashboardSummary() {
             </div>
           </CardHeader>
           <CardContent>
-            <DataTable columns={columns} data={customers.slice(0, 5)} />
+            {renderDataSection(customersData, "Recent Customers", DataTable, { columns: columns, data: Array.isArray(customersData) ? customersData : [] })}
           </CardContent>
         </Card>
       </TabsContent>
-      <TabsContent value="year">
+      {/* <TabsContent value="year">
         <BarChartCard />
-      </TabsContent>
+      </TabsContent> */}
     </Tabs>
   );
 }

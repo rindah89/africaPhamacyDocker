@@ -4,36 +4,12 @@ import prisma from "@/lib/db";
 import { withCache, cacheKeys } from "@/lib/cache";
 import { ILineOrder } from "@/types/types";
 
-// Helper function to adjust dates
-function getAdjustedDateRange(startDate?: Date, endDate?: Date) {
-  let adjustedStartDate = startDate;
-  let adjustedEndDate = endDate;
-
-  if (startDate) {
-    adjustedStartDate = new Date(startDate);
-    adjustedStartDate.setHours(0, 0, 0, 0); // Set to start of the day
-  }
-
-  if (endDate) {
-    adjustedEndDate = new Date(endDate);
-    adjustedEndDate.setHours(23, 59, 59, 999); // Set to end of the day
-  }
-  
-  return { startDate: adjustedStartDate, endDate: adjustedEndDate };
-}
-
 // Simple fallback sales fetching for when the main function has issues
-export async function getAllSalesSimple(page = 1, limit = 50, startDateInput?: Date, endDateInput?: Date) {
-  const { startDate, endDate } = getAdjustedDateRange(startDateInput, endDateInput);
+export async function getAllSalesSimple(page = 1, limit = 50) {
   try {
     const skip = (page - 1) * limit;
     
-    const where = startDate && endDate ? {
-      createdAt: {
-        gte: startDate,
-        lte: endDate
-      }
-    } : undefined;
+    const where = undefined;
 
     const sales = await prisma.sale.findMany({
       where,
@@ -85,20 +61,14 @@ export async function getAllSalesSimple(page = 1, limit = 50, startDateInput?: D
 }
 
 // Optimized sales fetching with pagination and caching
-export async function getAllSalesPaginated(page = 1, limit = 50, startDateInput?: Date, endDateInput?: Date) {
-  const { startDate, endDate } = getAdjustedDateRange(startDateInput, endDateInput);
-  const cacheKey = `sales:${page}:${limit}:${startDate?.getTime() || 'all'}:${endDate?.getTime() || 'all'}`;
+export async function getAllSalesPaginated(page = 1, limit = 50) {
+  const cacheKey = `sales:${page}:${limit}:all`;
   
   return withCache(cacheKey, async () => {
     try {
       const skip = (page - 1) * limit;
       
-      const where = startDate && endDate ? {
-        createdAt: {
-          gte: startDate,
-          lte: endDate
-        }
-      } : undefined;
+      const where = undefined;
 
       // Step 1: Get sales with basic data (fast query)
       const sales = await prisma.sale.findMany({
@@ -188,17 +158,16 @@ export async function getAllSalesPaginated(page = 1, limit = 50, startDateInput?
     } catch (error) {
       console.error("Failed to fetch sales:", error);
       // Fallback to simple query
-      const { startDate: adjFallbackStart, endDate: adjFallbackEnd } = getAdjustedDateRange(startDateInput, endDateInput);
-      return await getAllSalesSimple(page, limit, adjFallbackStart, adjFallbackEnd);
+      return await getAllSalesSimple(page, limit);
     }
   }, 3 * 60 * 1000); // Cache for 3 minutes
 }
 
 // Legacy function for backward compatibility (now optimized)
-export async function getAllSales(startDate?: Date, endDate?: Date) {
+export async function getAllSales() {
   try {
     // For backward compatibility, get first 100 sales without pagination
-    const result = await getAllSalesPaginated(1, 100, startDate, endDate);
+    const result = await getAllSalesPaginated(1, 100);
     return result.sales;
   } catch (error) {
     console.error("Error fetching sales:", error);

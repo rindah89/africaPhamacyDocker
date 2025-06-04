@@ -3,6 +3,7 @@
 import prisma from "@/lib/db";
 import { ICustomer, ILineOrder, OrderCustomer } from "@/types/types";
 import { OrderStatus } from "@prisma/client";
+import { withCache, cacheKeys } from "@/lib/cache";
 
 // Define the PaymentMethod enum here as well
 enum PaymentMethod {
@@ -186,6 +187,71 @@ export async function getCustomers() {
   }
 }
 
+export async function getRecentCustomersForDashboard(count: number = 5) {
+  return withCache(cacheKeys.recentCustomersDashboard(count), async () => {
+    console.log(`Fetching ${count} recent unique customers for dashboard (from cache or fresh)`);
+    try {
+      const recentOrdersWithCustomers = await prisma.lineOrder.findMany({
+        orderBy: {
+          createdAt: "desc",
+        },
+        select: {
+          customerId: true,
+          createdAt: true,
+        },
+        take: 100,
+      });
+
+      if (!recentOrdersWithCustomers || recentOrdersWithCustomers.length === 0) {
+        return [];
+      }
+
+      const uniqueCustomerMap = new Map<string, Date>();
+      for (const order of recentOrdersWithCustomers) {
+        if (order.customerId) {
+          if (!uniqueCustomerMap.has(order.customerId) || order.createdAt > uniqueCustomerMap.get(order.customerId)!) {
+            uniqueCustomerMap.set(order.customerId, order.createdAt);
+          }
+        }
+      }
+      
+      const sortedUniqueCustomerIds = Array.from(uniqueCustomerMap.entries())
+        .sort((a, b) => b[1].getTime() - a[1].getTime())
+        .slice(0, count)
+        .map(entry => entry[0]);
+
+      if (sortedUniqueCustomerIds.length === 0) {
+        return [];
+      }
+
+      const customers = await prisma.user.findMany({
+        where: {
+          id: {
+            in: sortedUniqueCustomerIds,
+          },
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          profileImage: true,
+          createdAt: true,
+        },
+      });
+      
+      const customersMap = new Map(customers.map(c => [c.id, c]));
+      const finalOrderedCustomers = sortedUniqueCustomerIds.map(id => customersMap.get(id)).filter(Boolean);
+
+      return finalOrderedCustomers as OrderCustomer[];
+    } catch (error) {
+      console.error("Error fetching recent customers for dashboard:", error);
+      return [];
+    }
+  }, 15 * 60 * 1000);
+}
+
 export type CustomerWithOrderDetails = {
   totalOrders: number;
   totalRevenue: number;
@@ -199,7 +265,6 @@ export type CustomerWithOrderDetails = {
 };
 export async function getCustomersWithOrders() {
   try {
-    // Get customer details with total orders and total revenue from the Sale model
     const customersWithOrderStats = await prisma.sale.groupBy({
       by: ["customerEmail", "customerName"],
       _sum: {
@@ -214,9 +279,7 @@ export async function getCustomersWithOrders() {
         },
       },
     });
-    // console.log(customersWithOrderStats);
 
-    // Fetch additional user information for each customer
     const customers = await prisma.user.findMany({
       where: {
         email: {
@@ -234,7 +297,6 @@ export async function getCustomersWithOrders() {
       },
     });
 
-    // Merge the customer details with the order statistics
     const customersWithDetails = customers.map((customer) => {
       const orderStats = customersWithOrderStats.find(
         (stats) => stats.customerEmail === customer.email
@@ -246,7 +308,6 @@ export async function getCustomersWithOrders() {
         totalRevenue: orderStats?._sum.salePrice || 0,
       };
     });
-    // console.log(customersWithDetails);
     return customersWithDetails;
   } catch (error) {
     console.log(error);

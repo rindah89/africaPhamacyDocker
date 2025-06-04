@@ -56,6 +56,8 @@ interface DataTableProps<TData, TValue> {
   onProcessedDataChange?: (processedData: TData[]) => void;
   dateRange?: DateRange;
   onDateRangeChange?: (dateRange: DateRange | undefined) => void;
+  hideSearch?: boolean;
+  hideFilters?: boolean;
 }
 
 export default function DataTable<TData, TValue>({
@@ -69,6 +71,8 @@ export default function DataTable<TData, TValue>({
   onProcessedDataChange,
   dateRange,
   onDateRangeChange,
+  hideSearch = false,
+  hideFilters = false,
 }: DataTableProps<TData, TValue>) {
   console.log(`🔄 DataTable (${tableTitle}): Component initializing...`);
   console.log(`🔄 DataTable (${tableTitle}): Received onDateRangeChange:`, typeof onDateRangeChange, onDateRangeChange);
@@ -185,40 +189,46 @@ export default function DataTable<TData, TValue>({
       )}
       <div className="flex justify-between items-center gap-8">
         <div className="flex-1 w-full">
-          <SearchBar
-            data={data}
-            onSearch={setSearchResults}
-            setIsSearch={setIsSearch}
-          />
+          {!hideSearch && (
+            <SearchBar
+              data={data}
+              onSearch={setSearchResults}
+              setIsSearch={setIsSearch}
+            />
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <DateRangeFilter
-            dateRange={dateRange}
-            onDateRangeChange={onDateRangeChange}
-          />
-          <DateFilters
-            dateRange={dateRange}
-            onDateRangeChange={onDateRangeChange}
-          />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-1">
-                <ListFilter className="h-3.5 w-3.5" />
-                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                  Filter
-                </span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Filter by</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem checked>
-                Active
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Draft</DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem>Archived</DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!hideFilters && (
+            <>
+              <DateRangeFilter
+                dateRange={dateRange}
+                onDateRangeChange={onDateRangeChange}
+              />
+              <DateFilters
+                dateRange={dateRange}
+                onDateRangeChange={onDateRangeChange}
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-1">
+                    <ListFilter className="h-3.5 w-3.5" />
+                    <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                      Filter
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Filter by</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem checked>
+                    Active
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem>Draft</DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem>Archived</DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          )}
           <DataTableViewOptions table={table} />
         </div>
       </div>

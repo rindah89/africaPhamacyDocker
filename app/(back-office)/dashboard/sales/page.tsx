@@ -12,7 +12,7 @@ import Link from "next/link";
 import ExportButton from "@/components/dashboard/Sales/ExportButton";
 import { Sale } from "@prisma/client";
 import { DateRange } from "react-day-picker";
-import { startOfYear } from "date-fns";
+import { startOfYear, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 
 // Load More Sales Button Component
 function LoadMoreButton({ totalCount, currentCount, isLoading }: { totalCount: number; currentCount: number; isLoading: boolean }) {
@@ -34,6 +34,7 @@ function LoadMoreButton({ totalCount, currentCount, isLoading }: { totalCount: n
 
 function SalesContent({ searchParams }: { searchParams?: { limit?: string } }) {
   const [initialSalesData, setInitialSalesData] = useState<Sale[]>([]);
+  const [displayedSales, setDisplayedSales] = useState<Sale[]>([]);
   const [processedSalesData, setProcessedSalesData] = useState<Sale[]>([]);
   const [totalSalesCount, setTotalSalesCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,7 +42,7 @@ function SalesContent({ searchParams }: { searchParams?: { limit?: string } }) {
   
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     const now = new Date();
-    console.log("SalesContent: Initializing dateRange state.");
+    console.log("SalesContent: Initializing dateRange state to Start of Year till Now.");
     return {
       from: startOfYear(now),
       to: now,
@@ -54,44 +55,71 @@ function SalesContent({ searchParams }: { searchParams?: { limit?: string } }) {
   const fetchSales = useCallback(async () => {
     setIsLoading(true);
     setIsUsingFallback(false);
-    console.log(`FETCHING sales with dateRange: FROM: ${dateRange?.from?.toISOString()} TO: ${dateRange?.to?.toISOString()}, limit: ${currentLimit}`);
+    console.log(`FETCHING sales with limit: ${currentLimit} (client-side date filtering will apply)`);
     try {
       let result;
       try {
-        result = await getAllSalesPaginated(1, currentLimit, dateRange?.from, dateRange?.to);
+        result = await getAllSalesPaginated(1, currentLimit);
       } catch (mainError) {
         console.warn("Main sales fetch failed, trying fallback:", mainError);
-        result = await getAllSalesSimple(1, currentLimit, dateRange?.from, dateRange?.to);
+        result = await getAllSalesSimple(1, currentLimit);
         setIsUsingFallback(true);
       }
       
       setInitialSalesData(result?.sales || []);
       setTotalSalesCount(result?.totalCount || 0);
-      setProcessedSalesData(result?.sales || []);
-      console.log(`FETCHED ${result?.sales?.length || 0} sales. Total count from server: ${result?.totalCount || 0} for dates: ${dateRange?.from?.toISOString()} - ${dateRange?.to?.toISOString()}`);
+      console.log(`FETCHED ${result?.sales?.length || 0} initial sales. Total count from server: ${result?.totalCount || 0}`);
 
     } catch (error) {
       console.error("Error fetching sales in SalesContent:", error);
       setInitialSalesData([]);
       setTotalSalesCount(0);
-      setProcessedSalesData([]);
     } finally {
       setIsLoading(false);
     }
-  }, [currentLimit, dateRange]);
+  }, [currentLimit]);
 
   useEffect(() => {
-    console.log(`SalesContent: useEffect for fetchSales triggered. Current DateRange for fetch: FROM: ${dateRange?.from?.toISOString()} TO: ${dateRange?.to?.toISOString()}`);
+    console.log(`SalesContent: useEffect for fetchSales triggered due to currentLimit change.`);
     fetchSales();
   }, [fetchSales]);
+
+  useEffect(() => {
+    console.log("SalesContent: Applying client-side date filter. DateRange:", dateRange, "Initial data length:", initialSalesData.length);
+    if (!dateRange || (!dateRange.from && !dateRange.to)) {
+      console.log("Client filter: No date range, showing all initial data.");
+      setDisplayedSales(initialSalesData);
+    } else if (dateRange.from && dateRange.to) {
+      const filtered = initialSalesData.filter(sale => {
+        const saleDate = new Date(sale.createdAt);
+        const rangeStart = startOfDay(dateRange.from!);
+        const rangeEnd = endOfDay(dateRange.to!);
+        return isWithinInterval(saleDate, { start: rangeStart, end: rangeEnd });
+      });
+      console.log(`Client filter: Applied. Filtered count: ${filtered.length}`);
+      setDisplayedSales(filtered);
+    } else if (dateRange.from) {
+        const filtered = initialSalesData.filter(sale => {
+            const saleDate = new Date(sale.createdAt);
+            const rangeStart = startOfDay(dateRange.from!);
+            const rangeEnd = endOfDay(dateRange.from!);
+            return isWithinInterval(saleDate, { start: rangeStart, end: rangeEnd });
+        });
+        console.log(`Client filter: Applied (single day). Filtered count: ${filtered.length}`);
+        setDisplayedSales(filtered);
+    } else {
+        console.log("Client filter: dateRange in an unexpected state or cleared, showing all initial data.");
+        setDisplayedSales(initialSalesData);
+    }
+  }, [initialSalesData, dateRange]);
 
   const handleDateRangeChange = (newRange: DateRange | undefined) => {
     console.log("SalesContent: handleDateRangeChange called with newRange:", newRange);
     setDateRange(newRange);
   };
 
-  const totalItems = initialSalesData.reduce((acc, sale) => acc + sale.qty, 0);
-  const totalSalesRevenue = initialSalesData.reduce((acc, sale) => acc + (sale.salePrice * sale.qty), 0);
+  const totalItems = displayedSales.reduce((acc, sale) => acc + sale.qty, 0);
+  const totalSalesRevenue = displayedSales.reduce((acc, sale) => acc + (sale.salePrice * sale.qty), 0);
 
   return (
     <>
@@ -107,8 +135,8 @@ function SalesContent({ searchParams }: { searchParams?: { limit?: string } }) {
           <CardTitle className="text-sm font-medium">Total Items Sold (Selected Range)</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{isLoading ? '...' : totalItems.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">From {isLoading ? '...' : initialSalesData.length} sales records</p>
+          <div className="text-2xl font-bold">{isLoading && !displayedSales.length ? '...' : totalItems.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">From {isLoading && !displayedSales.length ? '...' : displayedSales.length} sales records</p>
         </CardContent>
       </Card>
       <Card>
@@ -116,7 +144,7 @@ function SalesContent({ searchParams }: { searchParams?: { limit?: string } }) {
           <CardTitle className="text-sm font-medium">Total Revenue (Selected Range)</CardTitle>
         </CardHeader>
         <CardContent>
-            <div className="text-2xl font-bold">{isLoading ? '...' : formatMoney(totalSalesRevenue)}</div>
+            <div className="text-2xl font-bold">{isLoading && !displayedSales.length ? '...' : formatMoney(totalSalesRevenue)}</div>
             <p className="text-xs text-muted-foreground">Current filter total</p>
         </CardContent>
       </Card>
@@ -127,7 +155,7 @@ function SalesContent({ searchParams }: { searchParams?: { limit?: string } }) {
         title="Sales"
         linkTitle="New Sale"
         href="/pos"
-        data={initialSalesData}
+        data={displayedSales}
         model="sale"
       />
       {(processedSalesData.length > 0 || isLoading) && (
@@ -145,7 +173,7 @@ function SalesContent({ searchParams }: { searchParams?: { limit?: string } }) {
         <DataTable 
           tableTitle="sales" 
           columns={columns} 
-          data={initialSalesData}
+          data={displayedSales}
           initialSorting={[{ id: "createdAt", desc: true }]}
           onProcessedDataChange={setProcessedSalesData}
           dateRange={dateRange}

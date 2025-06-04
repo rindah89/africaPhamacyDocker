@@ -559,6 +559,49 @@ export async function getOrders() {
   }
 }
 
+export async function getRecentOrdersForDashboard(count: number = 5) {
+  return withCache(cacheKeys.recentOrdersDashboard(count), async () => {
+    console.log(`Fetching ${count} recent orders for dashboard (from cache or fresh)`);
+    try {
+      const recentOrders = await prisma.lineOrder.findMany({
+        where: {
+          lineOrderItems: {
+            some: {}, // Only fetch orders that have line items
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: count,
+        include: {
+          lineOrderItems: {
+            take: 5, // Limit line items per order for summary
+            select: {
+              id: true,
+              name: true,
+              qty: true,
+              price: true,
+            },
+          },
+          // Optionally include basic customer info if needed directly here
+          // customer: {
+          //   select: {
+          //     id: true,
+          //     firstName: true,
+          //     lastName: true,
+          //   }
+          // }
+        },
+      });
+      return recentOrders;
+    } catch (error) {
+      console.error("Error fetching recent orders for dashboard:", error);
+      // Instead of throwing, return null or empty array so Promise.all in DashboardSummary doesn't break
+      return null; 
+    }
+  }, 10 * 60 * 1000); // Cache for 10 minutes
+}
+
 // Get all orders without filtering (for debugging)
 export async function getAllOrdersNoFilter() {
   try {

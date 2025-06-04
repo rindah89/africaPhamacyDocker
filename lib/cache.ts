@@ -89,14 +89,19 @@ export const cacheKeys = {
   categories: () => 'categories:all',
   analytics: () => 'analytics:30days',
   revenueByCategory: () => 'revenue:category:6months',
-  salesChart: () => 'sales:chart:7days',
+  salesCountPastSevenDays: () => `sales:count:7days`,
   orders: (page: number, limit: number) => `orders:${page}:${limit}`,
   ordersMinimal: (page: number, limit: number) => `orders:minimal:${page}:${limit}`,
   orderCount: () => 'orders:count',
   sales: (page: number, limit: number, startDate?: string, endDate?: string) => 
     `sales:${page}:${limit}:${startDate || 'all'}:${endDate || 'all'}`,
   salesMinimal: (page: number, limit: number) => `sales:minimal:${page}:${limit}`,
-  salesCount: () => 'sales:count'
+  salesCount: () => 'sales:count',
+
+  // New keys for dashboard summaries
+  recentOrdersDashboard: (count: number) => `orders:dashboard:${count}`,
+  bestSellingProducts: (count: number) => `products:bestselling:${count}`,
+  recentCustomersDashboard: (count: number) => `customers:dashboard:${count}`
 };
 
 // Cache invalidation helpers
@@ -131,7 +136,7 @@ export const invalidateCache = {
   analytics: () => {
     cache.delete(cacheKeys.analytics());
     cache.delete(cacheKeys.revenueByCategory());
-    cache.delete(cacheKeys.salesChart());
+    cache.delete(cacheKeys.salesCountPastSevenDays());
   },
   all: () => cache.clear()
 };
