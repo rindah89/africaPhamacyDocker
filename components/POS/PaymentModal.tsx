@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader2, Shield } from "lucide-react";
+import { Loader2, Shield, Percent, DollarSign } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -61,11 +61,29 @@ export default function PaymentModal({
   const [providers, setProviders] = useState<InsuranceProvider[]>([]);
   const [loadingProviders, setLoadingProviders] = useState(false);
 
+  // Discount-related state
+  const [useDiscount, setUseDiscount] = useState(false);
+  const [discountType, setDiscountType] = useState<'percentage' | 'cash'>('percentage');
+  const [discountPercentage, setDiscountPercentage] = useState<string>('');
+  const [discountCashAmount, setDiscountCashAmount] = useState<string>('');
+  const [discountReason, setDiscountReason] = useState<string>('');
+
   // Calculated amounts
-  const insuranceAmount = useInsurance && insurancePercentage 
-    ? (totalAmount * parseFloat(insurancePercentage)) / 100 
+  const discountAmount = useDiscount 
+    ? discountType === 'percentage' && discountPercentage
+      ? (totalAmount * parseFloat(discountPercentage)) / 100
+      : discountType === 'cash' && discountCashAmount
+      ? parseFloat(discountCashAmount)
+      : 0
     : 0;
-  const customerPaymentAmount = totalAmount - insuranceAmount;
+  
+  const discountedAmount = totalAmount - discountAmount;
+  
+  const insuranceAmount = useInsurance && insurancePercentage 
+    ? (discountedAmount * parseFloat(insurancePercentage)) / 100 
+    : 0;
+  
+  const customerPaymentAmount = discountedAmount - insuranceAmount;
 
   useEffect(() => {
     if (isOpen) {
@@ -84,6 +102,11 @@ export default function PaymentModal({
       setInsurancePercentage('');
       setCustomerName(customerData?.customerName || '');
       setPolicyNumber('');
+      setUseDiscount(false);
+      setDiscountType('percentage');
+      setDiscountPercentage('');
+      setDiscountCashAmount('');
+      setDiscountReason('');
       
       // Load insurance providers
       loadInsuranceProviders();
@@ -94,7 +117,7 @@ export default function PaymentModal({
     setLoadingProviders(true);
     try {
       const result = await getInsuranceProviders();
-      if (result.success) {
+      if (result.success && result.data) {
         const activeProviders = result.data.filter((p: InsuranceProvider) => p.status);
         setProviders(activeProviders);
       } else {
@@ -123,6 +146,26 @@ export default function PaymentModal({
     if (parseFloat(value) <= 100) {
       setInsurancePercentage(value);
     }
+  };
+
+  const handleDiscountPercentageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9.]/g, '');
+    if (parseFloat(value) <= 100) {
+      setDiscountPercentage(value);
+    }
+  };
+
+  const handleDiscountCashChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, '');
+    const numericValue = parseInt(value) || 0;
+    if (numericValue <= totalAmount) {
+      setDiscountCashAmount(value);
+    }
+  };
+
+  const setPresetDiscount = (percentage: number) => {
+    setDiscountType('percentage');
+    setDiscountPercentage(percentage.toString());
   };
 
   const validateInsuranceData = () => {
@@ -187,6 +230,13 @@ export default function PaymentModal({
           customerAmount: customerPaymentAmount,
           customerName: customerName.trim(),
           policyNumber: policyNumber.trim(),
+        } : null,
+        discount: useDiscount ? {
+          type: discountType,
+          percentage: discountType === 'percentage' ? parseFloat(discountPercentage) : null,
+          cashAmount: discountType === 'cash' ? parseFloat(discountCashAmount) : null,
+          discountAmount: discountAmount,
+          reason: discountReason.trim() || 'No reason provided',
         } : null
       };
 
@@ -194,7 +244,17 @@ export default function PaymentModal({
       onPaymentComplete(paymentResult);
       
       onClose();
-      toast.success(useInsurance ? "Payment with insurance processed" : "Payment processed");
+      
+      let successMessage = "Payment processed";
+      if (useInsurance && useDiscount) {
+        successMessage = "Payment with insurance and discount processed";
+      } else if (useInsurance) {
+        successMessage = "Payment with insurance processed";
+      } else if (useDiscount) {
+        successMessage = "Payment with discount processed";
+      }
+      
+      toast.success(successMessage);
     } catch (error: any) {
       console.error("❌ Payment validation error:", error);
       console.error("Error details:", {
@@ -235,6 +295,156 @@ export default function PaymentModal({
             <div className="text-lg font-semibold">
               {totalAmount.toLocaleString('fr-CM')} FCFA
             </div>
+          </div>
+
+          {/* Discount Section */}
+          <div className="border rounded-lg p-4 space-y-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="use-discount" 
+                checked={useDiscount}
+                onCheckedChange={(checked) => setUseDiscount(checked === true)}
+              />
+              <Label htmlFor="use-discount" className="flex items-center space-x-1">
+                <Percent className="h-4 w-4" />
+                <span>Apply Discount</span>
+              </Label>
+            </div>
+
+            {useDiscount && (
+              <>
+                <div className="grid gap-2">
+                  <Label>Discount Type</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={discountType === 'percentage' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setDiscountType('percentage');
+                        setDiscountCashAmount('');
+                      }}
+                      disabled={processing}
+                    >
+                      <Percent className="h-3 w-3 mr-1" />
+                      Percentage
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={discountType === 'cash' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setDiscountType('cash');
+                        setDiscountPercentage('');
+                      }}
+                      disabled={processing}
+                    >
+                      <DollarSign className="h-3 w-3 mr-1" />
+                      Cash Amount
+                    </Button>
+                  </div>
+                </div>
+
+                {discountType === 'percentage' && (
+                  <>
+                    <div className="grid gap-2">
+                      <Label>Quick Discounts</Label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPresetDiscount(2)}
+                          disabled={processing}
+                        >
+                          2%
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPresetDiscount(5)}
+                          disabled={processing}
+                        >
+                          5%
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPresetDiscount(10)}
+                          disabled={processing}
+                        >
+                          10%
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="discount-percentage">Custom Percentage</Label>
+                      <Input
+                        id="discount-percentage"
+                        type="text"
+                        value={discountPercentage}
+                        onChange={handleDiscountPercentageChange}
+                        placeholder="Enter percentage (e.g., 15)"
+                        disabled={processing}
+                        className="text-right"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {discountType === 'cash' && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="discount-cash">Discount Amount (FCFA)</Label>
+                    <Input
+                      id="discount-cash"
+                      type="text"
+                      value={discountCashAmount}
+                      onChange={handleDiscountCashChange}
+                      placeholder="Enter discount amount"
+                      disabled={processing}
+                      className="text-right"
+                    />
+                  </div>
+                )}
+
+                <div className="grid gap-2">
+                  <Label htmlFor="discount-reason">Discount Reason (Optional)</Label>
+                  <Input
+                    id="discount-reason"
+                    value={discountReason}
+                    onChange={(e) => setDiscountReason(e.target.value)}
+                    placeholder="Enter reason for discount"
+                    disabled={processing}
+                  />
+                </div>
+
+                {discountAmount > 0 && (
+                  <div className="bg-orange-50 p-3 rounded-lg space-y-1">
+                    <div className="text-sm font-medium text-orange-800">Discount Applied:</div>
+                    <div className="flex justify-between text-sm">
+                      <span>Original amount:</span>
+                      <span>{totalAmount.toLocaleString('fr-CM')} FCFA</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Discount:</span>
+                      <span className="font-medium text-orange-600">
+                        -{discountAmount.toLocaleString('fr-CM')} FCFA
+                        {discountType === 'percentage' && ` (${discountPercentage}%)`}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm font-medium border-t pt-1">
+                      <span>After discount:</span>
+                      <span className="text-green-600">
+                        {discountedAmount.toLocaleString('fr-CM')} FCFA
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           {/* Insurance Section */}
