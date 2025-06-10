@@ -1,10 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAnalytics, getSalesCountForPastSevenDays, getRevenueByMainCategoryPastSixMonths, AnalyticsProps, DailySales, MonthlyMainCategoryRevenue } from "@/actions/analytics";
-import { getBestSellingProducts } from "@/actions/products";
-import { getRecentOrdersForDashboard } from "@/actions/pos";
-import { getRecentCustomersForDashboard } from "@/actions/orders";
+
+export interface AnalyticsProps {
+  title: string;
+  count: number;
+  detailLink: string;
+  countUnit?: "" | undefined;
+  icon: any;
+}
+
+export interface DailySales {
+  day: string;
+  sales: number;
+}
+
+export interface MonthlyMainCategoryRevenue {
+  month: string;
+  [category: string]: number | string;
+}
 
 // Hook for analytics data
 export function useAnalytics() {
@@ -15,7 +29,11 @@ export function useAnalytics() {
   useEffect(() => {
     async function loadAnalytics() {
       try {
-        const data = await getAnalytics();
+        const response = await fetch('/api/dashboard/analytics');
+        if (!response.ok) {
+          throw new Error('Failed to fetch analytics');
+        }
+        const data = await response.json();
         if (data) {
           setAnalytics(data);
         } else {
@@ -45,22 +63,17 @@ export function useChartsData() {
   useEffect(() => {
     async function loadChartsData() {
       try {
-        const [sales, revenue] = await Promise.all([
-          getSalesCountForPastSevenDays().catch(err => {
-            console.error('Failed to fetch sales data:', err);
-            return null;
-          }),
-          getRevenueByMainCategoryPastSixMonths().catch(err => {
-            console.error('Failed to fetch revenue data:', err);
-            return null;
-          })
-        ]);
-
-        setSalesData(sales);
-        setCategoryRevenue(revenue);
+        const response = await fetch('/api/dashboard/charts');
+        if (!response.ok) {
+          throw new Error('Failed to fetch charts data');
+        }
+        const data = await response.json();
+        
+        setSalesData(data.salesData);
+        setCategoryRevenue(data.categoryRevenue);
 
         // Set error only if both failed
-        if (!sales && !revenue) {
+        if (!data.salesData && !data.categoryRevenue) {
           setError("Failed to load chart data");
         }
       } catch (err) {
@@ -88,24 +101,15 @@ export function useDashboardSummary() {
   useEffect(() => {
     async function loadSummaryData() {
       try {
-        const [orders, products, customers] = await Promise.all([
-          getRecentOrdersForDashboard(5).catch(e => {
-            console.error("Failed to fetch recent orders:", e);
-            return { error: true, message: e.message || "Error fetching orders" };
-          }),
-          getBestSellingProducts(5).catch(e => {
-            console.error("Failed to fetch best selling products:", e);
-            return { error: true, message: e.message || "Error fetching products" };
-          }),
-          getRecentCustomersForDashboard(5).catch(e => {
-            console.error("Failed to fetch recent customers:", e);
-            return { error: true, message: e.message || "Error fetching customers" };
-          })
-        ]);
+        const response = await fetch('/api/dashboard/summary');
+        if (!response.ok) {
+          throw new Error('Failed to fetch summary data');
+        }
+        const data = await response.json();
 
-        setOrdersData(orders);
-        setBestSellingProducts(Array.isArray(products) ? products : []);
-        setCustomersData(customers);
+        setOrdersData(data.ordersData);
+        setBestSellingProducts(data.bestSellingProducts);
+        setCustomersData(data.customersData);
       } catch (err) {
         console.error('Error loading dashboard summary:', err);
         setError('Failed to load dashboard summary');

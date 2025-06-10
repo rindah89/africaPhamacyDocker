@@ -1,7 +1,7 @@
 import { DollarSign } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AnalyticsProps } from "@/actions/analytics";
+import { AnalyticsProps } from "@/hooks/use-dashboard-data";
 import Link from "next/link";
 import FormattedAmount from "@/components/frontend/FormattedAmount";
 
