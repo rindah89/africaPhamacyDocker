@@ -78,14 +78,18 @@ export async function getAnalytics() {
             id: true,
           }
         }),
-        // Use count for better performance
-        prisma.lineOrder.count(),
+        // Use cached count for better performance
+        withCache(cacheKeys.orderCount(), async () => {
+          return prisma.lineOrder.count();
+        }, 15 * 60 * 1000), // Cache for 15 minutes
         // Cache this count as it changes rarely
-        prisma.product.count({
-          where: {
-            status: true
-          }
-        }),
+        withCache(cacheKeys.productCount(), async () => {
+          return prisma.product.count({
+            where: {
+              status: true
+            }
+          });
+        }, 30 * 60 * 1000), // Cache for 30 minutes
       ]);
 
       const analytics = [
@@ -123,7 +127,7 @@ export async function getAnalytics() {
       console.log(error);
       return null;
     }
-  }, 5 * 60 * 1000); // Cache for 5 minutes
+  }, 10 * 60 * 1000); // Increased cache time to 10 minutes
 }
 
 export const getSalesCountForPastSevenDaysOld = async (): Promise<
@@ -167,7 +171,7 @@ export const getSalesCountForPastSevenDays = async (): Promise<
   DailySales[]
 > => {
   return withCache(cacheKeys.salesCountPastSevenDays(), async () => {
-    console.log('getSalesCountForPastSevenDays: Starting function (from cache or fresh)');
+    console.log('getSalesCountForPastSevenDays: Starting optimized function');
     const now = new Date();
     const sevenDaysAgo = subDays(now, 6); // Start from six days ago to include today
     sevenDaysAgo.setHours(0,0,0,0); // Normalize to start of day
@@ -181,9 +185,10 @@ export const getSalesCountForPastSevenDays = async (): Promise<
 
     const days = eachDayOfInterval({
       start: sevenDaysAgo,
-      end: now, // Use now for interval generation to include today correctly
+      end: now,
     });
 
+    // Initialize map with all days set to 0
     const salesCountMap: { [key: string]: number } = {};
     days.forEach((day) => {
       const formattedDay = format(day, "EEE do MMM");
@@ -192,39 +197,68 @@ export const getSalesCountForPastSevenDays = async (): Promise<
 
     console.log('getSalesCountForPastSevenDays: Initialized days map:', salesCountMap);
 
-    const sales = await prisma.sale.findMany({
-      where: {
-        createdAt: {
-          gte: sevenDaysAgo,
-          lte: todayEnd, // Use todayEnd for query
+    try {
+      // Use raw SQL for better performance with date grouping
+      const salesData = await prisma.$queryRaw<Array<{date: string, count: number}>>`
+        SELECT 
+          DATE(createdAt) as date,
+          COUNT(*) as count
+        FROM Sale 
+        WHERE createdAt >= ${sevenDaysAgo} 
+          AND createdAt <= ${todayEnd}
+        GROUP BY DATE(createdAt)
+        ORDER BY DATE(createdAt)
+      `;
+
+      console.log('getSalesCountForPastSevenDays: Raw query results:', salesData);
+
+      // Map the results to our format
+      salesData.forEach((item) => {
+        const date = new Date(item.date);
+        const formattedDay = format(date, "EEE do MMM");
+        if (salesCountMap.hasOwnProperty(formattedDay)) {
+          salesCountMap[formattedDay] = Number(item.count);
+        }
+      });
+
+    } catch (error) {
+      console.error('getSalesCountForPastSevenDays: Error with raw query, falling back to findMany:', error);
+      
+      // Fallback to original method if raw query fails
+      const sales = await prisma.sale.findMany({
+        where: {
+          createdAt: {
+            gte: sevenDaysAgo,
+            lte: todayEnd,
+          },
         },
-      },
-      select: {
-        createdAt: true,
-      },
-    });
+        select: {
+          createdAt: true,
+        },
+      });
 
-    console.log('getSalesCountForPastSevenDays: Found sales records:', sales.length);
+      sales.forEach((sale) => {
+        const day = format(sale.createdAt, "EEE do MMM");
+        if (salesCountMap.hasOwnProperty(day)) {
+          salesCountMap[day] += 1;
+        }
+      });
+    }
 
-    sales.forEach((sale) => {
-      const formattedDay = format(sale.createdAt, "EEE do MMM");
-      // Ensure the day exists in the map (it should due to initialization)
-      if (salesCountMap.hasOwnProperty(formattedDay)) {
-        salesCountMap[formattedDay] += 1;
-      }
-    });
+    console.log('getSalesCountForPastSevenDays: Final sales count map:', salesCountMap);
 
+    // Transform the map into the desired array format, maintaining day order
     const salesCountArray: DailySales[] = days.map((day) => {
       const formattedDay = format(day, "EEE do MMM");
       return {
         day: formattedDay,
-        sales: salesCountMap[formattedDay],
+        sales: salesCountMap[formattedDay] || 0,
       };
     });
 
-    console.log('getSalesCountForPastSevenDays: Final processed data:', salesCountArray);
+    console.log('getSalesCountForPastSevenDays: Returning array:', salesCountArray);
     return salesCountArray;
-  }, 2 * 60 * 60 * 1000); // Cache for 2 hours
+  }, 15 * 60 * 1000); // Cache for 15 minutes
 };
 
 export interface MainCategorySales {

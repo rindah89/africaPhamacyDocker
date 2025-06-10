@@ -6,7 +6,7 @@ interface CacheItem<T> {
 
 class MemoryCache {
   private cache = new Map<string, CacheItem<any>>();
-  private defaultTTL = 5 * 60 * 1000; // 5 minutes
+  private defaultTTL = 10 * 60 * 1000; // 10 minutes default (increased from 5)
 
   set<T>(key: string, data: T, ttl?: number): void {
     const expiry = Date.now() + (ttl || this.defaultTTL);
@@ -54,6 +54,14 @@ class MemoryCache {
       }
     }
   }
+
+  // Get cache stats for monitoring
+  getStats() {
+    return {
+      size: this.cache.size,
+      keys: Array.from(this.cache.keys())
+    };
+  }
 }
 
 export const cache = new MemoryCache();
@@ -68,9 +76,11 @@ export async function withCache<T>(
   const cached = cache.get<T>(key);
   
   if (cached !== null) {
+    console.log(`Cache hit for key: ${key}`);
     return cached;
   }
 
+  console.log(`Cache miss for key: ${key}`);
   // Execute function and cache result
   try {
     const data = await fn();
@@ -141,9 +151,10 @@ export const invalidateCache = {
   all: () => cache.clear()
 };
 
-// Cleanup expired cache items every 10 minutes
+// Cleanup expired cache items every 5 minutes (reduced from 10)
 if (typeof window === 'undefined') {
   setInterval(() => {
     cache.cleanup();
-  }, 10 * 60 * 1000);
+    console.log('Cache cleanup completed:', cache.getStats());
+  }, 5 * 60 * 1000);
 } 

@@ -1,25 +1,34 @@
-import { getAnalytics } from "@/actions/analytics";
+"use client";
+
 import AnalyticsCard from "./AnalyticsCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAnalytics } from "@/hooks/use-dashboard-data";
 
-export async function AnalyticsSection() {
-  try {
-    const analytics = await getAnalytics();
-    
-    if (!analytics) {
-      throw new Error("Failed to load analytics data");
-    }
+export function AnalyticsSection() {
+  const { analytics, loading, error } = useAnalytics();
 
-    return (
-      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-        {analytics.map((item, i) => (
-          <AnalyticsCard key={i} item={item} />
-        ))}
-      </div>
-    );
-  } catch (error) {
-    throw new Error("Failed to load analytics section");
+  if (loading) {
+    return <AnalyticsSkeleton />;
   }
+
+  if (error || !analytics) {
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>
+          {error || "Failed to load analytics data"}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+      {analytics.map((item, i) => (
+        <AnalyticsCard key={i} item={item} />
+      ))}
+    </div>
+  );
 }
 
 export function AnalyticsSkeleton() {

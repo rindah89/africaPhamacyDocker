@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import AnalyticsCard from "./Analytics/AnalyticsCard";
 import TransactionsList from "./TransactionsList";
@@ -19,6 +21,7 @@ import { SummarySkeleton } from "./Analytics/SummarySkeleton";
 import { ErrorBoundary } from "./ErrorBoundary";
 
 export function Dashboard() {
+  // Render immediately - all data loading happens in child components
   return (
     <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
       <ErrorBoundary>

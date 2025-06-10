@@ -4,7 +4,6 @@ import React, { useState, useMemo, useEffect } from "react";
 import { columns } from "@/app/(back-office)/dashboard/reports/sales/columns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoney } from "@/lib/formatMoney";
-import TableHeader from "@/components/dashboard/Tables/TableHeader";
 import DataTable from "@/components/DataTableComponents/DataTable";
 import {
   LineChart,
@@ -201,17 +200,15 @@ export default function SalesReport({ sales, totals, dailySales }: SalesReportPr
       </div>
 
       <div>
-        <TableHeader
-          title="Sales Report"
-          data={sortedSales}
-          model="sale"
-          showPdfExport={true}
-        />
+        <div className="flex items-center justify-between py-4">
+          <h2 className="text-2xl font-semibold">Sales Details</h2>
+        </div>
         <DataTable 
           columns={columns} 
           data={sortedSales}
           initialSorting={[{ id: "date", desc: true }]}
           onSelectionChange={setSelectedSales}
+          hideFilters={true}
         />
       </div>
     </div>

@@ -90,21 +90,8 @@ const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({
     };
   }, [onFocusBarcode, onFocusSearch, onClearOrder, onPlaceOrder, canPlaceOrder]);
 
-  return (
-    <div className="fixed bottom-4 right-4 z-50">
-      <div className="bg-gray-800 text-white p-3 rounded-lg shadow-lg text-xs max-w-xs">
-        <div className="font-semibold mb-2">Keyboard Shortcuts</div>
-        <div className="space-y-1">
-          <div><kbd className="bg-gray-700 px-1 rounded">F1</kbd> or <kbd className="bg-gray-700 px-1 rounded">Ctrl+B</kbd> - Focus Barcode Scanner</div>
-          <div><kbd className="bg-gray-700 px-1 rounded">F2</kbd> or <kbd className="bg-gray-700 px-1 rounded">Ctrl+S</kbd> - Focus Search</div>
-          <div><kbd className="bg-gray-700 px-1 rounded">F9</kbd> or <kbd className="bg-gray-700 px-1 rounded">Ctrl+C</kbd> - Clear Order</div>
-          {canPlaceOrder && (
-            <div><kbd className="bg-gray-700 px-1 rounded">F12</kbd> or <kbd className="bg-gray-700 px-1 rounded">Ctrl+Enter</kbd> - Place Order</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  // Return null to hide the UI while keeping the keyboard functionality
+  return null;
 };
 
 export default KeyboardShortcuts; 

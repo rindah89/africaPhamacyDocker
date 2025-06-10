@@ -21,7 +21,59 @@ const BarcodeItem = ({ productName, price, productCode, deliveryDate, supplierNa
   };
 
   return (
-    <div className="w-[94px] p-0.5 text-center text-[6px] border border-dashed border-gray-200 flex flex-col justify-between h-[37px]">
+    <div 
+      className="w-[94px] p-0.5 text-center text-[6px] flex flex-col justify-between h-[37px] relative"
+      style={{
+        border: '0.5px dotted #999',
+        position: 'relative'
+      }}
+    >
+      {/* Corner cutting guides */}
+      <div 
+        className="absolute"
+        style={{
+          top: '-2px',
+          left: '-2px',
+          width: '4px',
+          height: '4px',
+          borderTop: '1px solid #666',
+          borderLeft: '1px solid #666'
+        }}
+      />
+      <div 
+        className="absolute"
+        style={{
+          top: '-2px',
+          right: '-2px',
+          width: '4px',
+          height: '4px',
+          borderTop: '1px solid #666',
+          borderRight: '1px solid #666'
+        }}
+      />
+      <div 
+        className="absolute"
+        style={{
+          bottom: '-2px',
+          left: '-2px',
+          width: '4px',
+          height: '4px',
+          borderBottom: '1px solid #666',
+          borderLeft: '1px solid #666'
+        }}
+      />
+      <div 
+        className="absolute"
+        style={{
+          bottom: '-2px',
+          right: '-2px',
+          width: '4px',
+          height: '4px',
+          borderBottom: '1px solid #666',
+          borderRight: '1px solid #666'
+        }}
+      />
+      
       <div className="mb-px font-semibold truncate leading-tight">{productName}</div>
       <div className="mb-px truncate leading-tight">{supplierName || ''}</div>
       <div className="flex items-center justify-between">
@@ -55,7 +107,7 @@ const BarcodeSheet = ({ selectedBatches }: BarcodeSheetProps) => {
     pageStyle: `
       @page {
         size: A4;
-        margin: 13mm 18mm 15mm 16mm;
+        margin: 13mm 13mm 15mm 11mm;
       }
       @media print {
         body {
@@ -104,9 +156,9 @@ const BarcodeSheet = ({ selectedBatches }: BarcodeSheetProps) => {
       </Button>
 
       <div ref={componentRef}>
-        <div className="flex flex-col">
+        <div className="flex flex-col" style={{ gap: '2mm' }}>
           {rows.map((row, rowIndex) => (
-            <div key={rowIndex} className="flex flex-row justify-between h-[38px]">
+            <div key={rowIndex} className="flex flex-row justify-between h-[37px]">
               {row.map((batch, colIndex) => (
                 batch ? (
                   <BarcodeItem
