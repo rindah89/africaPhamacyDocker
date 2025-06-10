@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -11,7 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarIcon, Download, FileSpreadsheet } from "lucide-react";
 import { DateRange } from "react-day-picker";
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subWeeks, subMonths } from "date-fns";
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subWeeks, subMonths, isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface SalesDateFilterProps {
@@ -135,6 +135,22 @@ export default function SalesDateFilter({
 }: SalesDateFilterProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>("thisMonth");
   const filterOptions = getFilterOptions();
+
+  useEffect(() => {
+    if (!dateRange?.from || !dateRange?.to) {
+      setSelectedFilter("custom");
+      return;
+    }
+    // Try to match the current dateRange to a quick filter
+    const match = filterOptions.find(opt => {
+      const range = opt.getDateRange();
+      return (
+        isSameDay(range.from, dateRange.from) &&
+        isSameDay(range.to, dateRange.to)
+      );
+    });
+    setSelectedFilter(match ? match.value : "custom");
+  }, [dateRange]);
 
   const handleQuickFilter = (option: FilterOption) => {
     setSelectedFilter(option.value);

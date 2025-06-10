@@ -2004,75 +2004,81 @@ export async function getProductsBySearchQuery(
 
 export async function getBestSellingProducts(productCount: number) {
   return withCache(cacheKeys.bestSellingProducts(productCount), async () => {
-    console.log(`Fetching ${productCount} best selling products (from cache or fresh)`);
+    console.log(`Fetching ${productCount} best selling products - ULTRA OPTIMIZED`);
     try {
-      // Use a simpler approach: get recent sales and group by product
-      // This is much faster than sorting by sales count relation
-      const recentSales = await prisma.sale.findMany({
-        where: {
-          createdAt: {
-            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
-          }
-        },
-        select: {
-          productId: true,
-          salePrice: true,
-          qty: true,
-          product: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              productThumbnail: true,
-              productPrice: true,
-              status: true
-            }
-          }
-        },
-        take: 1000 // Limit to prevent memory issues
-      });
+      // Use raw SQL for much better performance
+      const bestSelling = await prisma.$queryRaw`
+        SELECT 
+          p.id,
+          p.name,
+          p.slug,
+          p.productThumbnail,
+          p.productPrice,
+          COUNT(s.id) as salesCount,
+          SUM(s.qty) as totalQuantity,
+          SUM(s.salePrice * s.qty) as totalRevenue
+        FROM Product p
+        INNER JOIN Sale s ON p.id = s.productId
+        WHERE s.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+          AND p.status = 1
+        GROUP BY p.id, p.name, p.slug, p.productThumbnail, p.productPrice
+        HAVING salesCount > 0
+        ORDER BY totalRevenue DESC, salesCount DESC
+        LIMIT ${productCount}
+      ` as Array<{
+        id: string;
+        name: string;
+        slug: string;
+        productThumbnail: string | null;
+        productPrice: number;
+        salesCount: bigint;
+        totalQuantity: bigint;
+        totalRevenue: bigint;
+      }>;
 
-      // Group sales by product and count
-      const productSalesMap = new Map<string, {
-        product: any,
-        salesCount: number,
-        totalRevenue: number,
-        sales: Array<{ salePrice: number, qty: number }>
-      }>();
+      const result = bestSelling.map(item => ({
+        id: item.id,
+        name: item.name,
+        slug: item.slug,
+        productThumbnail: item.productThumbnail,
+        productPrice: Number(item.productPrice),
+        salesCount: Number(item.salesCount),
+        totalQuantity: Number(item.totalQuantity),
+        totalRevenue: Number(item.totalRevenue),
+        sales: [] // Empty array for compatibility
+      }));
 
-      recentSales.forEach(sale => {
-        if (sale.product && sale.product.status) {
-          const key = sale.productId;
-          if (!productSalesMap.has(key)) {
-            productSalesMap.set(key, {
-              product: sale.product,
-              salesCount: 0,
-              totalRevenue: 0,
-              sales: []
-            });
-          }
-          const entry = productSalesMap.get(key)!;
-          entry.salesCount += 1;
-          entry.totalRevenue += sale.salePrice * sale.qty;
-          entry.sales.push({ salePrice: sale.salePrice, qty: sale.qty });
-        }
-      });
-
-      // Sort by sales count and return top products
-      const topSellingProducts = Array.from(productSalesMap.values())
-        .sort((a, b) => b.salesCount - a.salesCount)
-        .slice(0, productCount)
-        .map(entry => ({
-          ...entry.product,
-          sales: entry.sales
-        }));
-      
-      return topSellingProducts;
+      console.log(`Found ${result.length} best selling products via SQL`);
+      return result;
     } catch (error) {
-      console.error("Error in getBestSellingProducts:", error);
-      return []; // Return empty array on error to prevent breaking Promise.all
+      console.error("Error in optimized getBestSellingProducts:", error);
+      // Fallback to simpler query if raw SQL fails
+      try {
+        const fallbackProducts = await prisma.product.findMany({
+          where: {
+            status: true,
+            stockQty: { gt: 0 }
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            productThumbnail: true,
+            productPrice: true
+          },
+          take: productCount,
+          orderBy: {
+            createdAt: 'desc'
+          }
+        });
+        
+        return fallbackProducts.map(p => ({ ...p, sales: [] }));
+      } catch (fallbackError) {
+        console.error("Fallback query also failed:", fallbackError);
+        return [];
+      }
     }
-  }, 6 * 60 * 60 * 1000); // Cache for 6 hours
+  }, 30 * 60 * 1000); // Cache for 30 minutes
 }
 
 export async function searchPOSProducts(searchQuery: string) {

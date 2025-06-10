@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useDashboard } from "@/components/dashboard/DashboardProvider";
+import { withSmartCache } from "@/lib/smart-cache";
+import { getAnalytics, getSalesCountForPastSevenDays, getRevenueByMainCategoryPastSixMonths } from "@/actions/analytics";
 
 export interface AnalyticsProps {
   title: string;
   count: number;
   detailLink: string;
   countUnit?: "" | undefined;
-  icon: any;
+  iconName: string;
 }
 
 export interface DailySales {
@@ -20,52 +23,126 @@ export interface MonthlyMainCategoryRevenue {
   [category: string]: number | string;
 }
 
-// Hook for analytics data
+// Query keys for consistent cache management
+export const dashboardKeys = {
+  all: ['dashboard'] as const,
+  analytics: () => [...dashboardKeys.all, 'analytics'] as const,
+  charts: () => [...dashboardKeys.all, 'charts'] as const,
+  summary: () => [...dashboardKeys.all, 'summary'] as const,
+  liveData: () => [...dashboardKeys.all, 'live-data'] as const,
+};
+
+// Enhanced hook for analytics data with React Query
 export function useAnalytics() {
-  const [analytics, setAnalytics] = useState<AnalyticsProps[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function loadAnalytics() {
+  console.log('🔍 useAnalytics - Hook called');
+  
+  const query = useQuery({
+    queryKey: ['analytics'],
+    queryFn: async () => {
+      console.log('🔍 useAnalytics - Query function started');
+      console.log('🔍 useAnalytics - Fetching with smart cache...');
+      
       try {
-        const response = await fetch('/api/dashboard/analytics');
-        if (!response.ok) {
-          throw new Error('Failed to fetch analytics');
-        }
-        const data = await response.json();
-        if (data) {
-          setAnalytics(data);
-        } else {
-          setError("Failed to load analytics data");
-        }
-      } catch (err) {
-        console.error("Analytics loading error:", err);
-        setError("Error loading analytics");
-      } finally {
-        setLoading(false);
+        // Use smart cache wrapper
+        const result = await withSmartCache(
+          'analytics:overview',
+          async () => {
+            console.log('🔍 useAnalytics - Cache miss, fetching from getAnalytics...');
+            const analytics = await getAnalytics();
+            console.log('🔍 useAnalytics - getAnalytics result:', {
+              analytics,
+              analyticsType: typeof analytics,
+              analyticsLength: analytics?.length,
+              analyticsIsArray: Array.isArray(analytics),
+              analyticsData: analytics ? JSON.stringify(analytics, null, 2) : 'null'
+            });
+            
+            if (!analytics || analytics.length === 0) {
+              console.error('🔍 useAnalytics - No analytics data available');
+              throw new Error('No analytics data available');
+            }
+            
+            console.log('🔍 useAnalytics - Returning analytics data:', analytics);
+            return analytics;
+          },
+          { 
+            ttl: 15 * 60 * 1000, // 15 minutes
+            tags: ['analytics'] 
+          }
+        );
+        
+        console.log('🔍 useAnalytics - Smart cache result:', {
+          result,
+          resultType: typeof result,
+          resultLength: result?.length,
+          resultIsArray: Array.isArray(result)
+        });
+        
+        return result;
+      } catch (error) {
+        console.error('🔍 useAnalytics - Query function error:', error);
+        throw error;
       }
-    }
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes stale time
+    gcTime: 30 * 60 * 1000, // 30 minutes garbage collection
+    retry: (failureCount, error) => {
+      console.log('🔍 useAnalytics - Retry logic:', {
+        failureCount,
+        error: error instanceof Error ? error.message : error,
+        willRetry: failureCount < 2 && !(error instanceof Error && error.message.includes('data available'))
+      });
+      
+      // Only retry on network errors, not data errors
+      if (error instanceof Error && error.message.includes('data available')) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
+  });
 
-    loadAnalytics();
-  }, []);
+  console.log('🔍 useAnalytics - Query state:', {
+    data: query.data,
+    dataType: typeof query.data,
+    dataLength: query.data?.length,
+    isLoading: query.isLoading,
+    error: query.error?.message,
+    isRefetching: query.isRefetching,
+    status: query.status,
+    fetchStatus: query.fetchStatus
+  });
 
-  return { analytics, loading, error };
+  const result = {
+    analytics: query.data as AnalyticsProps[] | undefined,
+    loading: query.isLoading,
+    error: query.error?.message || null,
+    isRefetching: query.isRefetching,
+    refetch: query.refetch,
+  };
+
+  console.log('🔍 useAnalytics - Returning result:', {
+    analytics: result.analytics,
+    analyticsLength: result.analytics?.length,
+    loading: result.loading,
+    error: result.error,
+    isRefetching: result.isRefetching
+  });
+
+  return result;
 }
 
-// Hook for charts data
+// Enhanced hook for charts data with React Query
 export function useChartsData() {
-  const [salesData, setSalesData] = useState<DailySales[] | null>(null);
-  const [categoryRevenue, setCategoryRevenue] = useState<MonthlyMainCategoryRevenue[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { showError, autoRefresh, refreshInterval } = useDashboard();
+  
+  const query = useQuery({
+    queryKey: dashboardKeys.charts(),
+    queryFn: async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-  useEffect(() => {
-    async function loadChartsData() {
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
         const response = await fetch('/api/dashboard/charts', {
           signal: controller.signal,
         });
@@ -76,53 +153,55 @@ export function useChartsData() {
           throw new Error(`HTTP ${response.status}: Failed to fetch charts data`);
         }
         
-        const data = await response.json();
-        
-        // Provide fallback empty data if API data is null
-        setSalesData(data.salesData || []);
-        setCategoryRevenue(data.categoryRevenue || []);
-
-        // Only set error if API explicitly failed
-        if (!data.success && data.error) {
-          setError(`Warning: ${data.error}`);
-        }
-      } catch (err) {
-        console.error("Charts data loading error:", err);
-        
-        // Set fallback empty data instead of null
-        setSalesData([]);
-        setCategoryRevenue([]);
-        
-        if (err instanceof Error && err.name === 'AbortError') {
-          setError("Charts timed out. Using offline mode.");
-        } else {
-          setError("Failed to load charts. Using offline mode.");
-        }
-      } finally {
-        setLoading(false);
+        return response.json();
+      } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
       }
-    }
+    },
+    staleTime: 30 * 1000,
+    cacheTime: 5 * 60 * 1000,
+    refetchInterval: autoRefresh ? refreshInterval : false,
+    onError: (error: Error) => {
+      if (error.name === 'AbortError') {
+        showError('Charts request timed out. Please try again.');
+      } else {
+        showError(`Failed to load charts: ${error.message}`);
+      }
+    },
+    retry: (failureCount, error) => {
+      if (error.name === 'AbortError') return false;
+      return failureCount < 2;
+    },
+    // Provide fallback data on error
+    select: (data) => ({
+      salesData: data?.salesData || [],
+      categoryRevenue: data?.categoryRevenue || [],
+      success: data?.success ?? true,
+    }),
+  });
 
-    loadChartsData();
-  }, []);
-
-  return { salesData, categoryRevenue, loading, error };
+  return {
+    salesData: query.data?.salesData || [],
+    categoryRevenue: query.data?.categoryRevenue || [],
+    loading: query.isLoading,
+    error: query.error?.message || null,
+    isRefetching: query.isRefetching,
+    refetch: query.refetch,
+  };
 }
 
-// Hook for dashboard summary data
+// Enhanced hook for dashboard summary data with React Query
 export function useDashboardSummary() {
-  const [ordersData, setOrdersData] = useState<any>(null);
-  const [bestSellingProducts, setBestSellingProducts] = useState<any[] | null>(null);
-  const [customersData, setCustomersData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { showError, autoRefresh, refreshInterval } = useDashboard();
+  
+  const query = useQuery({
+    queryKey: dashboardKeys.summary(),
+    queryFn: async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-  useEffect(() => {
-    async function loadSummaryData() {
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
         const response = await fetch('/api/dashboard/summary', {
           signal: controller.signal,
         });
@@ -133,37 +212,182 @@ export function useDashboardSummary() {
           throw new Error(`HTTP ${response.status}: Failed to fetch summary data`);
         }
 
-        const data = await response.json();
-
-        // Handle partial failures gracefully
-        setOrdersData(data.ordersData || []);
-        setBestSellingProducts(data.bestSellingProducts || []);
-        setCustomersData(data.customersData || []);
-
-        // Only set error if API returned error flag
-        if (!data.success && data.error) {
-          setError(`Warning: ${data.error}`);
-        }
-      } catch (err) {
-        console.error('Error loading dashboard summary:', err);
-        
-        // Set fallback data instead of just showing error
-        setOrdersData([]);
-        setBestSellingProducts([]);
-        setCustomersData([]);
-        
-        if (err instanceof Error && err.name === 'AbortError') {
-          setError('Request timed out. Using offline mode.');
-        } else {
-          setError('Failed to load dashboard data. Using offline mode.');
-        }
-      } finally {
-        setLoading(false);
+        return response.json();
+      } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
       }
-    }
+    },
+    staleTime: 30 * 1000,
+    cacheTime: 5 * 60 * 1000,
+    refetchInterval: autoRefresh ? refreshInterval : false,
+    onError: (error: Error) => {
+      if (error.name === 'AbortError') {
+        showError('Summary request timed out. Please try again.');
+      } else {
+        showError(`Failed to load dashboard summary: ${error.message}`);
+      }
+    },
+    retry: (failureCount, error) => {
+      if (error.name === 'AbortError') return false;
+      return failureCount < 2;
+    },
+    // Provide fallback data on error
+    select: (data) => ({
+      ordersData: data?.ordersData || [],
+      bestSellingProducts: data?.bestSellingProducts || [],
+      customersData: data?.customersData || [],
+      success: data?.success ?? true,
+    }),
+  });
 
-    loadSummaryData();
-  }, []);
+  return {
+    ordersData: query.data?.ordersData || [],
+    bestSellingProducts: query.data?.bestSellingProducts || [],
+    customersData: query.data?.customersData || [],
+    loading: query.isLoading,
+    error: query.error?.message || null,
+    isRefetching: query.isRefetching,
+    refetch: query.refetch,
+  };
+}
 
-  return { ordersData, bestSellingProducts, customersData, loading, error };
+// New hook for real-time dashboard updates
+export function useLiveDashboardData() {
+  const { showInfo } = useDashboard();
+  
+  const query = useQuery({
+    queryKey: dashboardKeys.liveData(),
+    queryFn: async () => {
+      const response = await fetch('/api/dashboard/live-data');
+      if (!response.ok) {
+        throw new Error('Failed to fetch live data');
+      }
+      return response.json();
+    },
+    refetchInterval: 10 * 1000, // Update every 10 seconds for live data
+    staleTime: 5 * 1000, // 5 seconds
+    onSuccess: (data) => {
+      if (data.hasUpdates) {
+        showInfo('Dashboard data updated with latest information');
+      }
+    },
+    retry: 1,
+  });
+
+  return {
+    liveData: query.data,
+    loading: query.isLoading,
+    error: query.error?.message || null,
+  };
+}
+
+// Hook for dashboard mutations (settings, preferences, etc.)
+export function useDashboardMutations() {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useDashboard();
+
+  const updateSettings = useMutation({
+    mutationFn: async (settings: any) => {
+      const response = await fetch('/api/dashboard/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update settings');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      showSuccess('Dashboard settings updated successfully');
+      // Invalidate and refetch all dashboard data
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+    },
+    onError: (error: Error) => {
+      showError(`Failed to update settings: ${error.message}`);
+    },
+  });
+
+  const refreshAllData = useMutation({
+    mutationFn: async () => {
+      // Invalidate all dashboard queries to force refetch
+      await queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+      return true;
+    },
+    onSuccess: () => {
+      showSuccess('Dashboard data refreshed');
+    },
+    onError: (error: Error) => {
+      showError(`Failed to refresh data: ${error.message}`);
+    },
+  });
+
+  return {
+    updateSettings,
+    refreshAllData,
+  };
+}
+
+// Hook for optimistic updates (for immediate UI feedback)
+export function useOptimisticDashboard() {
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useDashboard();
+
+  const updateAnalyticsOptimistically = (newData: Partial<AnalyticsProps[]>) => {
+    queryClient.setQueryData(dashboardKeys.analytics(), (old: AnalyticsProps[]) => {
+      return old ? [...old, ...Object.values(newData)] : Object.values(newData);
+    });
+  };
+
+  const revertOptimisticUpdate = () => {
+    queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
+  };
+
+  return {
+    updateAnalyticsOptimistically,
+    revertOptimisticUpdate,
+  };
+}
+
+// Update the sales chart hook
+export function useSalesChart() {
+  return useQuery({
+    queryKey: ['salesChart'],
+    queryFn: async () => {
+      return withSmartCache(
+        'analytics:sales:7days',
+        () => getSalesCountForPastSevenDays(),
+        { 
+          ttl: 30 * 60 * 1000, // 30 minutes
+          tags: ['analytics', 'sales'] 
+        }
+      );
+    },
+    staleTime: 15 * 60 * 1000,
+    gcTime: 45 * 60 * 1000,
+    retry: 2
+  });
+}
+
+// Update the revenue chart hook
+export function useRevenueChart() {
+  return useQuery({
+    queryKey: ['revenueChart'],
+    queryFn: async () => {
+      return withSmartCache(
+        'analytics:revenue:6months',
+        () => getRevenueByMainCategoryPastSixMonths(),
+        { 
+          ttl: 30 * 60 * 1000, // 30 minutes
+          tags: ['analytics', 'revenue'] 
+        }
+      );
+    },
+    staleTime: 20 * 60 * 1000,
+    gcTime: 60 * 60 * 1000, // 1 hour
+    retry: 2
+  });
 } 

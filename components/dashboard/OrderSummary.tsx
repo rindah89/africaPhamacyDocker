@@ -26,7 +26,7 @@ import FormattedAmount from "../frontend/FormattedAmount";
 
 export default function OrderSummary({ orders }: { orders: ILineOrder[] }) {
   const actualOrders = orders
-    .filter((order) => order.lineOrderItems.length > 0)
+    .filter((order) => order.lineOrderItems && order.lineOrderItems.length > 0)
     .splice(0, 5);
   return (
     <Card>

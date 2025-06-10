@@ -26,13 +26,16 @@ export const exportToPDF = (data: any[]) => {
   doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 30);
 
   // Calculate sales statistics
-  const totals = data.reduce((acc, item) => ({
-    totalOrders: new Set([...acc.totalOrders, item.orderId]).size,
-    totalQuantity: acc.totalQuantity + item.quantity,
-    totalRevenue: acc.totalRevenue + item.revenue,
-    totalCost: acc.totalCost + item.cost,
-    totalProfit: acc.totalProfit + item.profit
-  }), {
+  const totals = data.reduce((acc, item) => {
+    if (item.orderId !== undefined && item.orderId !== null) {
+      acc.totalOrders.add(item.orderId);
+    }
+    acc.totalQuantity += item.quantity ?? 0;
+    acc.totalRevenue += item.revenue ?? 0;
+    acc.totalCost += item.cost ?? 0;
+    acc.totalProfit += item.profit ?? 0;
+    return acc;
+  }, {
     totalOrders: new Set(),
     totalQuantity: 0,
     totalRevenue: 0,
@@ -51,7 +54,7 @@ export const exportToPDF = (data: any[]) => {
     head: [[{ content: 'Metric', styles: { fillColor: [39, 174, 96] } }, 
             { content: 'Value', styles: { fillColor: [39, 174, 96] } }]],
     body: [
-      ['Total Orders', totals.totalOrders.toString()],
+      ['Total Orders', (totals.totalOrders instanceof Set ? totals.totalOrders.size : 0).toString()],
       ['Total Items Sold', totals.totalQuantity.toLocaleString()],
       ['Total Revenue', formatCurrency(totals.totalRevenue)],
       ['Total Cost', formatCurrency(totals.totalCost)],
@@ -80,15 +83,15 @@ export const exportToPDF = (data: any[]) => {
   ];
 
   const tableRows = data.map((item) => [
-    new Date(item.date).toLocaleDateString(),
-    item.orderNumber,
-    item.customerName,
-    item.productName,
-    item.category,
-    item.quantity.toString(),
-    item.unitPrice.toLocaleString('en-US'),
-    item.revenue.toLocaleString('en-US'),
-    item.profit.toLocaleString('en-US')
+    new Date(item.date || '').toLocaleDateString(),
+    item.orderNumber || '',
+    item.customerName || '',
+    item.productName || '',
+    item.category || '',
+    (item.quantity ?? 0).toString(),
+    (item.unitPrice ?? 0).toLocaleString('en-US'),
+    (item.revenue ?? 0).toLocaleString('en-US'),
+    (item.profit ?? 0).toLocaleString('en-US')
   ]);
 
   doc.autoTable({

@@ -26,18 +26,18 @@ export default async function exportSalesDataToExcel(data: any[], filename: stri
 
     // Transform sales data for better Excel formatting
     const formattedData: SalesExportData[] = data.map(sale => ({
-      date: new Date(sale.date).toLocaleDateString(),
-      orderNumber: sale.orderNumber,
-      customerName: sale.customerName,
-      productName: sale.productName,
-      category: sale.category,
-      subCategory: sale.subCategory,
-      brand: sale.brand,
-      quantity: sale.quantity,
-      unitPrice: sale.unitPrice,
-      revenue: sale.revenue,
-      cost: sale.cost,
-      profit: sale.profit
+      date: sale.date ? new Date(sale.date).toLocaleDateString() : '',
+      orderNumber: sale.orderNumber || '',
+      customerName: sale.customerName || '',
+      productName: sale.productName || '',
+      category: sale.category || '',
+      subCategory: sale.subCategory || '',
+      brand: sale.brand || '',
+      quantity: sale.quantity ?? 0,
+      unitPrice: sale.unitPrice ?? 0,
+      revenue: sale.revenue ?? 0,
+      cost: sale.cost ?? 0,
+      profit: sale.profit ?? 0
     }));
 
     // Create the main data worksheet

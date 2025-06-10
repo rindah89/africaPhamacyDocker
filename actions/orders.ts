@@ -189,20 +189,66 @@ export async function getCustomers() {
 
 export async function getRecentCustomersForDashboard(count: number = 5) {
   return withCache(cacheKeys.recentCustomersDashboard(count), async () => {
-    console.log(`Fetching ${count} recent unique customers for dashboard (from cache or fresh)`);
+    console.log(`Fetching ${count} recent unique customers for dashboard - SIMPLIFIED`);
     try {
-      // Simplified approach: get recent customers directly
-      const recentCustomers = await prisma.user.findMany({
-        where: {
-          // Only get users who have made orders
-          lineOrders: {
-            some: {}
-          }
-        },
+      // Get recent orders - remove the problematic WHERE clause
+      const recentOrders = await prisma.lineOrder.findMany({
         orderBy: {
           createdAt: "desc",
         },
-        take: count * 2, // Get a few more to account for duplicates
+        take: Math.min(count * 10, 200), // Get more to account for null filtering
+        select: {
+          customerId: true,
+          createdAt: true,
+          customerName: true,
+          customerEmail: true,
+        }
+      });
+
+      console.log(`Found ${recentOrders.length} recent orders`);
+
+      // Filter out orders without valid customer IDs in JavaScript
+      const ordersWithCustomers = recentOrders.filter(order => 
+        order.customerId && 
+        typeof order.customerId === 'string' && 
+        order.customerId.trim() !== ''
+      );
+
+      console.log(`Found ${ordersWithCustomers.length} orders with valid customer IDs`);
+
+      if (ordersWithCustomers.length === 0) {
+        console.log('No orders with valid customer IDs found, using fallback');
+        // Fallback: get recent users directly
+        const fallbackCustomers = await prisma.user.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: count,
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            profileImage: true,
+            createdAt: true,
+          }
+        });
+        return fallbackCustomers as OrderCustomer[];
+      }
+
+      // Get unique customer IDs
+      const uniqueCustomerIds = [...new Set(
+        ordersWithCustomers.map(order => order.customerId)
+      )].slice(0, count * 2); // Get a few extra to ensure we have enough
+
+      console.log(`Found ${uniqueCustomerIds.length} unique customer IDs`);
+
+      // Get customer details
+      const customers = await prisma.user.findMany({
+        where: {
+          id: {
+            in: uniqueCustomerIds
+          }
+        },
         select: {
           id: true,
           firstName: true,
@@ -211,41 +257,59 @@ export async function getRecentCustomersForDashboard(count: number = 5) {
           phone: true,
           profileImage: true,
           createdAt: true,
-          lineOrders: {
-            select: {
-              createdAt: true
-            },
-            orderBy: {
-              createdAt: "desc"
-            },
-            take: 1 // Just get the most recent order
-          }
-        },
+        }
       });
 
-      // Sort by most recent order date and limit
-      const sortedCustomers = recentCustomers
-        .filter(customer => customer.lineOrders.length > 0)
-        .sort((a, b) => {
-          const dateA = a.lineOrders[0]?.createdAt || a.createdAt;
-          const dateB = b.lineOrders[0]?.createdAt || b.createdAt;
-          return dateB.getTime() - dateA.getTime();
-        })
-        .slice(0, count)
-        .map(customer => ({
-          id: customer.id,
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-          email: customer.email,
-          phone: customer.phone,
-          profileImage: customer.profileImage,
-          createdAt: customer.createdAt
-        }));
+      console.log(`Retrieved ${customers.length} customer details`);
 
-      return sortedCustomers as OrderCustomer[];
+      // Sort by most recent order and limit to requested count
+      const customersWithOrderDate = customers.map(customer => {
+        const mostRecentOrder = ordersWithCustomers.find(order => order.customerId === customer.id);
+        return {
+          ...customer,
+          lastOrderDate: mostRecentOrder?.createdAt || customer.createdAt
+        };
+      }).sort((a, b) => b.lastOrderDate.getTime() - a.lastOrderDate.getTime());
+
+      const result = customersWithOrderDate.slice(0, count).map(customer => ({
+        id: customer.id,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        email: customer.email,
+        phone: customer.phone,
+        profileImage: customer.profileImage,
+        createdAt: customer.createdAt
+      })) as OrderCustomer[];
+
+      console.log(`Returning ${result.length} recent customers for dashboard`);
+      return result;
+
     } catch (error) {
       console.error("Error fetching recent customers for dashboard:", error);
-      return [];
+      
+      // Ultimate fallback: just get recent users
+      try {
+        console.log('Using ultimate fallback - recent users only');
+        const fallbackCustomers = await prisma.user.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: count,
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            profileImage: true,
+            createdAt: true,
+          }
+        });
+        
+        console.log(`Ultimate fallback returned ${fallbackCustomers.length} customers`);
+        return fallbackCustomers as OrderCustomer[];
+      } catch (fallbackError) {
+        console.error("Ultimate fallback also failed:", fallbackError);
+        return [];
+      }
     }
   }, 15 * 60 * 1000);
 }

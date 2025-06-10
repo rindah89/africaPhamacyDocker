@@ -7,37 +7,46 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    // Add timeout to prevent hanging
+    // Reduce timeout to 8 seconds to stay under database 15s limit
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Request timeout')), 30000)
+      setTimeout(() => reject(new Error('Request timeout after 8s')), 8000)
     );
+
+    console.log('Charts API: Starting data fetch...');
+    const startTime = Date.now();
 
     const dataPromise = Promise.all([
       getSalesCountForPastSevenDays().catch(err => {
         console.error('Failed to fetch sales data:', err);
-        return null;
+        return [];
       }),
       getRevenueByMainCategoryPastSixMonths().catch(err => {
         console.error('Failed to fetch revenue data:', err);
-        return null;
+        return [];
       })
     ]);
 
-    const [salesData, categoryRevenue] = await Promise.race([dataPromise, timeoutPromise]);
+    const [salesData, categoryRevenue] = await Promise.race([dataPromise, timeoutPromise]) as any;
+
+    const duration = Date.now() - startTime;
+    console.log(`Charts API: Completed in ${duration}ms`);
 
     return NextResponse.json({
-      salesData,
-      categoryRevenue,
-      success: true
+      salesData: salesData || [],
+      categoryRevenue: categoryRevenue || [],
+      success: true,
+      duration
     });
   } catch (error) {
     console.error("Charts API error:", error);
+    
+    // Return fallback data instead of error to prevent UI breakage
     return NextResponse.json({ 
-      error: "Failed to fetch charts data", 
-      message: error instanceof Error ? error.message : "Unknown error",
-      salesData: null,
-      categoryRevenue: null,
-      success: false 
-    }, { status: 500 });
+      salesData: [],
+      categoryRevenue: [],
+      success: false,
+      error: "Timeout - using fallback data",
+      message: error instanceof Error ? error.message : "Unknown error"
+    }, { status: 200 }); // Changed to 200 to prevent error state in UI
   }
 } 

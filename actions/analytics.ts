@@ -19,6 +19,7 @@ import {
   startOfMonth,
 } from "date-fns";
 import { withCache, cacheKeys } from "@/lib/cache";
+import { executeWithConnectionRetry } from "@/lib/db-health";
 
 interface Sale {
   salePrice: number;
@@ -38,9 +39,7 @@ export interface AnalyticsProps {
   count: number;
   detailLink: string;
   countUnit?: "";
-  icon: ForwardRefExoticComponent<
-    Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>
-  >;
+  iconName: string;
 }
 function calculateSalesSummary(sales: Sale[]): SalesSummary {
   const summary = sales.reduce(
@@ -54,43 +53,93 @@ function calculateSalesSummary(sales: Sale[]): SalesSummary {
 
   return summary;
 }
-export async function getAnalytics() {
+export const getAnalytics = async () => {
+  console.log('🔍 getAnalytics - Function called');
+  
   return withCache(cacheKeys.analytics(), async () => {
-    try {
-      // Get sales for the last 30 days only to limit data
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    console.log('🔍 getAnalytics - Cache miss, executing database queries');
+    
+    return executeWithConnectionRetry(async () => {
+      console.log('🔍 getAnalytics - Starting ultra-resilient analytics fetch...');
+      const now = new Date();
+      const thirtyDaysAgo = subDays(now, 30);
 
-      // Use Promise.all for parallel execution and optimize queries
-      const [salesData, ordersCount, productsCount] = await Promise.all([
-        // Optimized sales query with aggregation
+      console.log('🔍 getAnalytics - Date range:', {
+        now: now.toISOString(),
+        thirtyDaysAgo: thirtyDaysAgo.toISOString()
+      });
+
+      // Use Promise.allSettled for better error handling - get what we can
+      console.log('🔍 getAnalytics - Starting parallel database queries...');
+      const results = await Promise.allSettled([
+        // Optimized sales count - use aggregation
         prisma.sale.aggregate({
           where: {
             createdAt: {
-              gte: thirtyDaysAgo
-            }
+              gte: thirtyDaysAgo,
+              lte: now,
+            },
           },
-          _sum: {
-            salePrice: true,
-            qty: true,
-          },
-          _count: {
-            id: true,
-          }
+          _count: { id: true },
+          _sum: { salePrice: true }
         }),
-        // Use cached count for better performance
-        withCache(cacheKeys.orderCount(), async () => {
-          return prisma.lineOrder.count();
-        }, 15 * 60 * 1000), // Cache for 15 minutes
-        // Cache this count as it changes rarely
-        withCache(cacheKeys.productCount(), async () => {
-          return prisma.product.count({
-            where: {
-              status: true
-            }
-          });
-        }, 30 * 60 * 1000), // Cache for 30 minutes
+
+        // Optimized orders count - simple count
+        prisma.lineOrder.count(),
+
+        // Optimized products count - simple count
+        prisma.product.count(),
+
+        // Get sample data for verification
+        prisma.sale.findFirst({
+          select: { id: true, createdAt: true }
+        })
       ]);
+
+      console.log('🔍 getAnalytics - Database queries completed:', {
+        salesResult: results[0].status,
+        ordersResult: results[1].status,
+        productsResult: results[2].status,
+        sampleResult: results[3].status
+      });
+
+      const [salesResult, ordersResult, productsResult, sampleResult] = results;
+
+      // Extract data with fallbacks
+      const salesData = salesResult.status === 'fulfilled' ? salesResult.value : { _count: { id: 0 }, _sum: { salePrice: 0 } };
+      const ordersCount = ordersResult.status === 'fulfilled' ? ordersResult.value : 0;
+      const productsCount = productsResult.status === 'fulfilled' ? productsResult.value : 0;
+
+      console.log('🔍 getAnalytics - Raw database data:', {
+        salesData: {
+          success: salesResult.status === 'fulfilled',
+          count: salesData._count.id,
+          revenue: salesData._sum.salePrice,
+          error: salesResult.status === 'rejected' ? salesResult.reason : null
+        },
+        ordersCount: {
+          success: ordersResult.status === 'fulfilled',
+          count: ordersCount,
+          error: ordersResult.status === 'rejected' ? ordersResult.reason : null
+        },
+        productsCount: {
+          success: productsResult.status === 'fulfilled',
+          count: productsCount,
+          error: productsResult.status === 'rejected' ? productsResult.reason : null
+        },
+        sampleData: {
+          success: sampleResult.status === 'fulfilled',
+          data: sampleResult.status === 'fulfilled' ? sampleResult.value : null,
+          error: sampleResult.status === 'rejected' ? sampleResult.reason : null
+        }
+      });
+
+      console.log('🔍 getAnalytics - Processed analytics data:', {
+        salesCount: salesData._count.id,
+        revenue: salesData._sum.salePrice,
+        orders: ordersCount,
+        products: productsCount
+      });
 
       const analytics = [
         {
@@ -98,37 +147,85 @@ export async function getAnalytics() {
           count: salesData._count.id || 0,
           countUnit: "",
           detailLink: "/dashboard/sales",
-          icon: BarChartHorizontal,
+          iconName: "BarChartHorizontal",
         },
         {
           title: "Revenue (30 days)",
           count: salesData._sum.salePrice || 0,
           countUnit: " ",
           detailLink: "/dashboard/sales",
-          icon: DollarSign,
+          iconName: "DollarSign",
         },
         {
           title: "Total Orders",
           count: ordersCount,
           countUnit: "",
           detailLink: "/dashboard/sales/orders",
-          icon: Combine,
+          iconName: "Combine",
         },
         {
           title: "Total Products",
           count: productsCount,
           countUnit: "",
           detailLink: "/dashboard/inventory/products",
-          icon: LayoutGrid,
+          iconName: "LayoutGrid",
         },
       ];
+      
+      console.log('🔍 getAnalytics - Final analytics array:', {
+        analytics,
+        analyticsLength: analytics.length,
+        analyticsData: analytics.map((item, i) => ({
+          index: i,
+          title: item.title,
+          count: item.count,
+          countUnit: item.countUnit,
+          iconName: item.iconName
+        }))
+      });
+      
       return analytics as AnalyticsProps[];
-    } catch (error) {
-      console.log(error);
-      return null;
-    }
-  }, 10 * 60 * 1000); // Increased cache time to 10 minutes
-}
+    }, 'Analytics fetch')
+    .catch(error => {
+      console.error('🔍 getAnalytics - Connection error, using fallback:', error);
+      
+      // Return fallback analytics
+      const fallbackAnalytics = [
+        {
+          title: "Total Sales (30 days)",
+          count: 0,
+          countUnit: "",
+          detailLink: "/dashboard/sales",
+          iconName: "BarChartHorizontal",
+        },
+        {
+          title: "Revenue (30 days)",
+          count: 0,
+          countUnit: " ",
+          detailLink: "/dashboard/sales",
+          iconName: "DollarSign",
+        },
+        {
+          title: "Total Orders",
+          count: 0,
+          countUnit: "",
+          detailLink: "/dashboard/sales/orders",
+          iconName: "Combine",
+        },
+        {
+          title: "Total Products",
+          count: 0,
+          countUnit: "",
+          detailLink: "/dashboard/inventory/products",
+          iconName: "LayoutGrid",
+        },
+      ] as AnalyticsProps[];
+      
+      console.log('🔍 getAnalytics - Returning fallback analytics:', fallbackAnalytics);
+      return fallbackAnalytics;
+    });
+  }, 15 * 60 * 1000); // Cache for 15 minutes
+};
 
 export const getSalesCountForPastSevenDaysOld = async (): Promise<
   DailySales[]
@@ -167,85 +264,51 @@ export const getSalesCountForPastSevenDaysOld = async (): Promise<
   return salesCountArray;
 };
 
-export const getSalesCountForPastSevenDays = async (): Promise<
-  DailySales[]
-> => {
+export const getSalesCountForPastSevenDays = async (): Promise<DailySales[]> => {
   return withCache(cacheKeys.salesCountPastSevenDays(), async () => {
     try {
-      console.log('getSalesCountForPastSevenDays: Starting optimized function');
       const now = new Date();
-      const sevenDaysAgo = subDays(now, 6); // Start from six days ago to include today
-      sevenDaysAgo.setHours(0,0,0,0); // Normalize to start of day
-      const todayEnd = new Date(now);
-      todayEnd.setHours(23,59,59,999); // Normalize to end of day
-
-      console.log('getSalesCountForPastSevenDays: Date range', {
-        start: sevenDaysAgo,
-        end: todayEnd
-      });
-
-      const days = eachDayOfInterval({
-        start: sevenDaysAgo,
-        end: now,
-      });
-
-      // Initialize map with all days set to 0
-      const salesCountMap: { [key: string]: number } = {};
-      days.forEach((day) => {
-        const formattedDay = format(day, "EEE do MMM");
-        salesCountMap[formattedDay] = 0;
-      });
-
-      console.log('getSalesCountForPastSevenDays: Initialized days map:', salesCountMap);
-
-      // Use MongoDB-compatible query (raw SQL not supported in MongoDB)
+      const sevenDaysAgo = subDays(now, 6);
       const sales = await prisma.sale.findMany({
         where: {
           createdAt: {
             gte: sevenDaysAgo,
-            lte: todayEnd,
+            lte: now,
           },
         },
         select: {
           createdAt: true,
         },
       });
-
-      console.log('getSalesCountForPastSevenDays: Found sales:', sales.length);
-
+      // Group by day in JS
+      const salesCountMap: { [key: string]: number } = {};
+      const days = eachDayOfInterval({ start: sevenDaysAgo, end: now });
+      days.forEach((day) => {
+        const formattedDay = format(day, "EEE do MMM");
+        salesCountMap[formattedDay] = 0;
+      });
       sales.forEach((sale) => {
         const day = format(sale.createdAt, "EEE do MMM");
         if (salesCountMap.hasOwnProperty(day)) {
-          salesCountMap[day] += 1;
+          salesCountMap[day]++;
         }
       });
-
-      console.log('getSalesCountForPastSevenDays: Final sales count map:', salesCountMap);
-
-      // Transform the map into the desired array format, maintaining day order
-      const salesCountArray: DailySales[] = days.map((day) => {
-        const formattedDay = format(day, "EEE do MMM");
-        return {
-          day: formattedDay,
-          sales: salesCountMap[formattedDay] || 0,
-        };
-      });
-
-      console.log('getSalesCountForPastSevenDays: Returning array:', salesCountArray);
-      return salesCountArray;
+      const result = days.map((day) => ({
+        day: format(day, "EEE do MMM"),
+        sales: salesCountMap[format(day, "EEE do MMM")] || 0,
+      }));
+      return result;
     } catch (error) {
-      console.error('getSalesCountForPastSevenDays: Error occurred, returning fallback data:', error);
-      // Return fallback data with empty sales for the past 7 days
+      console.error('getSalesCountForPastSevenDays error:', error);
       const now = new Date();
       const sevenDaysAgo = subDays(now, 6);
       const days = eachDayOfInterval({ start: sevenDaysAgo, end: now });
-      
       return days.map((day) => ({
         day: format(day, "EEE do MMM"),
         sales: 0,
       }));
     }
-  }, 15 * 60 * 1000); // Cache for 15 minutes
+  }, 30 * 60 * 1000);
 };
 
 export interface MainCategorySales {
@@ -445,16 +508,12 @@ async function fixNullOrderNumbers() {
 export const getRevenueByMainCategoryPastSixMonths = async (): Promise<MonthlyMainCategoryRevenue[]> => {
   return withCache(cacheKeys.revenueByCategory(), async () => {
     try {
-      console.log('Starting getRevenueByMainCategoryPastSixMonths...');
-      
       const currentDate = new Date();
-      const sixMonthsAgo = subMonths(currentDate, 5); // Go back 5 months to include the current month fully
-      sixMonthsAgo.setDate(1); // Start from the beginning of the month
-      sixMonthsAgo.setHours(0, 0, 0, 0); // Normalize to start of the day
-
-      console.log('Date range:', { from: sixMonthsAgo, to: currentDate });
-
-      const salesData = await prisma.sale.findMany({
+      const sixMonthsAgo = subMonths(currentDate, 5);
+      sixMonthsAgo.setDate(1);
+      sixMonthsAgo.setHours(0, 0, 0, 0);
+      // Fetch all sales in the last 6 months, including full nested relations
+      const sales = await prisma.sale.findMany({
         where: {
           createdAt: {
             gte: sixMonthsAgo,
@@ -476,72 +535,36 @@ export const getRevenueByMainCategoryPastSixMonths = async (): Promise<MonthlyMa
             },
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
       });
-
-      console.log('Fetched sales data:', salesData.length, 'records');
-
-      const monthlyRevenueMap: { [key: string]: MonthlyMainCategoryRevenue } = {};
-
-      // Initialize months for the last 6 full months including the current month
-      for (let i = 0; i < 6; i++) {
-        const monthDate = subMonths(currentDate, i);
-        const monthKey = format(monthDate, "MMMM"); // Full month name e.g., "June"
-        if (!monthlyRevenueMap[monthKey]) { // Ensure not to overwrite if multiple calls create same key (though logic prevents this here)
-            monthlyRevenueMap[monthKey] = { month: monthKey };
-        }
-      }
-      
-      salesData.forEach((sale) => {
-        if (sale.product && sale.product.subCategory && sale.product.subCategory.category && sale.product.subCategory.category.mainCategory) {
-          const saleMonth = format(new Date(sale.createdAt), "MMMM");
-          const mainCategoryTitle = sale.product.subCategory.category.mainCategory.title;
-          const categoryKey = getFirstWord(mainCategoryTitle);
-
-          if (monthlyRevenueMap[saleMonth]) {
-            monthlyRevenueMap[saleMonth][categoryKey] = 
-              (monthlyRevenueMap[saleMonth][categoryKey] as number || 0) + sale.salePrice;
-          }
-        }
-      });
-      
-      // Ensure all initialized months are in the final array, even if they have no sales
-      const allMonthsKeys = Object.keys(monthlyRevenueMap);
-      const mainCategoryRevenueArray: MonthlyMainCategoryRevenue[] = allMonthsKeys.map(monthKey => {
-          return monthlyRevenueMap[monthKey];
-      }).sort((a, b) => {
-          // Sort by month, ensuring correct chronological order from most recent to oldest
-          const dateA = new Date(Date.parse(a.month +" 1, 2000")); // Use a dummy year for sorting
-          const dateB = new Date(Date.parse(b.month +" 1, 2000"));
-          // Find the index in our original initialized order
-          const indexA = Array.from({length: 6}, (_, i) => format(subMonths(currentDate, i), "MMMM")).indexOf(a.month);
-          const indexB = Array.from({length: 6}, (_, i) => format(subMonths(currentDate, i), "MMMM")).indexOf(b.month);
-          return indexA - indexB;
-      });
-
-
-      console.log('Processed revenue data:', mainCategoryRevenueArray.length, 'months');
-      return mainCategoryRevenueArray;
-    } catch (error) {
-      console.error('Error in getRevenueByMainCategoryPastSixMonths, returning fallback data:', error);
-      // Return fallback data with empty months
-      const currentDate = new Date();
-      const monthlyRevenueMap: { [key: string]: MonthlyMainCategoryRevenue } = {};
+      // Group and sum revenue by month and main category
+      const monthlyRevenueMap: { [month: string]: MonthlyMainCategoryRevenue } = {};
       for (let i = 0; i < 6; i++) {
         const monthDate = subMonths(currentDate, i);
         const monthKey = format(monthDate, "MMMM");
         monthlyRevenueMap[monthKey] = { month: monthKey };
       }
-      // Sort months from most recent to oldest in the error case as well
-      return Object.values(monthlyRevenueMap).sort((a,b) => {
+      sales.forEach((sale) => {
+        const month = format(sale.createdAt, "MMMM");
+        const mainCategory = sale.product?.subCategory?.category?.mainCategory?.title || 'Unknown';
+        if (!monthlyRevenueMap[month][mainCategory]) {
+          monthlyRevenueMap[month][mainCategory] = 0;
+        }
+        monthlyRevenueMap[month][mainCategory] = (monthlyRevenueMap[month][mainCategory] as number) + (sale.salePrice || 0);
+      });
+      const result = Object.values(monthlyRevenueMap).sort((a, b) => {
         const indexA = Array.from({length: 6}, (_, i) => format(subMonths(currentDate, i), "MMMM")).indexOf(a.month);
         const indexB = Array.from({length: 6}, (_, i) => format(subMonths(currentDate, i), "MMMM")).indexOf(b.month);
         return indexA - indexB;
       });
+      return result;
+    } catch (error) {
+      console.error('Error in getRevenueByMainCategoryPastSixMonths:', error);
+      const currentDate = new Date();
+      return Array.from({length: 6}, (_, i) => ({
+        month: format(subMonths(currentDate, i), "MMMM")
+      }));
     }
-  }, 10 * 60 * 1000); // Cache for 10 minutes
+  }, 30 * 60 * 1000);
 };
 
 export async function getProductsCount() {
