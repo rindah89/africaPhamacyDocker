@@ -10,7 +10,7 @@ import { exportToPDF } from "./columns";
 import exportSalesDataToExcel from "@/lib/exportSalesDataToExcel";
 import toast from "react-hot-toast";
 
-export default function page() {
+export default function SalesReportPage() {
   const [salesData, setSalesData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
