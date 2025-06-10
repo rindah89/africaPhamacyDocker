@@ -191,45 +191,18 @@ export async function getRecentCustomersForDashboard(count: number = 5) {
   return withCache(cacheKeys.recentCustomersDashboard(count), async () => {
     console.log(`Fetching ${count} recent unique customers for dashboard (from cache or fresh)`);
     try {
-      const recentOrdersWithCustomers = await prisma.lineOrder.findMany({
+      // Simplified approach: get recent customers directly
+      const recentCustomers = await prisma.user.findMany({
+        where: {
+          // Only get users who have made orders
+          lineOrders: {
+            some: {}
+          }
+        },
         orderBy: {
           createdAt: "desc",
         },
-        select: {
-          customerId: true,
-          createdAt: true,
-        },
-        take: 100,
-      });
-
-      if (!recentOrdersWithCustomers || recentOrdersWithCustomers.length === 0) {
-        return [];
-      }
-
-      const uniqueCustomerMap = new Map<string, Date>();
-      for (const order of recentOrdersWithCustomers) {
-        if (order.customerId) {
-          if (!uniqueCustomerMap.has(order.customerId) || order.createdAt > uniqueCustomerMap.get(order.customerId)!) {
-            uniqueCustomerMap.set(order.customerId, order.createdAt);
-          }
-        }
-      }
-      
-      const sortedUniqueCustomerIds = Array.from(uniqueCustomerMap.entries())
-        .sort((a, b) => b[1].getTime() - a[1].getTime())
-        .slice(0, count)
-        .map(entry => entry[0]);
-
-      if (sortedUniqueCustomerIds.length === 0) {
-        return [];
-      }
-
-      const customers = await prisma.user.findMany({
-        where: {
-          id: {
-            in: sortedUniqueCustomerIds,
-          },
-        },
+        take: count * 2, // Get a few more to account for duplicates
         select: {
           id: true,
           firstName: true,
@@ -238,13 +211,38 @@ export async function getRecentCustomersForDashboard(count: number = 5) {
           phone: true,
           profileImage: true,
           createdAt: true,
+          lineOrders: {
+            select: {
+              createdAt: true
+            },
+            orderBy: {
+              createdAt: "desc"
+            },
+            take: 1 // Just get the most recent order
+          }
         },
       });
-      
-      const customersMap = new Map(customers.map(c => [c.id, c]));
-      const finalOrderedCustomers = sortedUniqueCustomerIds.map(id => customersMap.get(id)).filter(Boolean);
 
-      return finalOrderedCustomers as OrderCustomer[];
+      // Sort by most recent order date and limit
+      const sortedCustomers = recentCustomers
+        .filter(customer => customer.lineOrders.length > 0)
+        .sort((a, b) => {
+          const dateA = a.lineOrders[0]?.createdAt || a.createdAt;
+          const dateB = b.lineOrders[0]?.createdAt || b.createdAt;
+          return dateB.getTime() - dateA.getTime();
+        })
+        .slice(0, count)
+        .map(customer => ({
+          id: customer.id,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          email: customer.email,
+          phone: customer.phone,
+          profileImage: customer.profileImage,
+          createdAt: customer.createdAt
+        }));
+
+      return sortedCustomers as OrderCustomer[];
     } catch (error) {
       console.error("Error fetching recent customers for dashboard:", error);
       return [];

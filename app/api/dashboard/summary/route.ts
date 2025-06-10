@@ -3,9 +3,18 @@ import { getRecentOrdersForDashboard } from "@/actions/pos";
 import { getRecentCustomersForDashboard } from "@/actions/orders";
 import { NextResponse } from "next/server";
 
+// Force dynamic rendering to prevent static generation timeouts
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
   try {
-    const [orders, products, customers] = await Promise.all([
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Request timeout')), 30000)
+    );
+
+    const dataPromise = Promise.all([
       getRecentOrdersForDashboard(5).catch(e => {
         console.error("Failed to fetch recent orders:", e);
         return { error: true, message: e.message || "Error fetching orders" };
@@ -20,6 +29,8 @@ export async function GET() {
       })
     ]);
 
+    const [orders, products, customers] = await Promise.race([dataPromise, timeoutPromise]);
+
     return NextResponse.json({
       ordersData: orders,
       bestSellingProducts: Array.isArray(products) ? products : [],
@@ -28,6 +39,13 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Summary API error:", error);
-    return NextResponse.json({ error: "Failed to fetch summary data" }, { status: 500 });
+    return NextResponse.json({ 
+      error: "Failed to fetch summary data", 
+      message: error instanceof Error ? error.message : "Unknown error",
+      ordersData: { error: true, message: "Timeout or error" },
+      bestSellingProducts: [],
+      customersData: { error: true, message: "Timeout or error" },
+      success: false 
+    }, { status: 500 });
   }
 } 

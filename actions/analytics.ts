@@ -197,53 +197,27 @@ export const getSalesCountForPastSevenDays = async (): Promise<
 
     console.log('getSalesCountForPastSevenDays: Initialized days map:', salesCountMap);
 
-    try {
-      // Use raw SQL for better performance with date grouping
-      const salesData = await prisma.$queryRaw<Array<{date: string, count: number}>>`
-        SELECT 
-          DATE(createdAt) as date,
-          COUNT(*) as count
-        FROM Sale 
-        WHERE createdAt >= ${sevenDaysAgo} 
-          AND createdAt <= ${todayEnd}
-        GROUP BY DATE(createdAt)
-        ORDER BY DATE(createdAt)
-      `;
-
-      console.log('getSalesCountForPastSevenDays: Raw query results:', salesData);
-
-      // Map the results to our format
-      salesData.forEach((item) => {
-        const date = new Date(item.date);
-        const formattedDay = format(date, "EEE do MMM");
-        if (salesCountMap.hasOwnProperty(formattedDay)) {
-          salesCountMap[formattedDay] = Number(item.count);
-        }
-      });
-
-    } catch (error) {
-      console.error('getSalesCountForPastSevenDays: Error with raw query, falling back to findMany:', error);
-      
-      // Fallback to original method if raw query fails
-      const sales = await prisma.sale.findMany({
-        where: {
-          createdAt: {
-            gte: sevenDaysAgo,
-            lte: todayEnd,
-          },
+    // Use MongoDB-compatible query (raw SQL not supported in MongoDB)
+    const sales = await prisma.sale.findMany({
+      where: {
+        createdAt: {
+          gte: sevenDaysAgo,
+          lte: todayEnd,
         },
-        select: {
-          createdAt: true,
-        },
-      });
+      },
+      select: {
+        createdAt: true,
+      },
+    });
 
-      sales.forEach((sale) => {
-        const day = format(sale.createdAt, "EEE do MMM");
-        if (salesCountMap.hasOwnProperty(day)) {
-          salesCountMap[day] += 1;
-        }
-      });
-    }
+    console.log('getSalesCountForPastSevenDays: Found sales:', sales.length);
+
+    sales.forEach((sale) => {
+      const day = format(sale.createdAt, "EEE do MMM");
+      if (salesCountMap.hasOwnProperty(day)) {
+        salesCountMap[day] += 1;
+      }
+    });
 
     console.log('getSalesCountForPastSevenDays: Final sales count map:', salesCountMap);
 
@@ -418,28 +392,32 @@ async function checkAndFixSalesData() {
 
 async function fixNullOrderNumbers() {
   try {
-    // Get all sales with null orderNumbers
-    const salesWithNullOrders = await prisma.$queryRaw`
-      SELECT id, created_at
-      FROM Sale
-      WHERE order_number IS NULL
-    `;
+    // Get all sales with null orderNumbers using MongoDB-compatible query
+    const salesWithNullOrders = await prisma.sale.findMany({
+      where: {
+        orderNumber: null
+      },
+      select: {
+        id: true,
+        createdAt: true
+      }
+    });
 
-    if (Array.isArray(salesWithNullOrders) && salesWithNullOrders.length > 0) {
+    if (salesWithNullOrders.length > 0) {
       console.log(`Found ${salesWithNullOrders.length} sales with null orderNumbers`);
 
-      // Update each sale with a new order number
-      for (const sale of salesWithNullOrders) {
-        const timestamp = new Date(sale.created_at).getTime();
+      // Update each sale with a new order number using MongoDB-compatible updates
+      const updates = salesWithNullOrders.map((sale) => {
+        const timestamp = sale.createdAt.getTime();
         const newOrderNumber = `FIX-${timestamp}-${sale.id}`;
         
-        await prisma.$executeRaw`
-          UPDATE Sale
-          SET order_number = ${newOrderNumber}
-          WHERE id = ${sale.id}
-        `;
-      }
+        return prisma.sale.update({
+          where: { id: sale.id },
+          data: { orderNumber: newOrderNumber }
+        });
+      });
 
+      await prisma.$transaction(updates);
       console.log('Fixed all null orderNumbers');
       return salesWithNullOrders.length;
     }

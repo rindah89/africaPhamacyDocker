@@ -2006,31 +2006,66 @@ export async function getBestSellingProducts(productCount: number) {
   return withCache(cacheKeys.bestSellingProducts(productCount), async () => {
     console.log(`Fetching ${productCount} best selling products (from cache or fresh)`);
     try {
-      const topSellingProducts = await prisma.product.findMany({
-        take: productCount,
+      // Use a simpler approach: get recent sales and group by product
+      // This is much faster than sorting by sales count relation
+      const recentSales = await prisma.sale.findMany({
         where: {
-          status: true, // Only include active products
-          sales: { some: {} } // Ensure product has at least one sale to be considered
+          createdAt: {
+            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // Last 30 days
+          }
         },
-        orderBy: {
-          sales: {
-            _count: "desc",
-          },
-        },
-        select: { // Select only necessary product fields
-          id: true,
-          name: true,
-          slug: true,
-          productThumbnail: true,
-          productPrice: true,
-          sales: {
+        select: {
+          productId: true,
+          salePrice: true,
+          qty: true,
+          product: {
             select: {
-              salePrice: true,
-              qty: true
+              id: true,
+              name: true,
+              slug: true,
+              productThumbnail: true,
+              productPrice: true,
+              status: true
             }
           }
+        },
+        take: 1000 // Limit to prevent memory issues
+      });
+
+      // Group sales by product and count
+      const productSalesMap = new Map<string, {
+        product: any,
+        salesCount: number,
+        totalRevenue: number,
+        sales: Array<{ salePrice: number, qty: number }>
+      }>();
+
+      recentSales.forEach(sale => {
+        if (sale.product && sale.product.status) {
+          const key = sale.productId;
+          if (!productSalesMap.has(key)) {
+            productSalesMap.set(key, {
+              product: sale.product,
+              salesCount: 0,
+              totalRevenue: 0,
+              sales: []
+            });
+          }
+          const entry = productSalesMap.get(key)!;
+          entry.salesCount += 1;
+          entry.totalRevenue += sale.salePrice * sale.qty;
+          entry.sales.push({ salePrice: sale.salePrice, qty: sale.qty });
         }
       });
+
+      // Sort by sales count and return top products
+      const topSellingProducts = Array.from(productSalesMap.values())
+        .sort((a, b) => b.salesCount - a.salesCount)
+        .slice(0, productCount)
+        .map(entry => ({
+          ...entry.product,
+          sales: entry.sales
+        }));
       
       return topSellingProducts;
     } catch (error) {
