@@ -171,67 +171,80 @@ export const getSalesCountForPastSevenDays = async (): Promise<
   DailySales[]
 > => {
   return withCache(cacheKeys.salesCountPastSevenDays(), async () => {
-    console.log('getSalesCountForPastSevenDays: Starting optimized function');
-    const now = new Date();
-    const sevenDaysAgo = subDays(now, 6); // Start from six days ago to include today
-    sevenDaysAgo.setHours(0,0,0,0); // Normalize to start of day
-    const todayEnd = new Date(now);
-    todayEnd.setHours(23,59,59,999); // Normalize to end of day
+    try {
+      console.log('getSalesCountForPastSevenDays: Starting optimized function');
+      const now = new Date();
+      const sevenDaysAgo = subDays(now, 6); // Start from six days ago to include today
+      sevenDaysAgo.setHours(0,0,0,0); // Normalize to start of day
+      const todayEnd = new Date(now);
+      todayEnd.setHours(23,59,59,999); // Normalize to end of day
 
-    console.log('getSalesCountForPastSevenDays: Date range', {
-      start: sevenDaysAgo,
-      end: todayEnd
-    });
+      console.log('getSalesCountForPastSevenDays: Date range', {
+        start: sevenDaysAgo,
+        end: todayEnd
+      });
 
-    const days = eachDayOfInterval({
-      start: sevenDaysAgo,
-      end: now,
-    });
+      const days = eachDayOfInterval({
+        start: sevenDaysAgo,
+        end: now,
+      });
 
-    // Initialize map with all days set to 0
-    const salesCountMap: { [key: string]: number } = {};
-    days.forEach((day) => {
-      const formattedDay = format(day, "EEE do MMM");
-      salesCountMap[formattedDay] = 0;
-    });
+      // Initialize map with all days set to 0
+      const salesCountMap: { [key: string]: number } = {};
+      days.forEach((day) => {
+        const formattedDay = format(day, "EEE do MMM");
+        salesCountMap[formattedDay] = 0;
+      });
 
-    console.log('getSalesCountForPastSevenDays: Initialized days map:', salesCountMap);
+      console.log('getSalesCountForPastSevenDays: Initialized days map:', salesCountMap);
 
-    // Use MongoDB-compatible query (raw SQL not supported in MongoDB)
-    const sales = await prisma.sale.findMany({
-      where: {
-        createdAt: {
-          gte: sevenDaysAgo,
-          lte: todayEnd,
+      // Use MongoDB-compatible query (raw SQL not supported in MongoDB)
+      const sales = await prisma.sale.findMany({
+        where: {
+          createdAt: {
+            gte: sevenDaysAgo,
+            lte: todayEnd,
+          },
         },
-      },
-      select: {
-        createdAt: true,
-      },
-    });
+        select: {
+          createdAt: true,
+        },
+      });
 
-    console.log('getSalesCountForPastSevenDays: Found sales:', sales.length);
+      console.log('getSalesCountForPastSevenDays: Found sales:', sales.length);
 
-    sales.forEach((sale) => {
-      const day = format(sale.createdAt, "EEE do MMM");
-      if (salesCountMap.hasOwnProperty(day)) {
-        salesCountMap[day] += 1;
-      }
-    });
+      sales.forEach((sale) => {
+        const day = format(sale.createdAt, "EEE do MMM");
+        if (salesCountMap.hasOwnProperty(day)) {
+          salesCountMap[day] += 1;
+        }
+      });
 
-    console.log('getSalesCountForPastSevenDays: Final sales count map:', salesCountMap);
+      console.log('getSalesCountForPastSevenDays: Final sales count map:', salesCountMap);
 
-    // Transform the map into the desired array format, maintaining day order
-    const salesCountArray: DailySales[] = days.map((day) => {
-      const formattedDay = format(day, "EEE do MMM");
-      return {
-        day: formattedDay,
-        sales: salesCountMap[formattedDay] || 0,
-      };
-    });
+      // Transform the map into the desired array format, maintaining day order
+      const salesCountArray: DailySales[] = days.map((day) => {
+        const formattedDay = format(day, "EEE do MMM");
+        return {
+          day: formattedDay,
+          sales: salesCountMap[formattedDay] || 0,
+        };
+      });
 
-    console.log('getSalesCountForPastSevenDays: Returning array:', salesCountArray);
-    return salesCountArray;
+      console.log('getSalesCountForPastSevenDays: Returning array:', salesCountArray);
+      return salesCountArray;
+    } catch (error) {
+      console.error('getSalesCountForPastSevenDays: Error occurred, returning fallback data:', error);
+      // Return fallback data with empty sales for the past 7 days
+      const now = new Date();
+      const sevenDaysAgo = subDays(now, 6);
+      const days = eachDayOfInterval({ start: sevenDaysAgo, end: now });
+      
+      return days.map((day) => ({
+        day: format(day, "EEE do MMM"),
+        sales: 0,
+      }));
+    }
   }, 15 * 60 * 1000); // Cache for 15 minutes
 };
 
@@ -512,17 +525,19 @@ export const getRevenueByMainCategoryPastSixMonths = async (): Promise<MonthlyMa
       console.log('Processed revenue data:', mainCategoryRevenueArray.length, 'months');
       return mainCategoryRevenueArray;
     } catch (error) {
-      console.error('Error in getRevenueByMainCategoryPastSixMonths:', error);
+      console.error('Error in getRevenueByMainCategoryPastSixMonths, returning fallback data:', error);
+      // Return fallback data with empty months
+      const currentDate = new Date();
       const monthlyRevenueMap: { [key: string]: MonthlyMainCategoryRevenue } = {};
       for (let i = 0; i < 6; i++) {
-        const monthDate = subMonths(new Date(), i);
+        const monthDate = subMonths(currentDate, i);
         const monthKey = format(monthDate, "MMMM");
         monthlyRevenueMap[monthKey] = { month: monthKey };
       }
       // Sort months from most recent to oldest in the error case as well
       return Object.values(monthlyRevenueMap).sort((a,b) => {
-        const indexA = Array.from({length: 6}, (_, i) => format(subMonths(new Date(), i), "MMMM")).indexOf(a.month);
-        const indexB = Array.from({length: 6}, (_, i) => format(subMonths(new Date(), i), "MMMM")).indexOf(b.month);
+        const indexA = Array.from({length: 6}, (_, i) => format(subMonths(currentDate, i), "MMMM")).indexOf(a.month);
+        const indexB = Array.from({length: 6}, (_, i) => format(subMonths(currentDate, i), "MMMM")).indexOf(b.month);
         return indexA - indexB;
       });
     }

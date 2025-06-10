@@ -63,22 +63,41 @@ export function useChartsData() {
   useEffect(() => {
     async function loadChartsData() {
       try {
-        const response = await fetch('/api/dashboard/charts');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+        const response = await fetch('/api/dashboard/charts', {
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
-          throw new Error('Failed to fetch charts data');
+          throw new Error(`HTTP ${response.status}: Failed to fetch charts data`);
         }
+        
         const data = await response.json();
         
-        setSalesData(data.salesData);
-        setCategoryRevenue(data.categoryRevenue);
+        // Provide fallback empty data if API data is null
+        setSalesData(data.salesData || []);
+        setCategoryRevenue(data.categoryRevenue || []);
 
-        // Set error only if both failed
-        if (!data.salesData && !data.categoryRevenue) {
-          setError("Failed to load chart data");
+        // Only set error if API explicitly failed
+        if (!data.success && data.error) {
+          setError(`Warning: ${data.error}`);
         }
       } catch (err) {
         console.error("Charts data loading error:", err);
-        setError("Error loading charts");
+        
+        // Set fallback empty data instead of null
+        setSalesData([]);
+        setCategoryRevenue([]);
+        
+        if (err instanceof Error && err.name === 'AbortError') {
+          setError("Charts timed out. Using offline mode.");
+        } else {
+          setError("Failed to load charts. Using offline mode.");
+        }
       } finally {
         setLoading(false);
       }
@@ -101,18 +120,43 @@ export function useDashboardSummary() {
   useEffect(() => {
     async function loadSummaryData() {
       try {
-        const response = await fetch('/api/dashboard/summary');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+        const response = await fetch('/api/dashboard/summary', {
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
-          throw new Error('Failed to fetch summary data');
+          throw new Error(`HTTP ${response.status}: Failed to fetch summary data`);
         }
+
         const data = await response.json();
 
-        setOrdersData(data.ordersData);
-        setBestSellingProducts(data.bestSellingProducts);
-        setCustomersData(data.customersData);
+        // Handle partial failures gracefully
+        setOrdersData(data.ordersData || []);
+        setBestSellingProducts(data.bestSellingProducts || []);
+        setCustomersData(data.customersData || []);
+
+        // Only set error if API returned error flag
+        if (!data.success && data.error) {
+          setError(`Warning: ${data.error}`);
+        }
       } catch (err) {
         console.error('Error loading dashboard summary:', err);
-        setError('Failed to load dashboard summary');
+        
+        // Set fallback data instead of just showing error
+        setOrdersData([]);
+        setBestSellingProducts([]);
+        setCustomersData([]);
+        
+        if (err instanceof Error && err.name === 'AbortError') {
+          setError('Request timed out. Using offline mode.');
+        } else {
+          setError('Failed to load dashboard data. Using offline mode.');
+        }
       } finally {
         setLoading(false);
       }

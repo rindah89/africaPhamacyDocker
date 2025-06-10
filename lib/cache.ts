@@ -66,11 +66,12 @@ class MemoryCache {
 
 export const cache = new MemoryCache();
 
-// Cache wrapper for database queries
+// Cache wrapper for database queries with fallback handling
 export async function withCache<T>(
   key: string,
   fn: () => Promise<T>,
-  ttl?: number
+  ttl?: number,
+  fallback?: T
 ): Promise<T> {
   // Check if cached data exists
   const cached = cache.get<T>(key);
@@ -88,6 +89,20 @@ export async function withCache<T>(
     return data;
   } catch (error) {
     console.error(`Cache error for key ${key}:`, error);
+    
+    // Return fallback data if provided
+    if (fallback !== undefined) {
+      console.log(`Using fallback data for key: ${key}`);
+      return fallback;
+    }
+    
+    // If no fallback, try to return stale cache data
+    const staleData = (cache as any).cache.get(key);
+    if (staleData) {
+      console.log(`Using stale cache data for key: ${key}`);
+      return staleData.data;
+    }
+    
     throw error;
   }
 }
