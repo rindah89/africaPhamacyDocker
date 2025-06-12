@@ -243,8 +243,6 @@ export default function PaymentModal({
       console.log('✅ Payment amount validated, proceeding to receipt with insurance data:', paymentResult);
       onPaymentComplete(paymentResult);
       
-      onClose();
-      
       let successMessage = "Payment processed";
       if (useInsurance && useDiscount) {
         successMessage = "Payment with insurance and discount processed";

@@ -1,134 +1,148 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
-
-// Inline withTimeout utility
-function withTimeout<T>(promiseFn: () => Promise<T>, ms: number): Promise<T> {
-  return Promise.race([
-    promiseFn(),
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Request timed out')), ms))
-  ]);
-}
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
-  return withTimeout(async () => {
-    try {
-      console.log('Optimized sales data API called (MongoDB/Prisma)');
-      const { searchParams } = new URL(request.url);
-      const from = searchParams.get('from');
-      const to = searchParams.get('to');
-      
-      if (!from || !to) {
-        return NextResponse.json({ error: 'Date range required' }, { status: 400 });
-      }
+  try {
+    console.log('Production-ready MongoDB aggregation API call');
+    const { searchParams } = new URL(request.url);
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
+    
+    if (!from || !to) {
+      return NextResponse.json({ error: 'Date range required' }, { status: 400 });
+    }
 
-      const fromDate = new Date(from);
-      const toDate = new Date(to);
-      
-      // Fetch all sales in the date range
-      const sales = await prisma.sale.findMany({
-        where: {
-          createdAt: {
-            gte: fromDate,
-            lte: toDate,
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    
+    const dateFilter = {
+      $match: {
+        createdAt: {
+          $gte: { $date: from },
+          $lte: { $date: to },
+        },
+      },
+    };
+
+    // 1. Paginated sales list for the table
+    const salesPromise = prisma.sale.findMany({
+      where: { createdAt: { gte: fromDate, lte: toDate } },
+      include: {
+        product: {
+          include: { brand: true, subCategory: { include: { category: true } } },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+    });
+    
+    // 2. Summary statistics using the MongoDB aggregation pipeline
+    const summaryPromise = prisma.sale.aggregateRaw({
+      pipeline: [
+        dateFilter,
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: { $multiply: ["$salePrice", "$qty"] } },
+            totalQuantity: { $sum: "$qty" },
+            totalSales: { $sum: 1 }
           },
         },
-        include: {
-          product: true,
+      ],
+    });
+
+    // 3. Daily sales breakdown
+    const dailySalesPromise = prisma.sale.aggregateRaw({
+      pipeline: [
+        dateFilter,
+        {
+          $group: {
+            _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            revenue: { $sum: { $multiply: ["$salePrice", "$qty"] } },
+            quantity: { $sum: "$qty" },
+            salesCount: { $sum: 1 },
+          },
         },
-      });
+        { $sort: { _id: 1 } },
+        { $project: { _id: 0, date: "$_id", revenue: 1, quantity: 1, salesCount: 1 } }
+      ],
+    });
 
-      // Sales summary
-      const totalSales = sales.length;
-      const totalRevenue = sales.reduce((sum, sale) => sum + (sale.salePrice * sale.qty), 0);
-      const totalQuantity = sales.reduce((sum, sale) => sum + sale.qty, 0);
-      const avgSalePrice = totalSales > 0 ? totalRevenue / totalQuantity : 0;
+    // 4. Top 10 products
+    const topProductsPromise = prisma.sale.aggregateRaw({
+      pipeline: [
+        dateFilter,
+        {
+          $group: {
+            _id: "$productId",
+            productName: { $first: "$productName" },
+            totalQty: { $sum: "$qty" },
+            revenue: { $sum: { $multiply: ["$salePrice", "$qty"] } },
+            salesCount: { $sum: 1 }
+          },
+        },
+        { $sort: { revenue: -1 } },
+        { $limit: 10 },
+      ],
+    });
 
-      // Top products
-      const productMap = new Map();
-      for (const sale of sales) {
-        const key = sale.productId;
-        if (!productMap.has(key)) {
-          productMap.set(key, {
-            name: sale.product?.name || '',
-            productCode: sale.product?.productCode || '',
-            salesCount: 0,
-            totalQty: 0,
-            revenue: 0,
-          });
-        }
-        const prod = productMap.get(key);
-        prod.salesCount += 1;
-        prod.totalQty += sale.qty;
-        prod.revenue += sale.salePrice * sale.qty;
-      }
-      const topProducts = Array.from(productMap.values())
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 10);
+    const [
+      sales, 
+      summaryResult,
+      dailySales,
+      topProducts,
+    ] = await Promise.all([
+      salesPromise,
+      summaryPromise,
+      dailySalesPromise,
+      topProductsPromise,
+    ]);
 
-      // Daily sales summary
-      const dailyMap = new Map();
-      for (const sale of sales) {
-        const day = sale.createdAt.toISOString().slice(0, 10); // YYYY-MM-DD
-        if (!dailyMap.has(day)) {
-          dailyMap.set(day, {
-            date: day,
-            salesCount: 0,
-            revenue: 0,
-            quantity: 0,
-          });
-        }
-        const daily = dailyMap.get(day);
-        daily.salesCount += 1;
-        daily.revenue += sale.salePrice * sale.qty;
-        daily.quantity += sale.qty;
-      }
-      const dailySales = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
-
-      // Map sales to the structure expected by the frontend
-      const mappedSales = sales.map(sale => {
-        const product = sale.product || {};
-        return {
-          date: sale.createdAt,
-          orderNumber: sale.orderNumber || '',
-          orderId: sale.orderId || '',
-          customerName: sale.customerName || '',
-          customerPhone: sale.customerPhone || '',
-          productName: sale.productName || product.name || '',
-          productCode: product.productCode || '',
-          category: product.subCategory?.category?.title || '',
-          subCategory: product.subCategory?.title || '',
-          brand: product.brand?.title || '',
-          quantity: sale.qty,
-          unitPrice: sale.salePrice,
-          revenue: sale.salePrice * sale.qty,
-          cost: (product.productCost || 0) * sale.qty,
-          profit: (sale.salePrice * sale.qty) - ((product.productCost || 0) * sale.qty),
-        };
-      });
-
-      const summary = {
-        totalSales,
-        totalRevenue,
-        totalQuantity,
-        avgSalePrice,
+    const summary: any = (summaryResult as any[])[0] || { totalRevenue: 0, totalQuantity: 0, totalSales: 0 };
+    const avgSalePrice = summary.totalQuantity > 0 ? summary.totalRevenue / summary.totalQuantity : 0;
+    const summaryData = { ...summary, avgSalePrice };
+    
+    const mappedSales = sales.map(sale => {
+      const product = sale.product || {};
+      const revenue = sale.salePrice * sale.qty;
+      const cost = (product.productCost || 0) * sale.qty;
+      return {
+        date: sale.createdAt,
+        orderNumber: sale.orderNumber || '',
+        orderId: sale.orderId || '',
+        customerName: sale.customerName || '',
+        customerPhone: sale.customerPhone || '',
+        productName: sale.productName || product.name || '',
+        productCode: product.productCode || '',
+        category: product.subCategory?.category?.title || '',
+        subCategory: product.subCategory?.title || '',
+        brand: product.brand?.title || '',
+        quantity: sale.qty,
+        unitPrice: sale.salePrice,
+        revenue: revenue,
+        cost: cost,
+        profit: revenue - cost,
       };
+    });
 
-      return NextResponse.json({
-        summary,
-        topProducts,
-        dailySales,
-        sales: mappedSales,
-        success: true,
-      });
-    } catch (error) {
-      console.error('Optimized sales data API error:', error);
-      return NextResponse.json({
-        summary: { totalSales: 0, totalRevenue: 0, totalQuantity: 0, avgSalePrice: 0 },
-        topProducts: [],
-        dailySales: [],
-        success: false,
-        error: 'Database timeout or error - please try a smaller date range',
-      }, { status: 200 });
-    }
-  }, 8000);
+    return NextResponse.json({
+      summary: summaryData,
+      topProducts,
+      dailySales,
+      sales: mappedSales,
+      success: true,
+    });
+  } catch (error) {
+    console.error('Production sales data API error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    return NextResponse.json({
+      summary: { totalSales: 0, totalRevenue: 0, totalQuantity: 0, avgSalePrice: 0 },
+      topProducts: [],
+      dailySales: [],
+      sales: [],
+      success: false,
+      error: `Database query failed: ${errorMessage}`,
+    }, { status: 500 });
+  }
 } 

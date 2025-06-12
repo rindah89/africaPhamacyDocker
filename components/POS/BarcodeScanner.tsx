@@ -66,9 +66,9 @@ const BarcodeScanner = forwardRef<BarcodeScannerRef, BarcodeScannerProps>(({
     initializeScanner();
 
     return () => {
-      if (codeReaderRef.current) {
-        codeReaderRef.current.reset();
-      }
+      // The reset logic is handled by the stopCameraScanning function,
+      // which is called in the main unmount effect.
+      // This prevents calling reset() on a non-active reader.
     };
   }, []);
 
@@ -160,7 +160,7 @@ const BarcodeScanner = forwardRef<BarcodeScannerRef, BarcodeScannerProps>(({
 
   // Stop camera scanning
   const stopCameraScanning = () => {
-    if (codeReaderRef.current) {
+    if (codeReaderRef.current && isCameraOpen) {
       codeReaderRef.current.reset();
     }
     

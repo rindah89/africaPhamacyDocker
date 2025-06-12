@@ -20,12 +20,12 @@ import { Loader2 } from "lucide-react";
 import { processPaymentAndOrder } from "@/actions/pos";
 
 interface ReceiptPrintProps {
-  setSuccess: (value: boolean) => void;
+  isOpen: boolean;
+  onClose: () => void;
   orderItems: OrderLineItem[];
   customerName: string;
   customerEmail: string;
   amountPaid: number;
-  onComplete?: () => void;
   orderData: any;
   customerData: any;
   orderNumber: string;
@@ -41,18 +41,19 @@ interface ReceiptPrintProps {
 }
 
 export default function ReceiptPrint2({ 
-  setSuccess, 
+  isOpen,
+  onClose,
   orderItems,
   customerName,
   customerEmail,
   amountPaid,
-  onComplete,
   orderData,
   customerData,
   orderNumber,
   insuranceData
 }: ReceiptPrintProps) {
   console.log('🧾 ReceiptPrint2 component rendering:', {
+    isOpen,
     hasItems: Boolean(orderItems?.length),
     customerName,
     amountPaid,
@@ -60,68 +61,22 @@ export default function ReceiptPrint2({
   });
 
   const componentRef = React.useRef<HTMLDivElement>(null);
-  const [isOpen, setIsOpen] = React.useState(false);
   const [isPrinting, setIsPrinting] = React.useState(false);
   const [hasPrinted, setHasPrinted] = React.useState(false);
-  const [isClosing, setIsClosing] = React.useState(false);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const dispatch = useAppDispatch();
-  const mountedRef = React.useRef(false);
-
+  
   const { currentDate, currentTime } = getCurrentDateAndTime();
   
-  // Validate required props on mount
+  // Reset state when the drawer is closed
   React.useEffect(() => {
-    console.log('🔍 Validating receipt props:', {
-      itemCount: orderItems?.length,
-      amountPaid,
-      isOpen,
-      hasPrinted,
-      mountCount: mountedRef.current
-    });
-
-    if (!orderItems?.length || typeof amountPaid !== 'number') {
-      console.error('❌ Invalid receipt props:', { 
-        itemCount: orderItems?.length, 
-        amountPaid,
-        type: typeof amountPaid
-      });
-      return;
-    }
-
-    // Short delay before opening to ensure clean mount
-    const timer = setTimeout(() => {
-      console.log('🔓 Opening receipt drawer');
-      setIsOpen(true);
-      setIsClosing(false);
-      setHasPrinted(false);
+    if (!isOpen) {
+      console.log('🧹 Resetting ReceiptPrint2 state as it is now closed.');
       setIsPrinting(false);
-    }, 50);
-
-    return () => {
-      clearTimeout(timer);
-      console.log('🧹 Receipt component cleanup');
-      mountedRef.current = false;
-    };
-  }, [orderItems, amountPaid, hasPrinted, isOpen]);
-
-  // Handle drawer state changes
-  const handleDrawerStateChange = React.useCallback((open: boolean) => {
-    console.log('Drawer state change requested:', { 
-      currentlyOpen: isOpen, 
-      requestedOpen: open,
-      isClosing,
-      hasPrinted,
-      mountCount: mountedRef.current
-    });
-    
-    if (!open && !isClosing) {
-      console.log('Preventing unauthorized drawer close');
-      return;
+      setHasPrinted(false);
+      setIsProcessing(false);
     }
-    
-    setIsOpen(open);
-  }, [isOpen, isClosing, hasPrinted]);
+  }, [isOpen]);
 
   const subTotal1 = orderItems.reduce(
     (total, item) => total + item.price * item.qty,
@@ -184,50 +139,28 @@ export default function ReceiptPrint2({
   });
 
   const handleClose = React.useCallback(() => {
-    console.log('🔒 Attempting to close receipt...', {
-      isPrinting,
-      hasPrinted,
-      isClosing,
-      isProcessing
-    });
+    console.log('🔒 Close requested from receipt...', { isPrinting, hasPrinted, isProcessing });
 
     if (isPrinting || isProcessing) {
       console.log('⚠️ Close prevented: Receipt is printing or processing');
       return;
     }
-
-    if (hasPrinted) {
-      console.log('✅ Closing receipt after successful print');
-      setIsClosing(true);
-      setIsOpen(false);
-      // Delay the cleanup to ensure drawer animation completes
-      setTimeout(() => {
-        dispatch(removeAllProductsFromOrderLine());
-        setSuccess(false);
-        onComplete?.();
-        console.log('🧹 Receipt cleanup completed');
-      }, 300);
+    
+    onClose();
+    
+  }, [isPrinting, isProcessing, hasPrinted, onClose]);
+  
+  const handleCancelSale = () => {
+    console.log('⚠️ Attempting to cancel sale without printing');
+    const shouldClose = window.confirm("Are you sure you want to cancel this sale? The order will be voided.");
+    if (shouldClose) {
+      console.log('❌ Sale cancelled by user, closing drawer.');
+      onClose();
     } else {
-      console.log('⚠️ Attempting to cancel sale without printing');
-      const shouldClose = window.confirm("Are you sure you want to cancel this sale? The order will be voided.");
-      if (shouldClose) {
-        console.log('❌ Sale cancelled by user');
-        setIsClosing(true);
-        setIsOpen(false);
-        // Delay the cleanup to ensure drawer animation completes
-        setTimeout(() => {
-          dispatch(removeAllProductsFromOrderLine());
-          setSuccess(false);
-          onComplete?.();
-          console.log('🧹 Receipt cleanup completed after cancellation');
-        }, 300);
-      } else {
-        console.log('↩️ Sale cancellation aborted by user');
-      }
+      console.log('↩️ Sale cancellation aborted by user');
     }
-  }, [isPrinting, hasPrinted, isClosing, isProcessing, dispatch, setSuccess, onComplete]);
+  };
 
-  // Don't render if no items
   if (!orderItems || orderItems.length === 0) {
     console.log('⚠️ Receipt not rendered: No items');
     return null;
@@ -236,7 +169,11 @@ export default function ReceiptPrint2({
   return (
     <Drawer 
       open={isOpen}
-      onOpenChange={handleDrawerStateChange}
+      onOpenChange={(open) => {
+        if (!open) {
+          handleClose();
+        }
+      }}
     >
       <DrawerContent>
         <DrawerHeader>
@@ -343,7 +280,7 @@ export default function ReceiptPrint2({
             <DrawerClose asChild>
               <Button 
                 variant="outline" 
-                onClick={handleClose}
+                onClick={hasPrinted ? handleClose : handleCancelSale}
                 disabled={isPrinting}
               >
                 {hasPrinted ? 'Close' : 'Cancel Sale'}

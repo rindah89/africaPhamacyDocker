@@ -96,6 +96,15 @@ export default function PointOfSale({
 
   );
 
+  
+
+  type SaleState = 'idle' | 'creating_order' | 'taking_payment' | 'payment_success';
+  const [saleState, setSaleState] = useState<SaleState>('idle');
+
+  useEffect(() => {
+    console.log(`[State Change] saleState is now: ${saleState}`);
+  }, [saleState]);
+
   const [selectedCustomer, setSelectedCustomer] = useState<Option>(
 
     initialCustomer ? { label: initialCustomer.label, value: initialCustomer.value } : { label: "", value: "" }
@@ -107,10 +116,6 @@ export default function PointOfSale({
   const [isSearching, setIsSearching] = useState(false);
 
   const [searchResults, setSearchResults] = useState(products);
-
-  const [processing, setProcessing] = useState(false);
-
-  const [success, setSuccess] = useState(false);
 
   const [orderNumber, setOrderNumber] = useState<string>("");
 
@@ -253,32 +258,34 @@ export default function PointOfSale({
 
 
   async function handleCreateOrder() {
-    console.log('Starting order creation...', {
-      selectedCustomer,
-      orderLineItems: orderLineItems.length
-    });
+    console.log(`[Create Order] Attempting... Current state: ${saleState}`);
+    if (saleState !== 'idle') {
+      console.warn(`[Create Order] Blocked: Not in 'idle' state.`);
+      return;
+    }
 
+    console.log('[Create Order] Validating prerequisites...');
     if (!selectedCustomer.value) {
-      console.log('No customer selected');
+      console.error('[Create Order] Failed: No customer selected.');
       toast.error("Please select a customer");
       return;
     }
 
-    setProcessing(true);
-    console.log('Starting order validation...');
+    console.log(`[Create Order] Transitioning state: idle -> creating_order`);
+    setSaleState('creating_order');
 
     const customer = customers.find(c => c.value === selectedCustomer.value);
     if (!customer) {
-      console.log('Selected customer not found', { selectedCustomer });
+      console.error(`[Create Order] Failed: Customer not found for ID ${selectedCustomer.value}`);
       toast.error("Selected customer not found");
-      setProcessing(false);
+      setSaleState('idle');
       return;
     }
 
     if (!orderLineItems || orderLineItems.length === 0) {
-      console.log('No items in order');
+      console.error('[Create Order] Failed: No items in order.');
       toast.error("Please add items to the order");
-      setProcessing(false);
+      setSaleState('idle');
       return;
     }
 
@@ -296,79 +303,59 @@ export default function PointOfSale({
     };
 
     try {
-      console.log('Validating order...', { customerData, newOrderData });
+      console.log('[Create Order] Calling validateOrder API...', { customerData, newOrderData });
       const validationResult = await validateOrder(newOrderData, customerData);
-      console.log('Validation result:', validationResult);
+      console.log('[Create Order] API Response:', validationResult);
 
       if (validationResult.success) {
         setOrderNumber(validationResult.orderNumber || '');
         setOrderData(newOrderData);
         setValidatedCustomerData(customerData);
-        setShowPaymentModal(true);
-        console.log('Order validated, showing payment modal', {
-          orderNumber: validationResult.orderNumber,
-          customerData,
-          newOrderData
-        });
+        console.log(`[Create Order] Success! Transitioning state: creating_order -> taking_payment`);
+        setSaleState('taking_payment');
         toast.success("Order validated successfully");
       } else {
-        console.error('Order validation failed:', validationResult.message);
+        console.error('[Create Order] API validation failed:', validationResult.message);
         toast.error(validationResult.message || "Order validation failed");
+        setSaleState('idle');
       }
     } catch (error: any) {
-      console.error("Order validation error:", error);
+      console.error('[Create Order] API call threw an error:', error);
       toast.error(error.message || "Failed to validate order");
-    } finally {
-      setProcessing(false);
+      setSaleState('idle');
     }
   }
 
   const handlePaymentComplete = async (result: any) => {
-    console.log('Payment completion handler called with result:', result);
-    
-    if (!result || typeof result.amountPaid !== 'number') {
-      console.error('Invalid payment result:', result);
-      toast.error('Payment processing error');
-      return;
+    console.log('[Payment Complete] Received result:', result);
+    if (result.success) {
+      console.log('[Payment Complete] Payment was successful. Preparing for receipt...');
+      setAmountPaid(result.amountPaid);
+      setOrderNumber(result.orderNumber);
+      setInsuranceData(result.insurance || null);
+      setReceiptKey(prev => prev + 1);
+      console.log(`[Payment Complete] Transitioning state: taking_payment -> payment_success`);
+      setSaleState('payment_success');
+    } else {
+      console.error('[Payment Complete] Payment failed. Resetting state.');
+      toast.error("Payment processing failed. Please try again.");
+      setSaleState('idle');
     }
-
-    if (!validatedCustomerData || !orderData) {
-      console.error('Missing order data:', { validatedCustomerData, orderData });
-      toast.error('Order data missing');
-      return;
-    }
-
-    // Set all required data before showing receipt
-    setAmountPaid(result.amountPaid);
-    setInsuranceData(result.insurance || null);
-    setShowPaymentModal(false);
-    setSuccess(true);
-    
-    console.log('Receipt data prepared:', {
-      amountPaid: result.amountPaid,
-      hasInsurance: !!result.insurance,
-      insuranceProvider: result.insurance?.providerName,
-      customerName: validatedCustomerData?.customerName,
-      orderItems: orderLineItems.length
-    });
   };
 
   function clearOrder() {
-    console.log('Clearing order state after receipt handling...', {
-      itemCount: orderLineItems.length,
-      orderNumber,
-      customerName: validatedCustomerData?.customerName
-    });
+    console.log(`[Clear Order] Clearing order state. Current state: ${saleState}`);
     dispatch(removeAllProductsFromOrderLine());
-    setSuccess(false);
+    setSaleState('idle');
     setOrderNumber('');
     setAmountPaid(0);
     setInsuranceData(null);
     setValidatedCustomerData(null);
     setOrderData(null);
-    console.log('Order state cleared successfully');
+    console.log('[Clear Order] Order state cleared. New state: idle');
   }
 
+  console.log(`[Render] Component rendering with state: ${saleState}`);
   return (
 
     <div className="grid grid-cols-12 divide-x-2 divide-gray-200">
@@ -676,43 +663,26 @@ export default function PointOfSale({
 
             </div>
 
-            {processing ? (
-
+            {saleState === 'creating_order' ? (
               <Button disabled className="w-full">
-
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-
                 Processing Please wait
-
               </Button>
-
             ) : (
-
-              <>
-
-                {!success && (
-
-                  <Button onClick={handleCreateOrder} className="w-full">
-
-                    Place Order
-
-                  </Button>
-
-                )}
-
-              </>
-
+              <Button onClick={handleCreateOrder} className="w-full" disabled={saleState !== 'idle'}>
+                Place Order
+              </Button>
             )}
 
           </div>
         )}
       </div>
 
-      {/* Receipt component with key-based mounting */}
-      {success && orderLineItems.length > 0 && (
+      {saleState === 'payment_success' && orderLineItems.length > 0 && (
         <ReceiptPrint2 
           key={receiptKey}
-          setSuccess={setSuccess}
+          isOpen={saleState === 'payment_success'}
+          onClose={clearOrder}
           orderItems={orderLineItems}
           customerName={validatedCustomerData?.customerName || ''}
           customerEmail={validatedCustomerData?.customerEmail || ''}
@@ -721,18 +691,14 @@ export default function PointOfSale({
           customerData={validatedCustomerData}
           orderNumber={orderNumber}
           insuranceData={insuranceData}
-          onComplete={() => {
-            console.log('Receipt handling completed, cleaning up...');
-            clearOrder();
-          }}
         />
       )}
 
       <PaymentModal
-        isOpen={showPaymentModal}
+        isOpen={saleState === 'taking_payment'}
         onClose={() => {
-          console.log('Payment modal closed without completion');
-          setShowPaymentModal(false);
+          console.log('[Payment Modal] Closed without completion.');
+          setSaleState('idle');
         }}
         totalAmount={subTotal}
         onPaymentComplete={handlePaymentComplete}
@@ -741,13 +707,12 @@ export default function PointOfSale({
         orderNumber={orderNumber}
       />
 
-      {/* Keyboard Shortcuts */}
       <KeyboardShortcuts
         onFocusBarcode={handleFocusBarcode}
         onFocusSearch={handleFocusSearch}
         onClearOrder={clearOrder}
         onPlaceOrder={handleCreateOrder}
-        canPlaceOrder={orderLineItems.length > 0 && !processing}
+        canPlaceOrder={orderLineItems.length > 0 && saleState === 'idle'}
       />
 
     </div>
