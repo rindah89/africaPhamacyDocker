@@ -9,6 +9,11 @@ export default async function PrintBarcodesLayout() {
           name: true,
           productCode: true,
           productPrice: true,
+          supplier: {
+            select: {
+              name: true,
+            }
+          }
         }
       }
     },

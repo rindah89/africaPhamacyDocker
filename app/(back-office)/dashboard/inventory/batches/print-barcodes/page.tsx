@@ -1,13 +1,17 @@
 'use client';
 
 import DataTable from "@/components/DataTableComponents/DataTable";
-import { columns } from "./columns";
+import { useBarcodeColumns } from "./columns";
 import { Button } from "@/components/ui/button";
 import BarcodeSheet from "@/components/dashboard/BarcodeSheet";
+import SelectedBatchesList from "@/components/dashboard/SelectedBatchesList";
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, X } from "lucide-react";
+import { Search, X, Trash2, Calendar } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useBarcodeSelection } from "@/hooks/use-barcode-selection";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 
 interface PrintBarcodesPageProps {
   batches: any[];
@@ -16,7 +20,8 @@ interface PrintBarcodesPageProps {
 type DatePreset = "lifetime" | "today" | "last7days" | "thismonth" | "thisyear" | "custom";
 
 export default function PrintBarcodesPage({ batches }: PrintBarcodesPageProps) {
-  const [selectedBatches, setSelectedBatches] = useState<any[]>([]);
+  const { selectedBatches, clearAllBatches, getTotalBarcodes } = useBarcodeSelection();
+  const columns = useBarcodeColumns();
   const [searchTerm, setSearchTerm] = useState("");
   const [datePreset, setDatePreset] = useState<DatePreset>("lifetime");
   
@@ -101,7 +106,8 @@ export default function PrintBarcodesPage({ batches }: PrintBarcodesPageProps) {
       filtered = filtered.filter(batch => 
         batch.product?.name?.toLowerCase().includes(searchLower) ||
         batch.batchNumber?.toLowerCase().includes(searchLower) ||
-        batch.product?.productCode?.toLowerCase().includes(searchLower)
+        batch.product?.productCode?.toLowerCase().includes(searchLower) ||
+        batch.product?.supplier?.name?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -118,33 +124,41 @@ export default function PrintBarcodesPage({ batches }: PrintBarcodesPageProps) {
         const toDate = new Date(expiryDateTo + "T23:59:59");
         if (expiryDate > toDate) return false;
       }
+      // If expiry date filters are set but batch has no expiry date, exclude it
+      if ((expiryDateFrom || expiryDateTo) && !batch.expiryDate) {
+        return false;
+      }
 
       // Delivery date filter
-      if (batch.deliveryDate) {
-        if (deliveryDateFrom) {
-          const deliveryDate = new Date(batch.deliveryDate);
-          const fromDate = new Date(deliveryDateFrom);
-          if (deliveryDate < fromDate) return false;
-        }
-        if (deliveryDateTo) {
-          const deliveryDate = new Date(batch.deliveryDate);
-          const toDate = new Date(deliveryDateTo + "T23:59:59");
-          if (deliveryDate > toDate) return false;
-        }
+      if (deliveryDateFrom && batch.deliveryDate) {
+        const deliveryDate = new Date(batch.deliveryDate);
+        const fromDate = new Date(deliveryDateFrom);
+        if (deliveryDate < fromDate) return false;
+      }
+      if (deliveryDateTo && batch.deliveryDate) {
+        const deliveryDate = new Date(batch.deliveryDate);
+        const toDate = new Date(deliveryDateTo + "T23:59:59");
+        if (deliveryDate > toDate) return false;
+      }
+      // If delivery date filters are set but batch has no delivery date, exclude it
+      if ((deliveryDateFrom || deliveryDateTo) && !batch.deliveryDate) {
+        return false;
       }
 
       // Created date filter
-      if (batch.createdAt) {
-        if (createdDateFrom) {
-          const createdDate = new Date(batch.createdAt);
-          const fromDate = new Date(createdDateFrom);
-          if (createdDate < fromDate) return false;
-        }
-        if (createdDateTo) {
-          const createdDate = new Date(batch.createdAt);
-          const toDate = new Date(createdDateTo + "T23:59:59");
-          if (createdDate > toDate) return false;
-        }
+      if (createdDateFrom && batch.createdAt) {
+        const createdDate = new Date(batch.createdAt);
+        const fromDate = new Date(createdDateFrom);
+        if (createdDate < fromDate) return false;
+      }
+      if (createdDateTo && batch.createdAt) {
+        const createdDate = new Date(batch.createdAt);
+        const toDate = new Date(createdDateTo + "T23:59:59");
+        if (createdDate > toDate) return false;
+      }
+      // If created date filters are set but batch has no created date, exclude it
+      if ((createdDateFrom || createdDateTo) && !batch.createdAt) {
+        return false;
       }
 
       return true;
@@ -174,70 +188,169 @@ export default function PrintBarcodesPage({ batches }: PrintBarcodesPageProps) {
     <div className="flex flex-col gap-4 p-4">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Print Batch Barcodes</h1>
-        <div className="text-sm text-muted-foreground">
-          {selectedBatches.length} batches selected
-          {hasActiveFilters && ` • ${filteredBatches.length} of ${batches.length} batches shown`}
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            {selectedBatches.length} batches selected
+            {hasActiveFilters && ` • ${filteredBatches.length} of ${batches.length} batches shown`}
+          </div>
+          {selectedBatches.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs">
+                {getTotalBarcodes()} total barcodes
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearAllBatches}
+                className="h-8 px-2 text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Clear All
+              </Button>
+            </div>
+          )}
         </div>
       </div>
       
-      {/* Custom Search and Filter Controls */}
-      <div className="flex items-center space-x-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search by product name, batch number, or product code..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+      {/* Search and Filter Controls */}
+      <div className="space-y-4">
+        {/* Search Bar */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search by product name, batch number, product code, or supplier..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          {searchTerm && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearSearch}
+              className="px-2"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+          
+          {/* Date Preset Selector */}
+          <Select value={datePreset} onValueChange={(value: DatePreset) => applyDatePreset(value)}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Time range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="lifetime">Life time</SelectItem>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="last7days">Last 7 days</SelectItem>
+              <SelectItem value="thismonth">This Month</SelectItem>
+              <SelectItem value="thisyear">This Year</SelectItem>
+              <SelectItem value="custom">Custom</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearAllFilters}
+            >
+              Clear All Filters
+            </Button>
+          )}
+        </div>
+
+        {/* Custom Date Filters */}
+        {datePreset === "custom" && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg bg-muted/30">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Expiry Date Range
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  type="date"
+                  value={expiryDateFrom}
+                  onChange={(e) => setExpiryDateFrom(e.target.value)}
+                  placeholder="From"
+                  className="text-sm"
+                />
+                <Input
+                  type="date"
+                  value={expiryDateTo}
+                  onChange={(e) => setExpiryDateTo(e.target.value)}
+                  placeholder="To"
+                  className="text-sm"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Delivery Date Range
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  type="date"
+                  value={deliveryDateFrom}
+                  onChange={(e) => setDeliveryDateFrom(e.target.value)}
+                  placeholder="From"
+                  className="text-sm"
+                />
+                <Input
+                  type="date"
+                  value={deliveryDateTo}
+                  onChange={(e) => setDeliveryDateTo(e.target.value)}
+                  placeholder="To"
+                  className="text-sm"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Created Date Range
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  type="date"
+                  value={createdDateFrom}
+                  onChange={(e) => setCreatedDateFrom(e.target.value)}
+                  placeholder="From"
+                  className="text-sm"
+                />
+                <Input
+                  type="date"
+                  value={createdDateTo}
+                  onChange={(e) => setCreatedDateTo(e.target.value)}
+                  placeholder="To"
+                  className="text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <DataTable
+            columns={columns}
+            data={filteredBatches}
+            initialSorting={[{ id: "expiryDate", desc: false }]}
+            hideSearch={true}
+            hideFilters={true}
           />
         </div>
-        {searchTerm && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClearSearch}
-            className="px-2"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        )}
-        
-        {/* Date Preset Selector */}
-        <Select value={datePreset} onValueChange={(value: DatePreset) => applyDatePreset(value)}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Time range" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="lifetime">Life time</SelectItem>
-            <SelectItem value="today">Today</SelectItem>
-            <SelectItem value="last7days">Last 7 days</SelectItem>
-            <SelectItem value="thismonth">This Month</SelectItem>
-            <SelectItem value="thisyear">This Year</SelectItem>
-            <SelectItem value="custom">Custom</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClearAllFilters}
-          >
-            Clear All
-          </Button>
-        )}
-      </div>
-      
-      <div className="flex flex-col gap-4">
-        <DataTable
-          columns={columns}
-          data={filteredBatches}
-          initialSorting={[{ id: "expiryDate", desc: false }]}
-          onSelectionChange={setSelectedBatches}
-          hideSearch={true}
-          hideFilters={true}
-        />
-        <BarcodeSheet selectedBatches={selectedBatches} />
+        <div className="space-y-4">
+          <SelectedBatchesList />
+          <BarcodeSheet selectedBatches={selectedBatches} clearAllBatches={clearAllBatches} />
+        </div>
       </div>
     </div>
   );

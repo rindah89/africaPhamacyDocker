@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import Barcode from 'react-barcode';
 import { format } from 'date-fns';
 import { formatMoney } from '@/lib/formatMoney';
+import { Trash2, Printer } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface BarcodeItemProps {
   productName: string;
@@ -97,9 +99,10 @@ const BarcodeItem = ({ productName, price, productCode, deliveryDate, supplierNa
 
 interface BarcodeSheetProps {
   selectedBatches: any[];
+  clearAllBatches?: () => void;
 }
 
-const BarcodeSheet = ({ selectedBatches }: BarcodeSheetProps) => {
+const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) => {
   const componentRef = React.useRef(null);
 
   const handlePrint = useReactToPrint({
@@ -116,6 +119,13 @@ const BarcodeSheet = ({ selectedBatches }: BarcodeSheetProps) => {
         }
       }
     `,
+    onAfterPrint: () => {
+      toast.success(`Successfully printed ${totalBarcodes} barcodes!`);
+      // Optionally clear all batches after successful printing
+      if (clearAllBatches) {
+        clearAllBatches();
+      }
+    },
   });
 
   // Calculate total number of barcodes
@@ -147,13 +157,26 @@ const BarcodeSheet = ({ selectedBatches }: BarcodeSheetProps) => {
 
   return (
     <div>
-      <Button 
-        onClick={handlePrint}
-        disabled={selectedBatches.length === 0}
-        className="mb-4"
-      >
-        Print {totalBarcodes} Barcodes
-      </Button>
+      <div className="flex items-center gap-2 mb-4">
+        <Button 
+          onClick={handlePrint}
+          disabled={selectedBatches.length === 0}
+          className="flex items-center gap-2"
+        >
+          <Printer className="h-4 w-4" />
+          Print {totalBarcodes} Barcodes
+        </Button>
+        {selectedBatches.length > 0 && clearAllBatches && (
+          <Button
+            variant="outline"
+            onClick={clearAllBatches}
+            className="flex items-center gap-2 text-destructive hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+            Clear All
+          </Button>
+        )}
+      </div>
 
       <div ref={componentRef}>
         <div className="flex flex-col" style={{ gap: '2mm' }}>
