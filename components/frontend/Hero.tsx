@@ -30,7 +30,7 @@ export default function Hero({ banners, adverts }: HeroProps) {
         >
           {banners.map((banner, i) => {
             return (
-              <Link key={i} href={banner.link} className="">
+              <Link key={i} href={banner.link} className="relative">
                 <Image
                   width={712}
                   height={384}
@@ -38,6 +38,12 @@ export default function Hero({ banners, adverts }: HeroProps) {
                   className="w-full"
                   alt={banner.title}
                 />
+                <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-start justify-center p-8 text-white">
+                  <h2 className="text-3xl font-bold mb-4">{banner.title}</h2>
+                  <button className="bg-white text-slate-800 px-6 py-2 rounded-full font-semibold hover:bg-opacity-90">
+                    Shop Now
+                  </button>
+                </div>
               </Link>
             );
           })}

@@ -83,30 +83,47 @@ async function HeroSection() {
 
 async function ProductSection() {
   const products = await getProducts();
+
+  const productSections = [
+    {
+      title: "Trending Products",
+      products: products.slice(0, 6),
+      cardType: "horizontal" as const,
+      className: "bg-slate-800 text-white border-b-0",
+      carousel: false,
+    },
+    {
+      title: "Sponsored Products",
+      products: products.slice(6, 12),
+      cardType: "vertical" as const,
+      className: "",
+      carousel: false,
+    },
+    {
+      title: "More Products",
+      products: products.slice(12),
+      cardType: "vertical" as const,
+      className: "bg-slate-800 text-white border-b-0",
+      carousel: true,
+    },
+  ];
+
   return (
-    <>
-      <ProductListing
-        title="Trending Products"
-        detailLink="#"
-        cardType="horizontal"
-        products={products.slice(0, 6)}
-        className="bg-slate-800 text-white border-b-0"
-      />
-      <ProductListing
-        title="Sponsored Products"
-        detailLink="#"
-        products={products.slice(6, 12)}
-        cardType="vertical"
-      />
-      <ProductListing
-        title="More Products"
-        detailLink="#"
-        products={products.slice(12)}
-        carousel
-        cardType="vertical"
-        className="bg-slate-800 text-white border-b-0"
-      />
-    </>
+    <div className="space-y-8">
+      {productSections
+        .filter((section) => section.products.length > 0)
+        .map((section, index) => (
+          <ProductListing
+            key={index}
+            title={section.title}
+            detailLink="#"
+            products={section.products}
+            cardType={section.cardType}
+            carousel={section.carousel}
+            className={section.className}
+          />
+        ))}
+    </div>
   );
 }
 
@@ -122,24 +139,36 @@ export default async function Home() {
         <Suspense fallback={<LoadingSection />}>
           <HeroSection />
         </Suspense>
-        
-        <div className="space-y-8 py-8">
+
+        <section className="py-12">
+          <h2 className="text-2xl font-bold text-center mb-8">
+            Shop by Category
+          </h2>
           <Suspense fallback={<LoadingSection />}>
             <CategoryListing />
           </Suspense>
+        </section>
 
+        <section className="py-12 bg-slate-50">
           <Suspense fallback={<LoadingSection />}>
             <ProductSection />
           </Suspense>
+        </section>
 
+        <section className="py-12">
           <Suspense fallback={<LoadingSection />}>
             <BrandSection />
           </Suspense>
+        </section>
 
+        <section className="py-12 bg-slate-50">
+          <h2 className="text-2xl font-bold text-center mb-8">
+            Recently Viewed
+          </h2>
           <Suspense fallback={<LoadingSection />}>
             <HistoryProductListing />
           </Suspense>
-        </div>
+        </section>
       </div>
     </main>
   );

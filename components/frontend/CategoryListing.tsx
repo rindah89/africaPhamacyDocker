@@ -17,7 +17,7 @@ export default async function CategoryListing() {
               return (
                 <Link
                   key={cat.id}
-                  className="flex items-center flex-col justify-center"
+                  className="flex items-center flex-col justify-center space-y-2 p-4 border rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300"
                   href={`/categories/${cat.slug}?type=cat`}
                 >
                   <Image
@@ -27,12 +27,7 @@ export default async function CategoryListing() {
                     src={cat.imageUrl ?? "/placeholder.svg"}
                     alt={cat.title}
                   />
-                  <span
-                    className={cn(
-                      "text-xs truncate",
-                      cat.title.length > 16 && "truncate-20"
-                    )}
-                  >
+                  <span className="text-xs text-center w-24 truncate">
                     {cat.title}
                   </span>
                 </Link>

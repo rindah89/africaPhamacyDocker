@@ -32,16 +32,16 @@ export default function BrandList({
             <Link
               href={`/brands/${brand.slug}?id=${brand.id}`}
               key={index}
-              className="text-center"
+              className="p-4 border rounded-lg shadow-sm hover:shadow-md hover:scale-105 transition-all duration-300 flex flex-col items-center justify-center space-y-2"
             >
               <Image
                 src={brand.logo ?? "/placeholder.svg"}
                 alt={brand.title}
                 width={200}
                 height={200}
-                className="h-24 object-cover rounded-md"
+                className="h-24 w-24 object-contain rounded-md"
               />
-              <h2>{brand.title}</h2>
+              <h2 className="text-center">{brand.title}</h2>
             </Link>
           );
         })}

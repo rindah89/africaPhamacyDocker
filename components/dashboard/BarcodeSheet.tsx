@@ -24,8 +24,10 @@ const BarcodeItem = ({ productName, price, productCode, deliveryDate, supplierNa
 
   return (
     <div 
-      className="w-[94px] p-0.5 text-center text-[6px] flex flex-col justify-between h-[37px] relative"
+      className="p-1 text-center flex flex-col justify-between relative"
       style={{
+        width: '52.5mm',
+        height: '21.1mm',
         border: '0.5px dotted #999',
         position: 'relative'
       }}
@@ -76,23 +78,36 @@ const BarcodeItem = ({ productName, price, productCode, deliveryDate, supplierNa
         }}
       />
       
-      <div className="mb-px font-semibold truncate leading-tight">{productName}</div>
-      <div className="mb-px truncate leading-tight">{supplierName || ''}</div>
-      <div className="flex items-center justify-between">
-        <div className="w-[65%]">
+      {/* Product name and supplier - top section */}
+      <div className="flex-shrink-0">
+        <div className="text-[7px] font-semibold truncate leading-tight mb-0.5">{productName}</div>
+        <div className="text-[6px] truncate leading-tight">{supplierName || ''}</div>
+      </div>
+      
+      {/* Barcode section - middle section with more space */}
+      <div className="flex-grow flex items-center justify-center">
+        <div className="w-full flex justify-center">
           <Barcode
             value={productCode}
-            width={0.4}
-            height={8}
-            fontSize={5}
-            margin={0}
-            displayValue={false}
-            textMargin={0}
+            width={1.2}
+            height={25}
+            fontSize={8}
+            margin={2}
+            displayValue={true}
+            textMargin={2}
+            font="monospace"
+            textAlign="center"
+            background="#ffffff"
+            lineColor="#000000"
           />
         </div>
-        <div className="w-[35%] text-right pr-0.5 text-[7px] leading-tight">{formatMoney(price)}</div>
       </div>
-      <div className="mt-px leading-tight">{formatDeliveryDate(deliveryDate, supplierName)}</div>
+      
+      {/* Price and delivery date - bottom section */}
+      <div className="flex-shrink-0 flex justify-between items-end">
+        <div className="text-[7px] font-bold">{formatMoney(price)}</div>
+        <div className="text-[6px] leading-tight">{formatDeliveryDate(deliveryDate, supplierName)}</div>
+      </div>
     </div>
   );
 };
@@ -139,20 +154,20 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
     }))
   );
 
-  // Create a grid of 27 rows x 7 columns
+  // Create a grid of 14 rows x 4 columns (new dimensions)
   const rows = [];
-  for (let i = 0; i < Math.min(barcodeItems.length, 27 * 7); i += 7) {
-    const row = barcodeItems.slice(i, i + 7);
-    // Pad each row to exactly 7 columns
-    while (row.length < 7) {
+  for (let i = 0; i < Math.min(barcodeItems.length, 14 * 4); i += 4) {
+    const row = barcodeItems.slice(i, i + 4);
+    // Pad each row to exactly 4 columns
+    while (row.length < 4) {
       row.push(null);
     }
     rows.push(row);
   }
 
-  // Pad with empty rows if needed to maintain 27 rows total
-  while (rows.length < 27) {
-    rows.push(Array(7).fill(null));
+  // Pad with empty rows if needed to maintain 14 rows total
+  while (rows.length < 14) {
+    rows.push(Array(4).fill(null));
   }
 
   return (
@@ -181,7 +196,7 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
       <div ref={componentRef}>
         <div className="flex flex-col" style={{ gap: '2mm' }}>
           {rows.map((row, rowIndex) => (
-            <div key={rowIndex} className="flex flex-row justify-between h-[37px]">
+            <div key={rowIndex} className="flex flex-row justify-between" style={{ height: '21.1mm' }}>
               {row.map((batch, colIndex) => (
                 batch ? (
                   <BarcodeItem
@@ -193,7 +208,7 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
                     supplierName={batch.product.supplier?.name}
                   />
                 ) : (
-                  <div key={`empty-${rowIndex}-${colIndex}`} className="w-[94px] h-[37px]" />
+                  <div key={`empty-${rowIndex}-${colIndex}`} style={{ width: '52.5mm', height: '21.1mm' }} />
                 )
               ))}
             </div>
