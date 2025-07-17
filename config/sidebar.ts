@@ -106,6 +106,11 @@ export const sidebarLinks: ISidebarLink[] = [
         access: "canViewProducts",
       },
       {
+        title: "Stock Analytics",
+        href: "/dashboard/inventory/stock-analytics",
+        access: "canViewStockAnalytics",
+      },
+      {
         title: "Suppliers",
         href: "/dashboard/inventory/suppliers",
         access: "canViewSuppliers",

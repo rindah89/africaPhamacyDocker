@@ -37,57 +37,35 @@ export default function POSLayout({ currentShift }: POSLayoutProps) {
   });
 
   const loadPOSData = async () => {
-    console.log("POS: Starting to load data");
     try {
       // Try to get cached products first
-      console.log("POS: Checking cache");
       const { products: cachedProducts, needsRefresh } = await getCachedProducts();
-      console.log("POS: Cache check result", { hasCachedProducts: !!cachedProducts, needsRefresh });
       
       let products: Product[] = [];
       if (cachedProducts && !needsRefresh) {
         products = cachedProducts;
-        console.log("POS: Using cached products", { count: products.length });
       } else {
         // If no cache or needs refresh, fetch from server
-        console.log("POS: Fetching fresh products");
         try {
           const freshProducts = await getAllProducts();
-          console.log("POS: Server response", { 
-            hasProducts: !!freshProducts, 
-            type: typeof freshProducts,
-            isArray: Array.isArray(freshProducts)
-          });
           
           if (freshProducts && Array.isArray(freshProducts)) {
             products = freshProducts;
-            console.log("POS: Got fresh products", { 
-              count: products.length,
-              sample: products[0]
-            });
             // Update cache with fresh data
             await cacheProducts(freshProducts);
-            console.log("POS: Updated cache with fresh products");
           } else {
-            console.error("POS: Invalid products data from server", freshProducts);
             throw new Error("Invalid products data from server");
           }
         } catch (fetchError) {
-          console.error("POS: Error fetching products:", fetchError);
           throw fetchError;
         }
       }
 
       // Always fetch categories and customers as they're typically smaller datasets
-      console.log("POS: Fetching categories and customers");
       const [categoriesData, customersData] = await Promise.all([
         getAllCategories(),
         getAllCustomers()
       ]) as [Category[] | null, ICustomer[] | null];
-
-      console.log("POS: Setting data", {
-        productsCount: products.length,
-        categoriesCount: categoriesData?.length || 0,
         customersCount: customersData?.length || 0,
         productsSample: products.slice(0, 2)
       });
@@ -102,7 +80,6 @@ export default function POSLayout({ currentShift }: POSLayoutProps) {
         }))
       });
     } catch (error) {
-      console.error("POS: Error loading data:", error);
       setError("Failed to load POS data: " + (error as Error).message);
     } finally {
       setLoading(false);

@@ -102,7 +102,7 @@ export default function PointOfSale({
   const [saleState, setSaleState] = useState<SaleState>('idle');
 
   useEffect(() => {
-    console.log(`[State Change] saleState is now: ${saleState}`);
+    // State change tracking
   }, [saleState]);
 
   const [selectedCustomer, setSelectedCustomer] = useState<Option>(
@@ -204,37 +204,16 @@ export default function PointOfSale({
   // Add debounced search function
 
   const handleSearch = async (query: string) => {
-
-    console.log('Search initiated with query:', query);
-
     setSearchQuery(query);
-
     
-
     if (!query.trim()) {
-
-      console.log('Empty query, resetting to all products');
-
       setSearchResults(products);
-
       return;
-
     }
 
-
-
     setIsSearching(true);
-
     try {
-
-      console.log('Calling searchPOSProducts with query:', query);
-
       const results = await searchPOSProducts(query);
-
-      console.log('Search results received:', results);
-
-      console.log('Number of results:', results?.length || 0);
-
       setSearchResults(results);
 
     } catch (error) {
@@ -258,20 +237,15 @@ export default function PointOfSale({
 
 
   async function handleCreateOrder() {
-    console.log(`[Create Order] Attempting... Current state: ${saleState}`);
     if (saleState !== 'idle') {
-      console.warn(`[Create Order] Blocked: Not in 'idle' state.`);
       return;
     }
 
-    console.log('[Create Order] Validating prerequisites...');
     if (!selectedCustomer.value) {
-      console.error('[Create Order] Failed: No customer selected.');
       toast.error("Please select a customer");
       return;
     }
 
-    console.log(`[Create Order] Transitioning state: idle -> creating_order`);
     setSaleState('creating_order');
 
     const customer = customers.find(c => c.value === selectedCustomer.value);

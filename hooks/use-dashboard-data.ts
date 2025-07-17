@@ -34,35 +34,20 @@ export const dashboardKeys = {
 
 // Enhanced hook for analytics data with React Query
 export function useAnalytics() {
-  console.log('🔍 useAnalytics - Hook called');
-  
   const query = useQuery({
     queryKey: ['analytics'],
     queryFn: async () => {
-      console.log('🔍 useAnalytics - Query function started');
-      console.log('🔍 useAnalytics - Fetching with smart cache...');
-      
       try {
         // Use smart cache wrapper
         const result = await withSmartCache(
           'analytics:overview',
           async () => {
-            console.log('🔍 useAnalytics - Cache miss, fetching from getAnalytics...');
             const analytics = await getAnalytics();
-            console.log('🔍 useAnalytics - getAnalytics result:', {
-              analytics,
-              analyticsType: typeof analytics,
-              analyticsLength: analytics?.length,
-              analyticsIsArray: Array.isArray(analytics),
-              analyticsData: analytics ? JSON.stringify(analytics, null, 2) : 'null'
-            });
             
             if (!analytics || analytics.length === 0) {
-              console.error('🔍 useAnalytics - No analytics data available');
               throw new Error('No analytics data available');
             }
             
-            console.log('🔍 useAnalytics - Returning analytics data:', analytics);
             return analytics;
           },
           { 
@@ -71,28 +56,14 @@ export function useAnalytics() {
           }
         );
         
-        console.log('🔍 useAnalytics - Smart cache result:', {
-          result,
-          resultType: typeof result,
-          resultLength: result?.length,
-          resultIsArray: Array.isArray(result)
-        });
-        
         return result;
       } catch (error) {
-        console.error('🔍 useAnalytics - Query function error:', error);
         throw error;
       }
     },
     staleTime: 10 * 60 * 1000, // 10 minutes stale time
     gcTime: 30 * 60 * 1000, // 30 minutes garbage collection
     retry: (failureCount, error) => {
-      console.log('🔍 useAnalytics - Retry logic:', {
-        failureCount,
-        error: error instanceof Error ? error.message : error,
-        willRetry: failureCount < 2 && !(error instanceof Error && error.message.includes('data available'))
-      });
-      
       // Only retry on network errors, not data errors
       if (error instanceof Error && error.message.includes('data available')) {
         return false;
@@ -102,17 +73,6 @@ export function useAnalytics() {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
   });
 
-  console.log('🔍 useAnalytics - Query state:', {
-    data: query.data,
-    dataType: typeof query.data,
-    dataLength: query.data?.length,
-    isLoading: query.isLoading,
-    error: query.error?.message,
-    isRefetching: query.isRefetching,
-    status: query.status,
-    fetchStatus: query.fetchStatus
-  });
-
   const result = {
     analytics: query.data as AnalyticsProps[] | undefined,
     loading: query.isLoading,
@@ -120,14 +80,6 @@ export function useAnalytics() {
     isRefetching: query.isRefetching,
     refetch: query.refetch,
   };
-
-  console.log('🔍 useAnalytics - Returning result:', {
-    analytics: result.analytics,
-    analyticsLength: result.analytics?.length,
-    loading: result.loading,
-    error: result.error,
-    isRefetching: result.isRefetching
-  });
 
   return result;
 }

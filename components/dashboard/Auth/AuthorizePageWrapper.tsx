@@ -16,9 +16,15 @@ export default async function AuthorizePageWrapper({
   requiredPermission,
 }: PageWrapperProps) {
   const session = await getServerSession(authOptions);
-  const userPermissions = session?.user?.role;
+  const userRole = session?.user?.role;
 
-  if (!userPermissions || !userPermissions[requiredPermission]) {
+  // If user role is NOT "customer", allow access to everything
+  if (userRole?.roleName !== "customer") {
+    return <>{children}</>;
+  }
+
+  // For customers, check specific permissions
+  if (!userRole || !userRole[requiredPermission]) {
     return <NotAuthorized />;
   }
 

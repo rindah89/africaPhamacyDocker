@@ -5,9 +5,7 @@ import { columns } from "./columns";
 import { getAllProductsNoLimit } from "@/actions/products";
 
 export default async function page() {
-  console.log('Products page: Starting to fetch products...');
   const products = (await getAllProductsNoLimit()) || [];
-  console.log('Products page: Products received:', products.length);
   
   return (
     <div>

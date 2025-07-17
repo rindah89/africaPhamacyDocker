@@ -173,14 +173,10 @@ export async function getAllProducts(page = 1, limit = 50) {
 
 export async function getAllProductsNoLimit() {
   try {
-    console.log('Fetching all products...');
-    
     // First, let's check if there are any products at all
     const count = await prisma.product.count();
-    console.log('Total number of products in database:', count);
 
     if (count === 0) {
-      console.log('No products found in the database');
       return [];
     }
 
@@ -197,15 +193,6 @@ export async function getAllProductsNoLimit() {
         }
       },
     });
-
-    console.log('Products fetched successfully:', products.length);
-    if (products.length > 0) {
-      console.log('Sample product:', {
-        id: products[0].id,
-        name: products[0].name,
-        stockQty: products[0].stockQty
-      });
-    }
 
     return products;
   } catch (error) {
@@ -2004,7 +1991,6 @@ export async function getProductsBySearchQuery(
 
 export async function getBestSellingProducts(productCount: number) {
   return withCache(cacheKeys.bestSellingProducts(productCount), async () => {
-    console.log(`Fetching ${productCount} best selling products - ULTRA OPTIMIZED`);
     try {
       // Use raw SQL for much better performance
       const bestSelling = await prisma.$queryRaw`
@@ -2048,10 +2034,8 @@ export async function getBestSellingProducts(productCount: number) {
         sales: [] // Empty array for compatibility
       }));
 
-      console.log(`Found ${result.length} best selling products via SQL`);
       return result;
     } catch (error) {
-      console.error("Error in optimized getBestSellingProducts:", error);
       // Fallback to simpler query if raw SQL fails
       try {
         const fallbackProducts = await prisma.product.findMany({
@@ -2074,7 +2058,6 @@ export async function getBestSellingProducts(productCount: number) {
         
         return fallbackProducts.map(p => ({ ...p, sales: [] }));
       } catch (fallbackError) {
-        console.error("Fallback query also failed:", fallbackError);
         return [];
       }
     }
@@ -2082,15 +2065,11 @@ export async function getBestSellingProducts(productCount: number) {
 }
 
 export async function searchPOSProducts(searchQuery: string) {
-  console.log('searchPOSProducts called with query:', searchQuery);
-  
   try {
     if (!searchQuery || searchQuery.trim() === '') {
-      console.log('Empty search query, returning empty array');
       return [];
     }
 
-    console.log('Building search query with filters');
     const searchConditions = {
       where: {
         AND: [
@@ -2123,16 +2102,10 @@ export async function searchPOSProducts(searchQuery: string) {
       take: 20  // Limit results for better performance
     };
 
-    console.log('Executing Prisma query with conditions:', JSON.stringify(searchConditions, null, 2));
     const products = await prisma.product.findMany(searchConditions);
-    
-    console.log(`Search complete. Found ${products.length} products`);
-    console.log('First product in results:', products[0]);
     
     return products;
   } catch (error) {
-    console.error("POS search error details:", error);
-    console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
     return [];
   }
 }

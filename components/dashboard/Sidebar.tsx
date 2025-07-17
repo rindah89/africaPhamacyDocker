@@ -24,6 +24,7 @@ import { filterLinks } from "@/lib/filterLinks";
 // import { signOut } from "next-auth/react"; // Commented out
 // import { NotificationMenu } from "../frontend/NotificationMenu"; // Commented out
 import { Notification } from "@prisma/client";
+import DebugSidebar from "./debug-sidebar";
 
 export default function Sidebar({
   session,
@@ -165,6 +166,7 @@ export default function Sidebar({
           </Button> */}
         </div>
       </div>
+      <DebugSidebar session={session} />
     </div>
   );
 }

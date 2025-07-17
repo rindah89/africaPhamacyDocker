@@ -57,10 +57,7 @@ export const getAnalytics = async () => {
   console.log('🔍 getAnalytics - Function called');
   
   return withCache(cacheKeys.analytics(), async () => {
-    console.log('🔍 getAnalytics - Cache miss, executing database queries');
-    
     return executeWithConnectionRetry(async () => {
-      console.log('🔍 getAnalytics - Starting ultra-resilient analytics fetch...');
       const now = new Date();
       const thirtyDaysAgo = subDays(now, 30);
 

@@ -55,23 +55,19 @@ function SalesContent({ searchParams }: { searchParams?: { limit?: string } }) {
   const fetchSales = useCallback(async () => {
     setIsLoading(true);
     setIsUsingFallback(false);
-    console.log(`FETCHING sales with limit: ${currentLimit} (client-side date filtering will apply)`);
     try {
       let result;
       try {
         result = await getAllSalesPaginated(1, currentLimit);
       } catch (mainError) {
-        console.warn("Main sales fetch failed, trying fallback:", mainError);
         result = await getAllSalesSimple(1, currentLimit);
         setIsUsingFallback(true);
       }
       
       setInitialSalesData(result?.sales || []);
       setTotalSalesCount(result?.totalCount || 0);
-      console.log(`FETCHED ${result?.sales?.length || 0} initial sales. Total count from server: ${result?.totalCount || 0}`);
 
     } catch (error) {
-      console.error("Error fetching sales in SalesContent:", error);
       setInitialSalesData([]);
       setTotalSalesCount(0);
     } finally {
@@ -80,14 +76,11 @@ function SalesContent({ searchParams }: { searchParams?: { limit?: string } }) {
   }, [currentLimit]);
 
   useEffect(() => {
-    console.log(`SalesContent: useEffect for fetchSales triggered due to currentLimit change.`);
     fetchSales();
   }, [fetchSales]);
 
   useEffect(() => {
-    console.log("SalesContent: Applying client-side date filter. DateRange:", dateRange, "Initial data length:", initialSalesData.length);
     if (!dateRange || (!dateRange.from && !dateRange.to)) {
-      console.log("Client filter: No date range, showing all initial data.");
       setDisplayedSales(initialSalesData);
     } else if (dateRange.from && dateRange.to) {
       const filtered = initialSalesData.filter(sale => {
@@ -96,7 +89,6 @@ function SalesContent({ searchParams }: { searchParams?: { limit?: string } }) {
         const rangeEnd = endOfDay(dateRange.to!);
         return isWithinInterval(saleDate, { start: rangeStart, end: rangeEnd });
       });
-      console.log(`Client filter: Applied. Filtered count: ${filtered.length}`);
       setDisplayedSales(filtered);
     } else if (dateRange.from) {
         const filtered = initialSalesData.filter(sale => {

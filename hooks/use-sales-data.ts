@@ -35,8 +35,6 @@ export function useSalesReport(dateRange: DateRange | undefined) {
       if (!dateRange?.from || !dateRange?.to) {
         throw new Error('Date range is required');
       }
-
-      console.log('Fetching sales report with optimized endpoint...');
       
       const params = new URLSearchParams({
         from: dateRange.from.toISOString(),

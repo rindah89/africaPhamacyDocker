@@ -7,11 +7,12 @@ import BarcodeSheet from "@/components/dashboard/BarcodeSheet";
 import SelectedBatchesList from "@/components/dashboard/SelectedBatchesList";
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
-import { Search, X, Trash2, Calendar } from "lucide-react";
+import { Search, X, Trash2, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useBarcodeSelection } from "@/hooks/use-barcode-selection";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface PrintBarcodesPageProps {
   batches: any[];
@@ -24,6 +25,7 @@ export default function PrintBarcodesPage({ batches }: PrintBarcodesPageProps) {
   const columns = useBarcodeColumns();
   const [searchTerm, setSearchTerm] = useState("");
   const [datePreset, setDatePreset] = useState<DatePreset>("lifetime");
+  const [showDateFilters, setShowDateFilters] = useState(false);
   
   // Date filters
   const [expiryDateFrom, setExpiryDateFrom] = useState("");
@@ -84,15 +86,23 @@ export default function PrintBarcodesPage({ batches }: PrintBarcodesPageProps) {
       setDeliveryDateTo("");
       setCreatedDateFrom("");
       setCreatedDateTo("");
+      setShowDateFilters(false);
     } else if (preset === "custom") {
-      // Keep current values, just switch to custom mode
+      // Show date filters for custom selection
+      setShowDateFilters(true);
     } else {
       const range = getDateRangeFromPreset(preset);
       if (range) {
-        // Apply to created date by default, but keep others if they were set
+        // Apply to created date by default for non-custom presets
         setCreatedDateFrom(range.from);
         setCreatedDateTo(range.to);
+        // Clear other date filters when using presets
+        setExpiryDateFrom("");
+        setExpiryDateTo("");
+        setDeliveryDateFrom("");
+        setDeliveryDateTo("");
       }
+      setShowDateFilters(false);
     }
   };
 
@@ -180,6 +190,7 @@ export default function PrintBarcodesPage({ batches }: PrintBarcodesPageProps) {
     setDeliveryDateTo("");
     setCreatedDateFrom("");
     setCreatedDateTo("");
+    setShowDateFilters(false);
   };
 
   const hasActiveFilters = searchTerm || expiryDateFrom || expiryDateTo || deliveryDateFrom || deliveryDateTo || createdDateFrom || createdDateTo;

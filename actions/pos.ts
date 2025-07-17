@@ -294,8 +294,6 @@ export async function processPaymentAndOrder(
           data: { stockQty: { decrement: item.qty } }
         });
 
-        console.log(`Updated product stock for ${item.name}`);
-
         // Calculate insurance amounts per item (proportional to item price)
         const itemTotal = item.price * item.qty;
         const itemInsuranceAmount = insuranceData 
@@ -339,7 +337,6 @@ export async function processPaymentAndOrder(
         });
 
         if (updatedProduct && updatedProduct.stockQty <= updatedProduct.alertQty) {
-          console.log(`⚠️ Low stock alert for ${updatedProduct.name}: ${updatedProduct.stockQty} units remaining`);
           await createNotification({
             message: updatedProduct.stockQty === 0
               ? `The stock of ${updatedProduct.name} is out. Current stock: ${updatedProduct.stockQty}.`
@@ -528,19 +525,23 @@ export async function createLineOrder(
 
 export async function getOrders() {
   try {
+    // Use a more efficient query without nested aggregation
     const allOrders = await prisma.lineOrder.findMany({
-      where: {
-        lineOrderItems: {
-          some: {} // Only fetch orders that have line items
-        }
-      },
       orderBy: {
         createdAt: "desc",
       },
-      take: 100, // Limit to 100 orders for better performance
-      include: {
+      take: 50, // Reduced from 100 for better performance
+      select: {
+        id: true,
+        ordernumber: true,
+        createdAt: true,
+        total: true,
+        customerId: true,
+        customerName: true,
+        customerEmail: true,
+        customerPhone: true,
         lineOrderItems: {
-          take: 5, // Limit line items per order
+          take: 3, // Reduced from 5 for better performance
           select: {
             id: true,
             productId: true,
@@ -552,7 +553,11 @@ export async function getOrders() {
         },
       },
     });
-    return allOrders;
+    
+    // Filter out orders with no line items after the fact (more efficient than nested query)
+    const ordersWithItems = allOrders.filter(order => order.lineOrderItems.length > 0);
+    
+    return ordersWithItems;
   } catch (error) {
     console.error("Error fetching orders:", error);
     throw new Error("Failed to fetch orders");
@@ -561,31 +566,45 @@ export async function getOrders() {
 
 export async function getRecentOrdersForDashboard(count: number = 5) {
   return withCache(cacheKeys.recentOrdersDashboard(count), async () => {
-    console.log(`Fetching ${count} recent orders for dashboard (MongoDB-safe)`);
-    // Only use the MongoDB-safe strategy: orders with limited line items
-    const orders = await prisma.lineOrder.findMany({
-      where: {
-        lineOrderItems: { some: {} }
-      },
-      orderBy: { createdAt: "desc" },
-      take: count,
-      include: {
-        lineOrderItems: {
-          take: 2, // Limit line items per order for performance
-          select: {
-            id: true,
-            name: true,
-            qty: true,
-            price: true
+    try {
+      // Use a more efficient query without nested aggregation
+      const orders = await prisma.lineOrder.findMany({
+        orderBy: { createdAt: "desc" },
+        take: Math.min(count * 2, 20), // Fetch extra to account for filtering
+        select: {
+          id: true,
+          ordernumber: true,
+          createdAt: true,
+          total: true,
+          customerName: true,
+          customerEmail: true,
+          lineOrderItems: {
+            take: 2, // Limit line items per order for performance
+            select: {
+              id: true,
+              name: true,
+              qty: true,
+              price: true
+            }
           }
         }
-      }
-    });
-    // Ensure lineOrderItems is always present (even if empty)
-    return orders.map(order => ({
-      ...order,
-      lineOrderItems: order.lineOrderItems || []
-    }));
+      });
+      
+      // Filter and limit after fetching (more efficient than nested where)
+      const ordersWithItems = orders
+        .filter(order => order.lineOrderItems.length > 0)
+        .slice(0, count);
+      
+      // Ensure lineOrderItems is always present (even if empty)
+      return ordersWithItems.map(order => ({
+        ...order,
+        lineOrderItems: order.lineOrderItems || []
+      }));
+    } catch (error) {
+      console.error("Error fetching recent orders for dashboard:", error);
+      // Return empty array as fallback to prevent UI breaking
+      return [];
+    }
   }, 5 * 60 * 1000);
 }
 

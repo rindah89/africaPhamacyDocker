@@ -153,6 +153,16 @@ model Product {
   supplierId    String          @db.ObjectId
   lineOrderItems LineOrderItem[]
   sales          Sale[]
+
+  @@index([name])
+  @@index([productCode])
+  @@index([stockQty])
+  @@index([status])
+  @@index([createdAt])
+  @@index([subCategoryId])
+  @@index([brandId])
+  @@index([stockQty, status])
+  @@index([name, status])
 }
 
 // New model for managing product batches
@@ -204,7 +214,8 @@ model Role {
   canViewAdverts   Boolean @default(false)
   canViewBanners   Boolean @default(false)
   canViewUnits   Boolean @default(false)
-  canViewProducts   Boolean @default(false)  
+  canViewProducts   Boolean @default(false)
+  canViewStockAnalytics Boolean @default(false)
   canViewSuppliers   Boolean @default(false)
   canViewInsurancePartners Boolean @default(false)
   createdAt DateTime @default(now())
@@ -249,6 +260,11 @@ model LineOrderItem {
   // Relationships
   product   Product   @relation(fields: [productId], references: [id])
   lineOrder LineOrder @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([createdAt])
+  @@index([orderId, productId])
 }
 
 enum OrderStatus {
@@ -275,6 +291,11 @@ model LineOrder {
   source String  @default("pos")
   status       OrderStatus @default(DELIVERED)
   paymentMethod PaymentMethod @default(NONE)
+
+  @@index([createdAt])
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt, status])
   
   // Insurance-related fields (optional for backwards compatibility)
   insuranceClaimId String? @db.ObjectId // Link to insurance claim if applicable
@@ -342,6 +363,13 @@ model Sale {
   product   Product   @relation(fields: [productId], references: [id])
   lineOrder LineOrder @relation(fields: [orderId], references: [id])
   insuranceClaim InsuranceClaim? @relation(fields: [insuranceClaimId], references: [id])
+
+  @@index([productId])
+  @@index([orderId])
+  @@index([createdAt])
+  @@index([productId, createdAt])
+  @@index([customerName])
+  @@index([orderNumber])
 }
 
 model Address {

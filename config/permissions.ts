@@ -80,10 +80,17 @@ export const permissions = [
     display: "Products",
     name: "canViewProducts",
   },
-  
+  {
+    display: "Stock Analytics",
+    name: "canViewStockAnalytics",
+  },
   {
     display: "Suppliers",
     name: "canViewSuppliers",
+  },
+  {
+    display: "Insurance Partners", 
+    name: "canViewInsurancePartners",
   },
 ];
 
@@ -109,7 +116,9 @@ export const permissionsObj = {
   canViewBanners: "canViewBanners",
   canViewUnits: "canViewUnits",
   canViewProducts: "canViewProducts",
+  canViewStockAnalytics: "canViewStockAnalytics",
   canViewSuppliers: "canViewSuppliers",
+  canViewInsurancePartners: "canViewInsurancePartners",
 } as const;
 
 export type PermissionKey = keyof typeof permissionsObj;

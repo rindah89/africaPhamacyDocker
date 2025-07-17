@@ -183,13 +183,12 @@ export async function getCustomers() {
     console.log(userIds);
     return customers as OrderCustomer[];
   } catch (error) {
-    console.log(error);
+    // Error handling
   }
 }
 
 export async function getRecentCustomersForDashboard(count: number = 5) {
   return withCache(cacheKeys.recentCustomersDashboard(count), async () => {
-    console.log(`Fetching ${count} recent unique customers for dashboard - SIMPLIFIED`);
     try {
       // Get recent orders - remove the problematic WHERE clause
       const recentOrders = await prisma.lineOrder.findMany({
@@ -281,7 +280,6 @@ export async function getRecentCustomersForDashboard(count: number = 5) {
         createdAt: customer.createdAt
       })) as OrderCustomer[];
 
-      console.log(`Returning ${result.length} recent customers for dashboard`);
       return result;
 
     } catch (error) {

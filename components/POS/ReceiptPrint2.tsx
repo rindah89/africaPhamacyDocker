@@ -191,7 +191,7 @@ export default function ReceiptPrint2({
               </DrawerTitle>
               <div className="flex flex-col items-center justify-center border-b pb-1">
                 <p className="text-[12px]">Bojongo - Douala</p>
-                <p className="text-[12px]">Tel: +237 675 708 688</p>
+                <p className="text-[12px]">Tel: +237 678 856 364 / +237 699 438 573</p>
               </div>
               <h1 className="uppercase tracking-widest text-center text-[14px] my-1">RECEIPT</h1>
               <div className="flex flex-col justify-center text-[10px] border-b pb-1">
