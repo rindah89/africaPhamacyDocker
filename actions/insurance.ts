@@ -417,4 +417,88 @@ export async function getInsuranceAnalytics() {
     console.error("Error fetching insurance analytics:", error);
     return { success: false, error: error.message };
   }
+}
+
+// Additional functions needed by components
+export async function getAllInsuranceProviders() {
+  try {
+    const providers = await prisma.insuranceProvider.findMany({
+      where: { status: true },
+      orderBy: { name: "asc" },
+    });
+    return providers;
+  } catch (error: any) {
+    console.error("Error fetching all insurance providers:", error);
+    return [];
+  }
+}
+
+export async function getInsuranceProviderById(id: string) {
+  try {
+    const provider = await prisma.insuranceProvider.findUnique({
+      where: { id },
+      include: {
+        claims: {
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        },
+        reports: {
+          orderBy: { createdAt: "desc" },
+          take: 5,
+        },
+      },
+    });
+    return provider;
+  } catch (error: any) {
+    console.error("Error fetching insurance provider by ID:", error);
+    return null;
+  }
+}
+
+export async function getInsuranceOrders() {
+  try {
+    const orders = await prisma.lineOrder.findMany({
+      where: {
+        insuranceClaimId: {
+          not: null,
+        },
+      },
+      include: {
+        insuranceClaim: {
+          include: {
+            provider: true,
+          },
+        },
+        lineOrderItems: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                productCode: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return orders;
+  } catch (error: any) {
+    console.error("Error fetching insurance orders:", error);
+    return [];
+  }
+}
+
+export async function updateInsuranceOrderStatus(orderId: string, status: string) {
+  try {
+    const order = await prisma.lineOrder.update({
+      where: { id: orderId },
+      data: { status: status as any },
+    });
+    revalidatePath("/dashboard/insurance/claims");
+    return { success: true, data: order };
+  } catch (error: any) {
+    console.error("Error updating insurance order status:", error);
+    return { success: false, error: error.message };
+  }
 } 

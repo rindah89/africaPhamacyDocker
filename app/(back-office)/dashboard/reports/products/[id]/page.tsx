@@ -20,8 +20,7 @@ import { Product } from "@prisma/client";
 import ProductContent from "@/components/frontend/ProductContent";
 import ShareProduct from "@/components/frontend/ShareProduct";
 import ProductReviewForm from "@/components/frontend/ProductReviewForm";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/config/authOptions";
+import { auth } from "@/auth";
 import { getProductReviews } from "@/actions/reviews";
 import { timeAgo } from "@/lib/timeAgo";
 import ReviewApproveBtn from "@/components/ReviewApproveBtn";
@@ -36,7 +35,7 @@ export default async function page({
 }: {
   params: { id: string };
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   const product = await getProductDetails(id);
   const productReviews = (await getProductReviews(product?.id ?? "")) || [];
   const breadcrumb: BreadcrumbProps[] = [

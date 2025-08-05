@@ -32,45 +32,78 @@ export const dashboardKeys = {
   liveData: () => [...dashboardKeys.all, 'live-data'] as const,
 };
 
-// Enhanced hook for analytics data with React Query
+// Enhanced hook for analytics data with React Query - Optimized for serverless
 export function useAnalytics() {
   const query = useQuery({
     queryKey: ['analytics'],
     queryFn: async () => {
       try {
-        // Use smart cache wrapper
-        const result = await withSmartCache(
-          'analytics:overview',
-          async () => {
-            const analytics = await getAnalytics();
-            
-            if (!analytics || analytics.length === 0) {
-              throw new Error('No analytics data available');
-            }
-            
-            return analytics;
-          },
-          { 
-            ttl: 15 * 60 * 1000, // 15 minutes
-            tags: ['analytics'] 
+        // Try fast mode first for initial loads
+        const fastResponse = await fetch('/api/dashboard/analytics?mode=fast', {
+          headers: {
+            'Cache-Control': 'max-age=300' // 5 minutes client cache
           }
-        );
+        });
+        
+        if (fastResponse.ok) {
+          const fastData = await fastResponse.json();
+          if (fastData.mode === 'fast' && fastData.summary) {
+            // Transform summary data to match expected format
+            return [{
+              title: "Total Sales (30 days)",
+              count: fastData.summary.totalSales || 0,
+              countUnit: "",
+              detailLink: "/dashboard/sales",
+              iconName: "BarChartHorizontal",
+            }, {
+              title: "Total Revenue",
+              count: fastData.summary.totalRevenue || 0,
+              countUnit: "",
+              detailLink: "/dashboard/sales",
+              iconName: "DollarSign",
+            }];
+          }
+        }
+        
+        // Fallback to full analytics with timeout protection
+        const response = await fetch('/api/dashboard/analytics', {
+          headers: {
+            'Cache-Control': 'max-age=600' // 10 minutes client cache
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Analytics API error: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        if (result.fallback && result.summary) {
+          console.warn('Using fallback analytics data due to timeout');
+          // Transform fallback data to expected format
+          return [{
+            title: "Total Sales (30 days)",
+            count: result.summary.totalSales || 0,
+            countUnit: "",
+            detailLink: "/dashboard/sales",
+            iconName: "BarChartHorizontal",
+          }];
+        }
+        
+        if (!result || result.length === 0) {
+          throw new Error('No analytics data available');
+        }
         
         return result;
       } catch (error) {
+        console.error('❌ Analytics fetch failed:', error);
         throw error;
       }
     },
-    staleTime: 10 * 60 * 1000, // 10 minutes stale time
-    gcTime: 30 * 60 * 1000, // 30 minutes garbage collection
-    retry: (failureCount, error) => {
-      // Only retry on network errors, not data errors
-      if (error instanceof Error && error.message.includes('data available')) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)
+    staleTime: 2 * 60 * 1000, // Consider data stale after 2 minutes for faster updates
+    gcTime: 10 * 60 * 1000, // Keep in garbage collection for 10 minutes
+    retry: 1, // Reduce retries for faster failure recovery
+    retryDelay: 1000, // Quick retry delay
   });
 
   const result = {

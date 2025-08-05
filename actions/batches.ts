@@ -1,6 +1,6 @@
 "use server";
 
-import { cache, withCache, cacheKeys, invalidateCache } from "@/lib/cache";
+import { cache, withCache } from "@/lib/cache";
 import prisma from "@/lib/db";
 
 export interface ProductBatch {
@@ -8,7 +8,7 @@ export interface ProductBatch {
   batchNumber: string;
   quantity: number;
   expiryDate: Date;
-  manufactureDate?: Date | null;
+  deliveryDate?: Date | null;
   costPerUnit: number;
   notes?: string | null;
   status: boolean;
@@ -49,8 +49,7 @@ export async function getAllBatches(): Promise<ProductBatch[]> {
           }
         });
 
-        // Filter out any batches with null products to prevent UI errors
-        return batches.filter(batch => batch.product !== null) as ProductBatch[];
+        return batches as ProductBatch[];
       },
       5 * 60 * 1000 // 5 minutes cache
     );
@@ -88,17 +87,10 @@ export async function getBatchesPaginated(
             skip,
             take: limit
           }),
-          prisma.productBatch.count({
-            where: {
-              product: {
-                isNot: null
-              }
-            }
-          })
+          prisma.productBatch.count()
         ]);
 
-        // Filter out any batches with null products
-        const validBatches = batches.filter(batch => batch.product !== null) as ProductBatch[];
+        const validBatches = batches as ProductBatch[];
         const hasMore = skip + validBatches.length < total;
 
         return {
@@ -129,9 +121,6 @@ export async function getExpiringBatches(days: number = 30): Promise<ProductBatc
               lte: futureDate
             },
             status: true,
-            product: {
-              isNot: null
-            }
           },
           include: {
             product: {
@@ -158,14 +147,26 @@ export async function getExpiringBatches(days: number = 30): Promise<ProductBatc
 
 export async function fixOrphanedBatches(): Promise<{ fixed: number; message: string }> {
   try {
-    // Find batches with null products
-    const orphanedBatches = await prisma.productBatch.findMany({
-      where: {
-        product: null
+    // Find batches where the referenced product doesn't exist
+    const allBatches = await prisma.productBatch.findMany({
+      select: {
+        id: true,
+        productId: true
       }
     });
 
-    if (orphanedBatches.length === 0) {
+    const allProducts = await prisma.product.findMany({
+      select: {
+        id: true
+      }
+    });
+
+    const productIds = new Set(allProducts.map(p => p.id));
+    const orphanedBatchIds = allBatches
+      .filter(batch => !productIds.has(batch.productId))
+      .map(batch => batch.id);
+
+    if (orphanedBatchIds.length === 0) {
       return {
         fixed: 0,
         message: "No orphaned batches found"
@@ -175,7 +176,9 @@ export async function fixOrphanedBatches(): Promise<{ fixed: number; message: st
     // Soft delete orphaned batches by setting status to false
     const result = await prisma.productBatch.updateMany({
       where: {
-        product: null
+        id: {
+          in: orphanedBatchIds
+        }
       },
       data: {
         status: false
@@ -183,7 +186,7 @@ export async function fixOrphanedBatches(): Promise<{ fixed: number; message: st
     });
 
     // Invalidate cache after fixing batches
-    invalidateBatchesCache();
+    await invalidateBatchesCache();
 
     return {
       fixed: result.count,
@@ -197,9 +200,9 @@ export async function fixOrphanedBatches(): Promise<{ fixed: number; message: st
 }
 
 // Cache invalidation helpers for batches
-export const invalidateBatchesCache = () => {
-  const keys = Array.from((cache as any).cache.keys());
-  keys.forEach(key => {
+export const invalidateBatchesCache = async () => {
+  const keys = Array.from((cache as any).cache.keys()) as string[];
+  keys.forEach((key: string) => {
     if (key.startsWith('batches:')) {
       cache.delete(key);
     }
@@ -207,7 +210,7 @@ export const invalidateBatchesCache = () => {
 };
 
 export const refreshBatchesData = async () => {
-  invalidateBatchesCache();
+  await invalidateBatchesCache();
   // Pre-warm cache with fresh data
   await getAllBatches();
 }; 

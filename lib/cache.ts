@@ -6,7 +6,7 @@ interface CacheItem<T> {
 
 class MemoryCache {
   private cache = new Map<string, CacheItem<any>>();
-  private defaultTTL = 10 * 60 * 1000; // 10 minutes default (increased from 5)
+  private defaultTTL = 15 * 60 * 1000; // 15 minutes default for serverless optimization
 
   set<T>(key: string, data: T, ttl?: number): void {
     const expiry = Date.now() + (ttl || this.defaultTTL);
@@ -165,6 +165,60 @@ export const invalidateCache = {
   },
   all: () => cache.clear()
 };
+
+// Fast cache wrapper for serverless optimization
+export async function fastCache<T>(
+  key: string,
+  fetchFn: () => Promise<T>,
+  ttl?: number
+): Promise<T> {
+  // Try to get from cache first
+  const cached = cache.get<T>(key);
+  if (cached !== null) {
+    return cached;
+  }
+
+  try {
+    // Fetch data with timeout
+    const data = await Promise.race([
+      fetchFn(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Fast cache timeout')), 10000)
+      )
+    ]);
+    
+    // Cache the result
+    cache.set(key, data, ttl);
+    return data;
+  } catch (error) {
+    // Return stale data if available during errors
+    const staleData = cache.get<T>(`${key}:stale`);
+    if (staleData !== null) {
+      console.warn('Returning stale data due to error:', error);
+      return staleData;
+    }
+    throw error;
+  }
+}
+
+// Background cache refresh for critical data
+export function backgroundRefresh<T>(
+  key: string,
+  fetchFn: () => Promise<T>,
+  ttl?: number
+) {
+  // Don't block, run in background
+  Promise.resolve().then(async () => {
+    try {
+      const data = await fetchFn();
+      cache.set(key, data, ttl);
+      // Keep stale backup
+      cache.set(`${key}:stale`, data, (ttl || 15 * 60 * 1000) * 2);
+    } catch (error) {
+      console.warn('Background refresh failed:', error);
+    }
+  });
+}
 
 // Cleanup expired cache items every 5 minutes (reduced from 10)
 if (typeof window === 'undefined') {

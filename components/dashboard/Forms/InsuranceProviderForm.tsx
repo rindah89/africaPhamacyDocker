@@ -9,8 +9,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import FormHeader from "@/components/dashboard/Layout/FormHeader";
-import FormFooter from "@/components/dashboard/Layout/FormFooter";
+import FormHeader from "@/components/dashboard/Forms/FormHeader";
+import FormFooter from "@/components/dashboard/Forms/FormFooter";
 import Select from "react-select";
 import { useRouter } from "next/navigation";
 import React, { ChangeEvent, useEffect, useState } from "react";

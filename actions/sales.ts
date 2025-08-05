@@ -1,6 +1,6 @@
 "use server";
 
-import prisma from "@/lib/db";
+import prisma, { withTimeout } from "@/lib/db";
 import { withCache, cacheKeys } from "@/lib/cache";
 import { ILineOrder } from "@/types/types";
 
@@ -209,16 +209,96 @@ export async function getSalesMinimal(page = 1, limit = 20) {
 
 export async function getOrderById(id: string) {
   try {
-    const order = await prisma.lineOrder.findUnique({
-      where: {
-        id,
-      },
-      include: {
-        lineOrderItems: true,
-      },
-    });
+    const order = await withTimeout(
+      prisma.lineOrder.findUnique({
+        where: {
+          id,
+        },
+        include: {
+          lineOrderItems: true,
+        },
+      }),
+      5000 // 5 second timeout
+    );
     return order as ILineOrder;
   } catch (error) {
     console.log(error);
   }
+}
+
+// Optimized function for MongoDB serverless - minimal data, fast queries
+export async function getSalesAnalyticsOptimized(limit = 20, offset = 0) {
+  return withCache(`sales:analytics:${limit}:${offset}`, async () => {
+    try {
+      // Use pipeline aggregation for maximum efficiency
+      const result = await withTimeout(
+        prisma.sale.findMany({
+          select: {
+            id: true,
+            qty: true,
+            salePrice: true,
+            productName: true,
+            customerName: true,
+            createdAt: true,
+            paymentMethod: true,
+          },
+          orderBy: {
+            createdAt: 'desc'
+          },
+          take: limit,
+          skip: offset,
+        }),
+        8000 // 8 second timeout
+      );
+      
+      return result;
+    } catch (error) {
+      console.error('Error in getSalesAnalyticsOptimized:', error);
+      // Return cached or empty result on timeout
+      return [];
+    }
+  }, 10 * 60 * 1000); // Cache for 10 minutes
+}
+
+// Fast analytics summary without complex joins
+export async function getSalesAnalyticsSummary() {
+  return withCache('sales:analytics:summary', async () => {
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      // Simple aggregation - no joins, minimal fields
+      const summary = await withTimeout(
+        prisma.sale.aggregate({
+          where: {
+            createdAt: {
+              gte: thirtyDaysAgo,
+            },
+          },
+          _count: { id: true },
+          _sum: { 
+            salePrice: true,
+            qty: true 
+          },
+        }),
+        6000 // 6 second timeout
+      );
+      
+      return {
+        totalSales: summary._count.id || 0,
+        totalRevenue: summary._sum.salePrice || 0,
+        totalQuantity: summary._sum.qty || 0,
+        period: '30 days'
+      };
+    } catch (error) {
+      console.error('Error in getSalesAnalyticsSummary:', error);
+      return {
+        totalSales: 0,
+        totalRevenue: 0,
+        totalQuantity: 0,
+        period: '30 days',
+        error: true
+      };
+    }
+  }, 15 * 60 * 1000); // Cache for 15 minutes
 }

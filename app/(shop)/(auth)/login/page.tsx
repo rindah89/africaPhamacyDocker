@@ -1,13 +1,12 @@
 import LoginForm from "@/components/frontend/LoginForm";
-import { authOptions } from "@/config/authOptions";
+import { auth } from "@/auth";
 import { Lock, Mail } from "lucide-react";
-import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import React from "react";
 
 export default async function page() {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (session) {
     redirect("/dashboard");
   }

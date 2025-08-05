@@ -1,6 +1,6 @@
 "use server";
 
-import prisma from "@/lib/db";
+import prisma, { withTimeout } from "@/lib/db";
 import {
   BarChartHorizontal,
   Combine,
@@ -67,30 +67,36 @@ export const getAnalytics = async () => {
       });
 
       // Use Promise.allSettled for better error handling - get what we can
-      console.log('🔍 getAnalytics - Starting parallel database queries...');
+      console.log('🔍 getAnalytics - Starting optimized parallel database queries...');
+      
+      // Use shorter timeouts and simpler queries for serverless
       const results = await Promise.allSettled([
-        // Optimized sales count - use aggregation
-        prisma.sale.aggregate({
-          where: {
-            createdAt: {
-              gte: thirtyDaysAgo,
-              lte: now,
+        // Ultra-fast sales aggregation with timeout
+        withTimeout(
+          prisma.sale.aggregate({
+            where: {
+              createdAt: {
+                gte: thirtyDaysAgo,
+              },
             },
-          },
-          _count: { id: true },
-          _sum: { salePrice: true }
-        }),
+            _count: { id: true },
+            _sum: { salePrice: true }
+          }),
+          8000 // 8 second timeout
+        ),
 
-        // Optimized orders count - simple count
-        prisma.lineOrder.count(),
+        // Fast counts with timeout
+        withTimeout(prisma.lineOrder.count(), 3000),
+        withTimeout(prisma.product.count(), 3000),
 
-        // Optimized products count - simple count
-        prisma.product.count(),
-
-        // Get sample data for verification
-        prisma.sale.findFirst({
-          select: { id: true, createdAt: true }
-        })
+        // Quick sample data check
+        withTimeout(
+          prisma.sale.findFirst({
+            select: { id: true, createdAt: true },
+            orderBy: { createdAt: 'desc' }
+          }),
+          2000
+        )
       ]);
 
       console.log('🔍 getAnalytics - Database queries completed:', {

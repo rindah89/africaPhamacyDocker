@@ -66,9 +66,6 @@ export default function POSLayout({ currentShift }: POSLayoutProps) {
         getAllCategories(),
         getAllCustomers()
       ]) as [Category[] | null, ICustomer[] | null];
-        customersCount: customersData?.length || 0,
-        productsSample: products.slice(0, 2)
-      });
 
       setData({
         products,

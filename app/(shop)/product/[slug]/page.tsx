@@ -19,8 +19,7 @@ import { Product } from "@prisma/client";
 import ProductContent from "@/components/frontend/ProductContent";
 import ShareProduct from "@/components/frontend/ShareProduct";
 import ProductReviewForm from "@/components/frontend/ProductReviewForm";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/config/authOptions";
+import { auth } from "@/auth";
 import {
   getApprovedProductReviews,
   getProductReviews,
@@ -72,7 +71,7 @@ export default async function page({
 }: {
   params: { slug: string };
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   const product = await getProductBySlug(slug);
   const productReviews =
     (await getApprovedProductReviews(product?.id ?? "")) || [];

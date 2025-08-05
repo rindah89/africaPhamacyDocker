@@ -1,7 +1,6 @@
 import Sidebar from "@/components/POS/Sidebar";
 import Navbar from "@/components/dashboard/Navbar";
-import { authOptions } from "@/config/authOptions";
-import { getServerSession } from "next-auth";
+import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import React, { ReactNode } from "react";
 import { Metadata } from "next";
@@ -17,7 +16,7 @@ export const metadata: Metadata = {
   },
 };
 export default async function Layout({ children }: { children: ReactNode }) {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session) {
     redirect("/login");
   }

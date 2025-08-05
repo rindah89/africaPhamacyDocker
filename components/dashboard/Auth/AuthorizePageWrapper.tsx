@@ -3,8 +3,7 @@ import React from "react";
 
 import NotAuthorized from "./NotAuthorized";
 import { PermissionKey, permissionsObj } from "@/config/permissions";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/config/authOptions";
+import { auth } from "@/auth";
 
 interface PageWrapperProps {
   children: React.ReactNode;
@@ -15,7 +14,7 @@ export default async function AuthorizePageWrapper({
   children,
   requiredPermission,
 }: PageWrapperProps) {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   const userRole = session?.user?.role;
 
   // If user role is NOT "customer", allow access to everything

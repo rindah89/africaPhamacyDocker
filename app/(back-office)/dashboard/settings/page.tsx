@@ -3,13 +3,12 @@ import AuthorizePageWrapper from "@/components/dashboard/Auth/AuthorizePageWrapp
 import { permissionsObj } from "@/config/permissions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UpdateProfile from "@/components/dashboard/Settings/UpdateProfile";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/config/authOptions";
+import { auth } from "@/auth";
 import UpdatePassword from "@/components/dashboard/Settings/UpdatePassword";
 import ChangePasswordForm from "@/components/frontend/ChangePasswordForm";
 
 export default async function page() {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   return (
     <AuthorizePageWrapper requiredPermission={permissionsObj.canViewSettings}>
       <div>

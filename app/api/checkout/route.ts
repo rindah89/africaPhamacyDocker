@@ -1,10 +1,9 @@
-import { authOptions } from "@/config/authOptions";
 import { CartItem } from "@/redux/slices/cartSlice";
-import { getServerSession } from "next-auth";
+import { auth } from "@/auth";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   const userId = session?.user.id;
 
   if (!userId) {
