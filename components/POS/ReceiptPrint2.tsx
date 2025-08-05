@@ -102,18 +102,35 @@ export default function ReceiptPrint2({
       setIsProcessing(true);
 
       try {
-        console.log('🔄 Processing order before print...');
-        const result = await processPaymentAndOrder(
+        console.log('🔄 Processing order before print...', {
           orderData,
           customerData,
           orderNumber,
           amountPaid,
-          insuranceData
+          hasInsurance: !!insuranceData
+        });
+        
+        // Add timeout to prevent indefinite hanging
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Order processing timeout after 30 seconds')), 30000)
         );
+        
+        const result = await Promise.race([
+          processPaymentAndOrder(
+            orderData,
+            customerData,
+            orderNumber,
+            amountPaid,
+            insuranceData
+          ),
+          timeoutPromise
+        ]);
 
         if (!result.success) {
           console.error('❌ Order processing failed:', result.message);
           toast.error(result.message || "Failed to process order");
+          setIsProcessing(false);
+          setIsPrinting(false);
           return Promise.reject(new Error(result.message));
         }
 
@@ -121,20 +138,35 @@ export default function ReceiptPrint2({
           orderId: result.order?.id,
           orderNumber: result.order?.orderNumber
         });
+        
+        // Mark as printed since order is successfully processed
+        setHasPrinted(true);
+        toast.success("Order processed successfully");
+        
         return Promise.resolve();
       } catch (error: any) {
         console.error('❌ Order processing error:', error);
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          orderData,
+          customerData
+        });
         toast.error(error.message || "Failed to process order");
+        setIsProcessing(false);
+        setIsPrinting(false);
         return Promise.reject(error);
       } finally {
         setIsProcessing(false);
       }
     },
     onAfterPrint: () => {
-      console.log('✅ Print completed successfully');
+      console.log('✅ Print dialog handled');
       setIsPrinting(false);
-      setHasPrinted(true);
-      toast.success("Receipt printed successfully");
+    },
+    onPrintError: (errorLocation, error) => {
+      console.error('❌ Print error:', errorLocation, error);
+      setIsPrinting(false);
     }
   });
 
@@ -158,6 +190,49 @@ export default function ReceiptPrint2({
       onClose();
     } else {
       console.log('↩️ Sale cancellation aborted by user');
+    }
+  };
+
+  const handleCompleteWithoutPrint = async () => {
+    console.log('💾 Completing sale without printing...');
+    setIsProcessing(true);
+
+    try {
+      console.log('🔄 Processing order without print...', {
+        orderData,
+        customerData,
+        orderNumber,
+        amountPaid,
+        hasInsurance: !!insuranceData
+      });
+      
+      const result = await processPaymentAndOrder(
+        orderData,
+        customerData,
+        orderNumber,
+        amountPaid,
+        insuranceData
+      );
+
+      if (!result.success) {
+        console.error('❌ Order processing failed:', result.message);
+        toast.error(result.message || "Failed to process order");
+        return;
+      }
+
+      console.log('✅ Order processed successfully without printing:', {
+        orderId: result.order?.id,
+        orderNumber: result.order?.orderNumber
+      });
+      
+      setHasPrinted(true);
+      toast.success("Sale completed successfully");
+      
+    } catch (error: any) {
+      console.error('❌ Order processing error:', error);
+      toast.error(error.message || "Failed to process order");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -262,30 +337,53 @@ export default function ReceiptPrint2({
             </div>
           </div>
           <DrawerFooter>
-            <Button 
-              onClick={handlePrint}
-              disabled={isPrinting}
-            >
-              {isPrinting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : hasPrinted ? (
-                'Print Again'
-              ) : (
-                'Print Receipt & Complete Sale'
-              )}
-            </Button>
-            <DrawerClose asChild>
-              <Button 
-                variant="outline" 
-                onClick={hasPrinted ? handleClose : handleCancelSale}
-                disabled={isPrinting}
-              >
-                {hasPrinted ? 'Close' : 'Cancel Sale'}
-              </Button>
-            </DrawerClose>
+            {!hasPrinted ? (
+              <>
+                <Button 
+                  onClick={handlePrint}
+                  disabled={isPrinting || isProcessing}
+                >
+                  {isPrinting || isProcessing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Print Receipt & Complete Sale'
+                  )}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleCompleteWithoutPrint}
+                  disabled={isPrinting || isProcessing}
+                >
+                  Complete Sale Without Printing
+                </Button>
+                <DrawerClose asChild>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleCancelSale}
+                    disabled={isPrinting || isProcessing}
+                  >
+                    Cancel Sale
+                  </Button>
+                </DrawerClose>
+              </>
+            ) : (
+              <>
+                <Button 
+                  onClick={() => window.print()}
+                  variant="secondary"
+                >
+                  Print Receipt
+                </Button>
+                <DrawerClose asChild>
+                  <Button onClick={handleClose}>
+                    Close
+                  </Button>
+                </DrawerClose>
+              </>
+            )}
           </DrawerFooter>
         </div>
       </DrawerContent>

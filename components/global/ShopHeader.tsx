@@ -20,7 +20,6 @@ import { useRouter } from "next/navigation";
 import ModeToggleButton from "./ModeToggleButton";
 import { HelpMenu } from "../frontend/HelpMenu";
 import { CartMenu } from "../frontend/CartMenu";
-import { AlignJustify } from "lucide-react";
 import { MobileMenu } from "../frontend/MobileMenu";
 import FrontendSearchBar from "../FrontendSearchBar";
 export type SearchProduct = {
@@ -65,22 +64,24 @@ export default function ShopHeader({
             <HelpMenu />
             {session && user && user?.id ? (
               <DropdownMenu>
-                <DropdownMenuTrigger className="cursor-pointer" asChild>
-                  <Avatar>
-                    <AvatarImage src={user.image ?? ""} alt={user.name ?? ""} />
-                    <AvatarFallback>{initials}</AvatarFallback>
-                  </Avatar>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={user.image ?? ""} alt={user.name ?? ""} />
+                      <AvatarFallback>{initials}</AvatarFallback>
+                    </Avatar>
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56">
                   <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  {user.role && user.role !== "CUSTOMER" && (
+                    <DropdownMenuItem>
+                      <Link href="/dashboard" className="w-full">Dashboard</Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem>
-                    <Link href="/dashboard">Dashboard</Link>
-                  </DropdownMenuItem>
-                  {/* <DropdownMenuItem>Billing</DropdownMenuItem> */}
-                  {/* <DropdownMenuItem>Team</DropdownMenuItem> */}
-                  <DropdownMenuItem>
-                    <button onClick={handleLogout}>Logout</button>
+                    <button onClick={handleLogout} className="w-full text-left">Sign out</button>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

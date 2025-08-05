@@ -34,9 +34,10 @@ async function POSContent({ cat }: { cat: string }) {
 export default async function POSPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const { cat = "all" } = searchParams;
+  const params = await searchParams;
+  const { cat = "all" } = params;
 
   return (
     <AuthorizePageWrapper requiredPermission={permissionsObj.canViewPos}>

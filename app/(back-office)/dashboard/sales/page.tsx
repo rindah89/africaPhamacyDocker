@@ -58,8 +58,12 @@ function SalesContent({ searchParams }: { searchParams?: { limit?: string } }) {
     try {
       let result;
       try {
+        console.log('Fetching sales with getAllSalesPaginated...');
         result = await getAllSalesPaginated(1, currentLimit);
+        console.log('Sales fetched successfully:', result);
       } catch (mainError) {
+        console.error('Error with getAllSalesPaginated:', mainError);
+        console.log('Falling back to getAllSalesSimple...');
         result = await getAllSalesSimple(1, currentLimit);
         setIsUsingFallback(true);
       }
@@ -68,6 +72,7 @@ function SalesContent({ searchParams }: { searchParams?: { limit?: string } }) {
       setTotalSalesCount(result?.totalCount || 0);
 
     } catch (error) {
+      console.error('Error fetching sales:', error);
       setInitialSalesData([]);
       setTotalSalesCount(0);
     } finally {
