@@ -66,6 +66,8 @@ export async function generateStaticParams() {
   }
 }
 
+export const dynamic = 'force-dynamic';
+
 export default async function page({
   params: { slug },
 }: {
@@ -106,8 +108,6 @@ export default async function page({
     product?.subCategoryId,
     product?.id
   );
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-  const url = `${baseUrl}/product/${slug}`;
 
   const averageRating =
     productReviews.reduce((acc, item) => acc + item.rating, 0) /
