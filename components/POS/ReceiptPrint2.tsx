@@ -89,7 +89,12 @@ export default function ReceiptPrint2({
   const changeFormatted = change.toLocaleString("fr-CM");
 
   const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
+    content: () => {
+      console.log('🖨️ Getting content for print, ref:', componentRef.current);
+      return componentRef.current;
+    },
+    documentTitle: `Receipt-${orderNumber}`,
+    removeAfterPrint: false,
     onBeforeGetContent: async () => {
       console.log('🖨️ Starting print process...', { isPrinting, hasPrinted });
       if (!orderItems || orderItems.length === 0) {
@@ -258,9 +263,9 @@ export default function ReceiptPrint2({
           </DrawerDescription>
         </DrawerHeader>
         <div className="mx-auto max-w-[300px]">
-          <div ref={componentRef}>
+          <div ref={componentRef} className="receipt-print-content" style={{ backgroundColor: 'white', color: 'black' }}>
             {/* Receipt content remains the same */}
-            <DrawerHeader className="p-2">
+            <DrawerHeader className="p-2" style={{ padding: '8px' }}>
               <DrawerTitle className="uppercase tracking-widest text-center text-[16px]">
                 KAREN PHARMACY 
               </DrawerTitle>
@@ -372,7 +377,54 @@ export default function ReceiptPrint2({
             ) : (
               <>
                 <Button 
-                  onClick={() => window.print()}
+                  onClick={() => {
+                    // Create a new window with just the receipt content
+                    const printWindow = window.open('', 'PRINT', 'height=600,width=400');
+                    if (printWindow && componentRef.current) {
+                      printWindow.document.write(`
+                        <html>
+                          <head>
+                            <title>Receipt ${orderNumber}</title>
+                            <style>
+                              body { 
+                                font-family: monospace; 
+                                margin: 0; 
+                                padding: 10px;
+                                font-size: 12px;
+                              }
+                              .text-center { text-align: center; }
+                              .font-bold { font-weight: bold; }
+                              .uppercase { text-transform: uppercase; }
+                              .border-b { border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 5px; }
+                              .flex { display: flex; }
+                              .justify-between { justify-content: space-between; }
+                              .mb-1 { margin-bottom: 4px; }
+                              .mb-2 { margin-bottom: 8px; }
+                              .mt-2 { margin-top: 8px; }
+                              .pt-2 { padding-top: 8px; }
+                              .pb-2 { padding-bottom: 8px; }
+                              .px-2 { padding-left: 8px; padding-right: 8px; }
+                              .mx-4 { margin-left: 16px; margin-right: 16px; }
+                              .text-[16px] { font-size: 16px; }
+                              .text-[14px] { font-size: 14px; }
+                              .text-[12px] { font-size: 12px; }
+                              .text-[10px] { font-size: 10px; }
+                              .text-[9px] { font-size: 9px; }
+                            </style>
+                          </head>
+                          <body>
+                            ${componentRef.current.innerHTML}
+                          </body>
+                        </html>
+                      `);
+                      printWindow.document.close();
+                      printWindow.focus();
+                      setTimeout(() => {
+                        printWindow.print();
+                        printWindow.close();
+                      }, 250);
+                    }
+                  }}
                   variant="secondary"
                 >
                   Print Receipt
