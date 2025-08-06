@@ -23,10 +23,11 @@ import { getCategoryById } from "@/actions/category";
 import { getAllMainCategories } from "@/actions/main-category";
 
 export default async function page({
-  params: { id },
+  params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const category = await getCategoryById(id);
   const allMainCategories = (await getAllMainCategories()) || [];
   const mainCategories = allMainCategories.map((item) => {

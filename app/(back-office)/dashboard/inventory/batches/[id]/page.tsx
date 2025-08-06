@@ -4,10 +4,11 @@ import prisma from "@/lib/db";
 import { notFound } from "next/navigation";
 
 export default async function EditBatchPage({
-  params: { id },
+  params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const [batch, products] = await Promise.all([
     prisma.productBatch.findUnique({
       where: { id },

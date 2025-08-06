@@ -33,10 +33,11 @@ export type BreadcrumbProps = {
 };
 
 export async function generateMetadata({
-  params: { slug },
+  params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
+  const { slug } = await params;
   const product = await getProductBySlug(slug);
   return {
     title: product?.name,
@@ -69,10 +70,11 @@ export async function generateStaticParams() {
 export const dynamic = 'force-dynamic';
 
 export default async function page({
-  params: { slug },
+  params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
+  const { slug } = await params;
   const session = await auth();
   const product = await getProductBySlug(slug);
   const productReviews =

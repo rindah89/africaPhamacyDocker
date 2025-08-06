@@ -89,10 +89,7 @@ export default function ReceiptPrint2({
   const changeFormatted = change.toLocaleString("fr-CM");
 
   const handlePrint = useReactToPrint({
-    content: () => {
-      console.log('🖨️ Getting content for print, ref:', componentRef.current);
-      return componentRef.current;
-    },
+    contentRef: componentRef,
     documentTitle: `Receipt-${orderNumber}`,
     removeAfterPrint: false,
     onBeforeGetContent: async () => {

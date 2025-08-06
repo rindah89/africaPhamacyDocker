@@ -35,7 +35,7 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
   const currentDate = convertIsoToDateString(order.createdAt);
   const componentRef = React.useRef(null);
   const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
+    contentRef: componentRef,
   });
 
   const getPaymentMethodDisplay = (method: string) => {

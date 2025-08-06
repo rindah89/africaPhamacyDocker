@@ -20,10 +20,11 @@ async function getAdjustmentById(id: string) {
 }
 
 export default async function UpdateAdjustmentPage({
-  params: { id },
+  params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const products = (await getAllProducts()) || [];
   const adjustment = await getAdjustmentById(id);
 

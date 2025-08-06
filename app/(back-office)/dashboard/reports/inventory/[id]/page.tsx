@@ -31,10 +31,11 @@ export type BreadcrumbProps = {
 };
 
 export default async function page({
-  params: { id },
+  params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const session = await auth();
   const product = await getProductDetails(id);
   const productReviews = (await getProductReviews(product?.id ?? "")) || [];

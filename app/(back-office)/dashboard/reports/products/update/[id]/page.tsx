@@ -7,10 +7,11 @@ import { getAllUnits } from "@/actions/unit";
 import ProductForm from "@/components/dashboard/Forms/ProductForm";
 
 export default async function page({
-  params: { id },
+  params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const product = await getProductById(id);
   const allSubCategories = (await getAllSubCategories()) || [];
   const allBrands = (await getAllBrands()) || [];

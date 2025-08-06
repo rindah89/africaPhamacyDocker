@@ -25,10 +25,11 @@ import { getBannerById } from "@/actions/banner";
 import BannerForm from "@/components/dashboard/Forms/BannerForm";
 
 export default async function page({
-  params: { id },
+  params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const banner = await getBannerById(id);
 
   return <BannerForm editingId={id} initialData={banner} />;

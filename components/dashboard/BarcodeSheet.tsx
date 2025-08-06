@@ -121,7 +121,7 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
   const componentRef = React.useRef(null);
 
   const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
+    contentRef: componentRef,
     pageStyle: `
       @page {
         size: A4;

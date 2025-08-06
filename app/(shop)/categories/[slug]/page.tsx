@@ -9,10 +9,11 @@ import Link from "next/link";
 import PriceRange from "@/components/frontend/PriceRange";
 import Paginate from "@/components/frontend/Paginate";
 export async function generateMetadata({
-  params: { slug },
+  params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
+  const { slug } = await params;
   const categoryName = slug.split("-").join(" ");
   // const product = await getProductBySlug(slug);
   return {
@@ -23,12 +24,13 @@ export async function generateMetadata({
   };
 }
 export default async function page({
-  params: { slug },
+  params,
   searchParams,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
+  const { slug } = await params;
   const { type, sort, min, max, page = 1 } = searchParams;
   console.log(min, max);
   const categoryName = slug.split("-").join(" ");

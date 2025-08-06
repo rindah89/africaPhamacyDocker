@@ -24,10 +24,11 @@ import { getBrandById } from "@/actions/brand";
 import BrandForm from "@/components/dashboard/Forms/BrandForm";
 
 export default async function page({
-  params: { id },
+  params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const brand = await getBrandById(id);
   return <BrandForm editingId={id} initialData={brand} />;
 }

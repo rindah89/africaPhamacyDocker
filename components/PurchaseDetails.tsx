@@ -34,7 +34,7 @@ export default function PurchaseDetails({
 }) {
   const componentRef = React.useRef(null);
   const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
+    contentRef: componentRef,
   });
   const items = purchase?.items;
   const supplier = purchase?.supplier;

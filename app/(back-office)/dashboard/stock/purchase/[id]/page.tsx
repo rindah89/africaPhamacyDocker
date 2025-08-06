@@ -27,10 +27,11 @@ import { IPurchaseOrder } from "@/types/types";
 import PurchaseDetails from "@/components/PurchaseDetails";
 
 export default async function page({
-  params: { id },
+  params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const purchase = await getPurchaseOrderById(id);
 
   return <PurchaseDetails purchase={purchase} />;

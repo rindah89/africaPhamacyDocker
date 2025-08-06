@@ -134,7 +134,7 @@ export default function ProductForm({
   
   const componentRef = useRef(null);
   const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
+    contentRef: componentRef,
   });
   // const productCode =watch("productCode")
   // console.log(productCode)

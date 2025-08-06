@@ -50,7 +50,7 @@ export default function ShiftReport({ open, onOpenChange, shift, sales }: ShiftR
   const reportRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
-    content: () => reportRef.current,
+    contentRef: reportRef,
   });
 
   // Calculate totals

@@ -11,10 +11,11 @@ import { BreadcrumbProps } from "../../product/[slug]/page";
 import { CustomBreadCrumb } from "@/components/frontend/CustomBreadCrumb";
 import { getAllBrands } from "@/actions/brand";
 export async function generateMetadata({
-  params: { slug },
+  params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
+  const { slug } = await params;
   const brandName = slug.split("-").join(" ");
   // const product = await getProductBySlug(slug);
   return {
@@ -39,12 +40,13 @@ export async function generateStaticParams() {
   }
 }
 export default async function page({
-  params: { slug },
+  params,
   searchParams,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
+  const { slug } = await params;
   const { id } = searchParams;
   const brandName = slug.split("-").join(" ");
   // Fetch Products by Brand Id

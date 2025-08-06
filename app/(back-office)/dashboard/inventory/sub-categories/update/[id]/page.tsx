@@ -3,10 +3,11 @@ import SubCategoryForm from "@/components/dashboard/Forms/SubCategoryForm";
 import { getSubCategoryById } from "@/actions/sub-category";
 
 export default async function page({
-  params: { id },
+  params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const subCategory = await getSubCategoryById(id);
   const allCategories = (await getAllCategories()) || [];
   const categories = allCategories.map((item) => {

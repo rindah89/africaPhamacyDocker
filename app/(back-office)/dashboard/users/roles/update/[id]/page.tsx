@@ -3,10 +3,11 @@ import { getRoleById } from "@/actions/roles";
 import RoleForm from "@/components/dashboard/Forms/RoleForm";
 
 export default async function page({
-  params: { id },
+  params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const role = await getRoleById(id);
   return <RoleForm editingId={id} initialData={role} />;
 }

@@ -7,10 +7,11 @@ import Link from "next/link";
 import { format } from "date-fns";
 
 export default async function ProductDetailsPage({
-  params: { id },
+  params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const product = await getProductById(id);
   const batches = await getProductBatches(id);
 

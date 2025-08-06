@@ -19,12 +19,13 @@ import Link from "next/link";
 import React from "react";
 
 export default async function page({
-  params: { id },
+  params,
   searchParams,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
   searchParams: { [key: string]: string | string[] | undefined };
 }) {
+  const { id } = await params;
   const pageSize = 2;
   const { page = 1 } = searchParams;
   const data = await getOrdersByCustomerId(id, Number(page), pageSize);

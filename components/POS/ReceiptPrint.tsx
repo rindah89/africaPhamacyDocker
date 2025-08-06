@@ -31,7 +31,7 @@ export function ReceiptPrint({ setSuccess }: { setSuccess: any }) {
   const dispatch = useAppDispatch();
 
   const handlePrint = useReactToPrint({
-    content: () => componentRef.current,
+    contentRef: componentRef,
     onBeforeGetContent: () => {
       if (!orderLineItems || orderLineItems.length === 0) {
         toast.error("No items to print");

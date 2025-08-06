@@ -24,10 +24,11 @@ import MainCategoryForm from "@/components/dashboard/Forms/MainCategoryForm";
 import { getMainCategoryById } from "@/actions/main-category";
 
 export default async function page({
-  params: { id },
+  params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const category = await getMainCategoryById(id);
   return <MainCategoryForm editingId={id} initialData={category} />;
 }
