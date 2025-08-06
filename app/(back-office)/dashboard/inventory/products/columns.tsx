@@ -72,7 +72,7 @@ export const columns: ColumnDef<IProduct>[] = [
     cell: ({ row }) => <StatusColumn row={row} accessorKey="status" />,
   },
   {
-    accessorKey: "subCategory",
+    accessorKey: "viewProduct",
     header: "View",
     cell: ({ row }) => {
       const product = row.original;
