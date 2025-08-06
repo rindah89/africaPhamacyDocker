@@ -33,9 +33,21 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
     0
   );
   const currentDate = convertIsoToDateString(order.createdAt);
-  const componentRef = React.useRef(null);
+  const componentRef = React.useRef<HTMLDivElement>(null);
+  
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
+    documentTitle: `Order-${order.orderNumber}`,
+    pageStyle: `
+      @page {
+        size: A4;
+        margin: 1cm;
+      }
+      @media print {
+        body { -webkit-print-color-adjust: exact; }
+        * { color: black !important; }
+      }
+    `,
   });
 
   const getPaymentMethodDisplay = (method: string) => {
@@ -69,17 +81,35 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
   };
 
   const handlePrintWithName = () => {
+    console.log('Print function:', handlePrint);
+    console.log('Component ref:', componentRef);
+    console.log('Component ref current:', componentRef.current);
+    
+    if (!handlePrint) {
+      console.error('handlePrint is undefined');
+      return;
+    }
+    
+    if (!componentRef.current) {
+      console.error('componentRef.current is null');
+      return;
+    }
+    
     setIsModalOpen(false);
-    handlePrint();
+    // Small delay to ensure modal is closed and DOM is updated
+    setTimeout(() => {
+      try {
+        handlePrint();
+      } catch (error) {
+        console.error('Error during print:', error);
+      }
+    }, 100);
   };
 
   return (
     <div className="max-w-5xl mx-auto p-8">
       <div className="max-w-2xl mx-auto">
-        <div
-          ref={componentRef}
-          className="relative mt-4 overflow-hidden bg-white dark:bg-slate-700 rounded-lg shadow"
-        >
+        <div className="relative mt-4 overflow-hidden bg-white dark:bg-slate-700 rounded-lg shadow">
           <div className="absolute top-4 right-4 print:hidden">
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogTrigger asChild>
@@ -109,7 +139,7 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
             </Dialog>
           </div>
 
-          <div className="px-4 py-6 sm:px-8 sm:py-10">
+          <div ref={componentRef} className="px-4 py-6 sm:px-8 sm:py-10 bg-white print:bg-white">
             <div className="-my-8 divide-y divide-gray-200">
               <div className="pt-16 pb-8 text-center sm:py-8">
                 <Logo />

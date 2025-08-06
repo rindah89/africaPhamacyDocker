@@ -118,10 +118,11 @@ interface BarcodeSheetProps {
 }
 
 const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) => {
-  const componentRef = React.useRef(null);
+  const componentRef = React.useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
+    documentTitle: 'Batch-Barcodes',
     pageStyle: `
       @page {
         size: A4;
@@ -131,6 +132,10 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
         body {
           margin: 0;
           padding: 0;
+          -webkit-print-color-adjust: exact;
+        }
+        * {
+          color: black !important;
         }
       }
     `,
@@ -193,7 +198,7 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
         )}
       </div>
 
-      <div ref={componentRef}>
+      <div ref={componentRef} className="bg-white print:bg-white">
         <div className="flex flex-col" style={{ gap: '2mm' }}>
           {rows.map((row, rowIndex) => (
             <div key={rowIndex} className="flex flex-row justify-between" style={{ height: '21.1mm' }}>
