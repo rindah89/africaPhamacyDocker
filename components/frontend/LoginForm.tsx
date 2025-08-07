@@ -60,6 +60,13 @@ export default function LoginForm() {
             Login in to your account
           </h2>
           <p className="text-xs">Welcome Back, fill in details to login</p>
+          <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+            <p className="font-semibold">Demo Credentials:</p>
+            <p>Admin: admin@pharmaciedouala.cm / Pharmacy@2024</p>
+            <p>Pharmacist: marie.ngo@pharmaciedouala.cm / Pharmacy@2024</p>
+            <p>Cashier: sandrine.fotso@pharmaciedouala.cm / Pharmacy@2024</p>
+            <p>Stock Manager: georges.essomba@pharmaciedouala.cm / Pharmacy@2024</p>
+          </div>
         </div>
       </div>
       <div className="">
@@ -103,6 +110,31 @@ export default function LoginForm() {
             Create Account
           </Link>
         </p>
+
+        {/* Demo Credentials Section */}
+        <div className="mt-6 p-4 bg-blue-50 dark:bg-gray-800 border border-blue-200 dark:border-gray-700 rounded-lg">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+            Demo Credentials
+          </h3>
+          <div className="space-y-2 text-xs">
+            <div className="flex flex-col gap-1">
+              <span className="font-medium text-gray-700 dark:text-gray-300">Admin:</span>
+              <span className="text-gray-600 dark:text-gray-400 break-all">admin@pharmaciedouala.cm / Pharmacy@2024</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="font-medium text-gray-700 dark:text-gray-300">Pharmacist:</span>
+              <span className="text-gray-600 dark:text-gray-400 break-all">marie.ngo@pharmaciedouala.cm / Pharmacy@2024</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="font-medium text-gray-700 dark:text-gray-300">Cashier:</span>
+              <span className="text-gray-600 dark:text-gray-400 break-all">sandrine.fotso@pharmaciedouala.cm / Pharmacy@2024</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="font-medium text-gray-700 dark:text-gray-300">Stock Manager:</span>
+              <span className="text-gray-600 dark:text-gray-400 break-all">georges.essomba@pharmaciedouala.cm / Pharmacy@2024</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

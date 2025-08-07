@@ -1,7 +1,10 @@
 {
-  "name": "karen-pharmacy",
+  "name": "Africa-pharmacy",
   "version": "0.1.0",
   "private": true,
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+  },
   "scripts": {
     "dev": "next dev",
     "email": "email dev",
@@ -51,12 +54,14 @@
     "@tanstack/react-table": "^8.16.0",
     "@tremor/react": "^3.16.1",
     "@types/bcrypt": "^5.0.2",
+    "@types/bcryptjs": "^2.4.6",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/uuid": "^10.0.0",
     "@uploadthing/react": "^6.5.1",
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.3",
     "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",

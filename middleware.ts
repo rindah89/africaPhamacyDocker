@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 const manifest = {
-  "name": "KP Bojongo",
+  "name": "AP Rail",
   "short_name": "KPB",
-  "description": "KP Bojongo Point of Sale and Inventory Management System",
+  "description": "AP Rail Point of Sale and Inventory Management System",
   "scope": "/",
   "icons": [
     {
@@ -46,7 +46,7 @@ export function middleware(request: NextRequest) {
   // Handle manifest requests
   if (request.nextUrl.pathname === '/site.webmanifest') {
     const baseUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://karenpharmacy.health' 
+      ? 'https://africapharmacy.health' 
       : request.nextUrl.origin
 
     // Replace all %PUBLIC_URL% with the actual base URL

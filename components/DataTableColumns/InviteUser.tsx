@@ -16,7 +16,7 @@ export default function InviteUser({ user }: { user: IUser }) {
         firstName: user.firstName,
         password: user.plainPassword ?? "",
         invitedByUsername: "JB WEB DEVELOPER",
-        invitedByEmail: "jb@Karen Pharmacy.com",
+        invitedByEmail: "jb@Africa Pharmacy.com",
         loginEmail: user.email,
         role: user.role.displayName,
         inviteLink: baseUrl,

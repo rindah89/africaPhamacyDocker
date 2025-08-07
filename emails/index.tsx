@@ -41,7 +41,7 @@ export const InviteEmailTemplate = ({
   role,
   inviteLink,
 }: InviteEmailTemplateProps) => {
-  const previewText = `Join Karen Pharmacy Inventory Management System as${role}`;
+  const previewText = `Join Africa Pharmacy Inventory Management System as${role}`;
 
   return (
     <Html>
@@ -52,10 +52,10 @@ export const InviteEmailTemplate = ({
           <Container className="border border-solid border-[#eaeaea] rounded my-[40px] mx-auto p-[20px] max-w-[465px]">
             <Section className="mt-[32px] flex items-center justify-center">
               {/* <Logo /> */}
-              <strong>Karen Pharmacy</strong> Inventory Management System
+              <strong>Africa Pharmacy</strong> Inventory Management System
             </Section>
             <Heading className="text-black text-[24px] font-normal text-center p-0 my-[30px] mx-0">
-              Welcome to <strong>Karen Pharmacy</strong> Inventory Management System
+              Welcome to <strong>Africa Pharmacy</strong> Inventory Management System
             </Heading>
             <Text className="text-black text-[14px] leading-[24px]">
               Hello {firstName},
@@ -68,7 +68,7 @@ export const InviteEmailTemplate = ({
               >
                 {invitedByEmail}
               </Link>
-              ) has invited you to join <strong>Karen Pharmacy</strong> as{" "}
+              ) has invited you to join <strong>Africa Pharmacy</strong> as{" "}
               <strong>{role}</strong>.
             </Text>
             <Text className="text-black text-[14px] leading-[24px]">

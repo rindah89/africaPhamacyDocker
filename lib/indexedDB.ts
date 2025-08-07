@@ -1,6 +1,6 @@
 import { openDB, IDBPDatabase } from 'idb';
 
-const DB_NAME = 'kpbojongo_pos';
+const DB_NAME = 'aprail_pos';
 const STORE_NAME = 'products';
 const DB_VERSION = 1;
 

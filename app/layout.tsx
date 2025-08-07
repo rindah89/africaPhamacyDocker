@@ -29,8 +29,8 @@ export const metadata: Metadata = {
   ],
   authors: [
     {
-      name: "Karen Pharmacy",
-      url: "https://Karen Pharmacy.com",
+      name: "Africa Pharmacy",
+      url: "https://Africa Pharmacy.com",
     },
   ],
   alternates: {
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
       "en-US": "/en-US",
     },
   },
-  creator: "Karen Pharmacy",
+  creator: "Africa Pharmacy",
   openGraph: {
     type: "website",
     locale: "en_US",

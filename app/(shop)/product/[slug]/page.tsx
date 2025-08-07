@@ -182,7 +182,7 @@ export default async function page({
                       </h3>
                       <p>
                         For details about in-store returns, please visit
-                        - Karen Pharmacy Return Policy
+                        - Africa Pharmacy Return Policy
                       </p>
                     </div>
                   </div>
