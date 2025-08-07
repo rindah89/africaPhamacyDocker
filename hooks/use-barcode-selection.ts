@@ -1,20 +1,5 @@
 import { useState, useEffect } from 'react';
-
-interface BarcodeBatch {
-  id: string;
-  quantity: number;
-  product: {
-    name: string;
-    productCode: string;
-    productPrice: number;
-    supplier?: {
-      name: string;
-    };
-  };
-  deliveryDate?: string | null;
-  batchNumber: string;
-  expiryDate?: string | null;
-}
+import { BarcodeBatch } from '@/types/batch';
 
 // Safely retrieve selected batches from localStorage
 const getInitialSelectedBatches = (): BarcodeBatch[] => {
@@ -22,7 +7,15 @@ const getInitialSelectedBatches = (): BarcodeBatch[] => {
     try {
       const storedBatches = localStorage.getItem("selectedBarcodeBatches");
       if (storedBatches) {
-        return JSON.parse(storedBatches);
+        const parsed = JSON.parse(storedBatches);
+        // Convert string dates back to Date objects
+        return parsed.map((batch: any) => ({
+          ...batch,
+          expiryDate: new Date(batch.expiryDate),
+          deliveryDate: batch.deliveryDate ? new Date(batch.deliveryDate) : null,
+          createdAt: new Date(batch.createdAt),
+          updatedAt: new Date(batch.updatedAt),
+        }));
       }
     } catch (error) {
       console.error("Failed to parse selected barcode batches from localStorage", error);

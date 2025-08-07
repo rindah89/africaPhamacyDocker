@@ -3,6 +3,7 @@
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import PrintBarcodesPage from './page';
+import { ProductBatch } from '@/types/batch';
 
 // Mock the custom hooks
 jest.mock('@/hooks/use-barcode-selection', () => ({
@@ -51,14 +52,19 @@ jest.mock('@/components/DataTableComponents/DataTable', () => {
 });
 
 describe('PrintBarcodesPage Filtering', () => {
-  const mockBatches = [
+  const mockBatches: ProductBatch[] = [
     {
       id: '1',
       batchNumber: 'BATCH001',
       quantity: 10,
-      expiryDate: '2024-12-31T00:00:00.000Z',
-      deliveryDate: '2024-01-15T00:00:00.000Z',
-      createdAt: '2024-01-01T00:00:00.000Z',
+      expiryDate: new Date('2024-12-31T00:00:00.000Z'),
+      deliveryDate: new Date('2024-01-15T00:00:00.000Z'),
+      createdAt: new Date('2024-01-01T00:00:00.000Z'),
+      costPerUnit: 80,
+      notes: null,
+      status: true,
+      updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+      productId: 'prod1',
       product: {
         name: 'Aspirin',
         productCode: 'ASP001',
@@ -72,9 +78,14 @@ describe('PrintBarcodesPage Filtering', () => {
       id: '2',
       batchNumber: 'BATCH002',
       quantity: 5,
-      expiryDate: '2024-06-30T00:00:00.000Z',
-      deliveryDate: '2024-02-01T00:00:00.000Z',
-      createdAt: '2024-02-01T00:00:00.000Z',
+      expiryDate: new Date('2024-06-30T00:00:00.000Z'),
+      deliveryDate: new Date('2024-02-01T00:00:00.000Z'),
+      createdAt: new Date('2024-02-01T00:00:00.000Z'),
+      costPerUnit: 40,
+      notes: null,
+      status: true,
+      updatedAt: new Date('2024-02-01T00:00:00.000Z'),
+      productId: 'prod2',
       product: {
         name: 'Paracetamol',
         productCode: 'PAR001',
@@ -88,9 +99,14 @@ describe('PrintBarcodesPage Filtering', () => {
       id: '3',
       batchNumber: 'BATCH003',
       quantity: 15,
-      expiryDate: '2024-03-31T00:00:00.000Z',
-      deliveryDate: '2024-03-01T00:00:00.000Z',
-      createdAt: '2024-03-01T00:00:00.000Z',
+      expiryDate: new Date('2024-03-31T00:00:00.000Z'),
+      deliveryDate: new Date('2024-03-01T00:00:00.000Z'),
+      createdAt: new Date('2024-03-01T00:00:00.000Z'),
+      costPerUnit: 60,
+      notes: null,
+      status: true,
+      updatedAt: new Date('2024-03-01T00:00:00.000Z'),
+      productId: 'prod3',
       product: {
         name: 'Ibuprofen',
         productCode: 'IBU001',

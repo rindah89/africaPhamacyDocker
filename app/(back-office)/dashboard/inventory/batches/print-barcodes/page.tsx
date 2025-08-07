@@ -13,10 +13,7 @@ import { useBarcodeSelection } from "@/hooks/use-barcode-selection";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-
-interface PrintBarcodesPageProps {
-  batches: any[];
-}
+import { PrintBarcodesPageProps } from "@/types/batch";
 
 type DatePreset = "lifetime" | "today" | "last7days" | "thismonth" | "thisyear" | "custom";
 

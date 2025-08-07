@@ -3,6 +3,7 @@
 
 import { renderHook, act } from '@testing-library/react';
 import { useBarcodeSelection } from './use-barcode-selection';
+import { BarcodeBatch } from '@/types/batch';
 
 // Mock localStorage
 const localStorageMock = {
@@ -32,13 +33,22 @@ describe('useBarcodeSelection', () => {
     const mockData = [
       {
         id: '1',
+        batchNumber: 'BATCH001',
         quantity: 5,
+        expiryDate: new Date('2024-12-31'),
+        deliveryDate: null,
+        costPerUnit: 80,
+        notes: null,
+        status: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        productId: 'prod1',
         product: {
           name: 'Test Product',
           productCode: 'TEST001',
           productPrice: 100,
+          supplier: null,
         },
-        batchNumber: 'BATCH001',
       }
     ];
     
@@ -56,13 +66,22 @@ describe('useBarcodeSelection', () => {
     
     const newBatch = {
       id: '1',
+      batchNumber: 'BATCH002',
       quantity: 3,
+      expiryDate: new Date('2024-12-31'),
+      deliveryDate: null,
+      costPerUnit: 40,
+      notes: null,
+      status: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      productId: 'prod1',
       product: {
         name: 'New Product',
         productCode: 'NEW001',
         productPrice: 50,
+        supplier: null,
       },
-      batchNumber: 'BATCH002',
     };
     
     act(() => {
@@ -78,18 +97,34 @@ describe('useBarcodeSelection', () => {
   });
 
   it('should remove a batch correctly', () => {
-    const mockData = [
+    const mockData: BarcodeBatch[] = [
       {
         id: '1',
-        quantity: 5,
-        product: { name: 'Product 1', productCode: 'P1', productPrice: 100 },
         batchNumber: 'B1',
+        quantity: 5,
+        expiryDate: new Date('2024-12-31'),
+        deliveryDate: null,
+        costPerUnit: 80,
+        notes: null,
+        status: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        productId: 'prod1',
+        product: { name: 'Product 1', productCode: 'P1', productPrice: 100, supplier: null },
       },
       {
         id: '2',
-        quantity: 3,
-        product: { name: 'Product 2', productCode: 'P2', productPrice: 200 },
         batchNumber: 'B2',
+        quantity: 3,
+        expiryDate: new Date('2024-12-31'),
+        deliveryDate: null,
+        costPerUnit: 150,
+        notes: null,
+        status: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        productId: 'prod2',
+        product: { name: 'Product 2', productCode: 'P2', productPrice: 200, supplier: null },
       }
     ];
     
@@ -106,12 +141,20 @@ describe('useBarcodeSelection', () => {
   });
 
   it('should clear all batches', () => {
-    const mockData = [
+    const mockData: BarcodeBatch[] = [
       {
         id: '1',
-        quantity: 5,
-        product: { name: 'Product 1', productCode: 'P1', productPrice: 100 },
         batchNumber: 'B1',
+        quantity: 5,
+        expiryDate: new Date('2024-12-31'),
+        deliveryDate: null,
+        costPerUnit: 80,
+        notes: null,
+        status: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        productId: 'prod1',
+        product: { name: 'Product 1', productCode: 'P1', productPrice: 100, supplier: null },
       }
     ];
     
@@ -131,18 +174,34 @@ describe('useBarcodeSelection', () => {
   });
 
   it('should calculate total barcodes correctly', () => {
-    const mockData = [
+    const mockData: BarcodeBatch[] = [
       {
         id: '1',
-        quantity: 5,
-        product: { name: 'Product 1', productCode: 'P1', productPrice: 100 },
         batchNumber: 'B1',
+        quantity: 5,
+        expiryDate: new Date('2024-12-31'),
+        deliveryDate: null,
+        costPerUnit: 80,
+        notes: null,
+        status: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        productId: 'prod1',
+        product: { name: 'Product 1', productCode: 'P1', productPrice: 100, supplier: null },
       },
       {
         id: '2',
-        quantity: 3,
-        product: { name: 'Product 2', productCode: 'P2', productPrice: 200 },
         batchNumber: 'B2',
+        quantity: 3,
+        expiryDate: new Date('2024-12-31'),
+        deliveryDate: null,
+        costPerUnit: 150,
+        notes: null,
+        status: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        productId: 'prod2',
+        product: { name: 'Product 2', productCode: 'P2', productPrice: 200, supplier: null },
       }
     ];
     

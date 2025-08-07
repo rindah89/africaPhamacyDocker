@@ -3,21 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useBarcodeSelection } from "@/hooks/use-barcode-selection";
-
-type ProductBatch = {
-  id: string;
-  batchNumber: string;
-  quantity: number;
-  product: {
-    name: string;
-    productCode: string;
-    productPrice: number;
-    supplier?: {
-      name: string;
-    };
-  };
-  deliveryDate?: string | null;
-};
+import { ProductBatch } from "@/types/batch";
 
 // Custom hook to create columns with selection functionality
 export const useBarcodeColumns = () => {
