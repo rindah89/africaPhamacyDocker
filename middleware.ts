@@ -45,9 +45,7 @@ const manifest = {
 export function middleware(request: NextRequest) {
   // Handle manifest requests
   if (request.nextUrl.pathname === '/site.webmanifest') {
-    const baseUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://africapharmacy.health' 
-      : request.nextUrl.origin
+    const baseUrl = request.nextUrl.origin
 
     // Replace all %PUBLIC_URL% with the actual base URL
     const processedManifest = JSON.stringify(manifest, null, 2)
