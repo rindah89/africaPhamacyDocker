@@ -25,7 +25,7 @@ export default function PasswordRest({ token = 596853 }: RestPasswordProps) {
         <Container style={container}>
           <Section style={coverSection}>
             <Section style={imageSection}>
-              <Heading style={heading}>Karen Pharmacy Password Reset</Heading>
+              <Heading style={heading}>Africa Pharmacy Password Reset</Heading>
             </Section>
             <Section style={upperSection}>
               <Heading style={h1}>Reset your Password with the Token</Heading>

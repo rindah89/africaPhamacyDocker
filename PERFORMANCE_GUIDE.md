@@ -1,6 +1,6 @@
 # 🚀 Performance Optimization Guide
 
-This guide outlines the performance optimizations implemented in your Karen Pharmacy application and provides recommendations for further improvements.
+This guide outlines the performance optimizations implemented in your Africa Pharmacy application and provides recommendations for further improvements.
 
 ## 📊 Current Optimizations Implemented
 

@@ -305,10 +305,10 @@ export default function ReceiptPrint2({
             {/* Receipt content remains the same */}
             <DrawerHeader className="p-2" style={{ padding: '8px' }}>
               <DrawerTitle className="uppercase tracking-widest text-center text-[16px]">
-                KAREN PHARMACY 
+                Africa PHARMACY 
               </DrawerTitle>
               <div className="flex flex-col items-center justify-center border-b pb-1">
-                <p className="text-[12px]">Bojongo - Douala</p>
+                <p className="text-[12px]">Rail - Douala</p>
                 <p className="text-[12px]">Tel: +237 678 856 364 / +237 699 438 573</p>
               </div>
               <h1 className="uppercase tracking-widest text-center text-[14px] my-1">RECEIPT</h1>

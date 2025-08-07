@@ -1,6 +1,6 @@
 # 📋 Orders Pagination Implementation Guide
 
-This guide explains the server-side pagination implementation for the orders page in your Karen Pharmacy application.
+This guide explains the server-side pagination implementation for the orders page in your Africa Pharmacy application.
 
 ## 🚀 Overview
 

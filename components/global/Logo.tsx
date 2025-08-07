@@ -35,7 +35,7 @@ export default function Logo({
       )}
     />
       </div>
-      {labelShown && <h2 className="text-xl font-semibold">Karen</h2>}
+      {labelShown && <h2 className="text-xl font-semibold">Africa</h2>}
     </Link>
   );
 }

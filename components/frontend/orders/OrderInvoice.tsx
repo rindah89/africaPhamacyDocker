@@ -382,14 +382,14 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
             <div className="page-break-avoid">
               <div className="invoice-header pt-16 pb-8 text-center sm:py-8">
                 <Logo />
-                <h1 className="invoice-title mt-4 text-2xl font-bold text-green-700">
-                  KAREN PHARMACY PURCHASE ORDER
+                <h1 className="mt-4 text-2xl font-bold text-green-700 dark:text-green-50">
+                  Africa PHARMACY PURCHASE ORDER
                 </h1>
                 <p className="company-info text-[10px] text-muted-foreground">
                   N0 4012/A/MINSANTE DU 09 JUIN 2024/ UIN: P095800234204H
                 </p>
-                <p className="company-info text-[10px] text-muted-foreground">
-                  Bojongo - Douala
+                <p className="text-[10px] text-muted-foreground">
+                  Rail - Douala
                 </p>
                 
                 <div className="order-details mt-6 text-left space-y-1">

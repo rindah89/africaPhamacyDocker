@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Add asset prefix for production
-  assetPrefix: process.env.NODE_ENV === 'production' ? 'https://karenpharmacy.health' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? 'https://africapharmacy.health' : '',
   
   // Experimental optimizations
   experimental: {
@@ -79,7 +79,7 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: "kpbojongo.com",
+        hostname: "aprail.com",
       },
     ],
     dangerouslyAllowSVG: true,

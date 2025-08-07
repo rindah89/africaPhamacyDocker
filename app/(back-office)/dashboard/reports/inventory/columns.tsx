@@ -17,21 +17,13 @@ declare module 'jspdf' {
 }
 
 export const exportToPDF = (data: IProduct[]) => {
-  try {
-    console.log("Starting PDF export with data:", data?.length || 0, "items");
-    
-    if (!data || data.length === 0) {
-      alert("No data to export");
-      return;
-    }
-    
-    const doc = new jsPDF();
-    
-    // Title and date
-    doc.setFontSize(16);
-    doc.text("Karen Pharmacy Inventory Report", 20, 20);
-    doc.setFontSize(10);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 30);
+  const doc = new jsPDF();
+  
+  // Title and date
+  doc.setFontSize(16);
+  doc.text("Africa Pharmacy Inventory Report", 20, 20);
+  doc.setFontSize(10);
+  doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 30);
 
   // Calculate inventory statistics
   const totalItems = data.reduce((sum, item) => sum + (item.stockQty || 0), 0);
@@ -96,12 +88,7 @@ export const exportToPDF = (data: IProduct[]) => {
     }
   });
 
-    doc.save("inventory-report.pdf");
-    console.log("PDF export completed successfully");
-  } catch (error) {
-    console.error("Error exporting PDF:", error);
-    alert("Failed to export PDF. Please check the console for details.");
-  }
+  doc.save("inventory-report.pdf");
 };
 
 export const columns: ColumnDef<any>[] = [

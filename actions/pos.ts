@@ -577,7 +577,7 @@ export async function getRecentOrdersForDashboard(count: number = 5) {
         take: Math.min(count * 2, 20), // Fetch extra to account for filtering
         select: {
           id: true,
-          ordernumber: true,
+          orderNumber: true,
           createdAt: true,
           total: true,
           customerName: true,

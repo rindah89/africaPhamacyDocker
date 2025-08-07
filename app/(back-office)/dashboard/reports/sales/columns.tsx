@@ -21,7 +21,7 @@ export const exportToPDF = (data: any[]) => {
   
   // Title and date
   doc.setFontSize(16);
-  doc.text("Karen Pharmacy Sales Report", 20, 20);
+  doc.text("Africa Pharmacy Sales Report", 20, 20);
   doc.setFontSize(10);
   doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 30);
 
