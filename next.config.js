@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Add asset prefix for production
-  assetPrefix: process.env.NODE_ENV === 'production' ? 'https://africapharmacy.health' : '',
+  // Remove hardcoded asset prefix - let Vercel handle this automatically
+  // assetPrefix: process.env.NODE_ENV === 'production' ? 'https://africapharmacy.health' : '',
   
   // Experimental optimizations
   experimental: {
