@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 export default function OrderInvoice({ order, readOnly = true }: { order: ILineOrder; readOnly?: boolean }) {
   const [customerName, setCustomerName] = useState(order.firstName || "");
@@ -44,10 +46,38 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
         margin: 1cm;
       }
       @media print {
-        body { -webkit-print-color-adjust: exact; }
-        * { color: black !important; }
+        body { 
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        * { 
+          color: black !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .dark * {
+          color: black !important;
+          background-color: white !important;
+        }
+        img {
+          max-width: 100%;
+          page-break-inside: avoid;
+        }
+        .print\\:hidden {
+          display: none !important;
+        }
+        .print\\:bg-white {
+          background-color: white !important;
+        }
       }
     `,
+    onBeforePrint: () => {
+      console.log("Preparing to print...");
+    },
+    onPrintError: (error) => {
+      console.error("Print error:", error);
+      alert("There was an error printing. Please try again.");
+    }
   });
 
   const getPaymentMethodDisplay = (method: string) => {
@@ -81,27 +111,51 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
   };
 
   const handlePrintWithName = () => {
-    console.log('Print function:', handlePrint);
-    console.log('Component ref:', componentRef);
-    console.log('Component ref current:', componentRef.current);
-    
-    if (!handlePrint) {
-      console.error('handlePrint is undefined');
-      return;
-    }
-    
-    if (!componentRef.current) {
-      console.error('componentRef.current is null');
-      return;
-    }
-    
     setIsModalOpen(false);
     // Small delay to ensure modal is closed and DOM is updated
     setTimeout(() => {
+      handlePrint();
+    }, 100);
+  };
+
+  const handleDownloadPDF = async () => {
+    setIsModalOpen(false);
+    
+    // Wait for modal to close
+    setTimeout(async () => {
       try {
-        handlePrint();
+        const element = componentRef.current;
+        if (!element) return;
+        
+        // Create canvas from the element
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        });
+        
+        // Create PDF
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+        const imgX = (pdfWidth - imgWidth * ratio) / 2;
+        const imgY = 10;
+        
+        pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+        pdf.save(`Order-${order.orderNumber}.pdf`);
       } catch (error) {
-        console.error('Error during print:', error);
+        console.error('Error generating PDF:', error);
+        alert('Error generating PDF. Please try printing instead.');
       }
     }, 100);
   };
@@ -131,19 +185,24 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
                       placeholder="Enter customer name"
                     />
                   </div>
-                  <Button onClick={handlePrintWithName}>
-                    Print Receipt
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button onClick={handlePrintWithName} className="flex-1">
+                      Print Receipt
+                    </Button>
+                    <Button onClick={handleDownloadPDF} variant="outline" className="flex-1">
+                      Download PDF
+                    </Button>
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>
           </div>
 
-          <div ref={componentRef} className="px-4 py-6 sm:px-8 sm:py-10 bg-white print:bg-white">
-            <div className="-my-8 divide-y divide-gray-200">
+          <div ref={componentRef} className="px-4 py-6 sm:px-8 sm:py-10 bg-white print:bg-white" style={{ backgroundColor: 'white', color: 'black' }}>
+            <div className="-my-8 divide-y divide-gray-200 print:divide-gray-200">
               <div className="pt-16 pb-8 text-center sm:py-8">
                 <Logo />
-                <h1 className="mt-4 text-2xl font-bold text-green-700 dark:text-green-50">
+                <h1 className="mt-4 text-2xl font-bold text-green-700 print:text-green-700">
                   KAREN PHARMACY PURCHASE ORDER
                 </h1>
                 <p className="text-[10px] text-muted-foreground">
@@ -154,13 +213,13 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
                 </p>
                 
                 <div className="mt-6 text-left space-y-1">
-                  <p className="text-sm font-normal text-gray-600 dark:text-slate-300">
+                  <p className="text-sm font-normal text-gray-600 print:text-gray-600">
                     <span className="font-semibold">Date:</span> {currentDate}
                   </p>
-                  <p className="text-sm font-normal text-gray-600 dark:text-slate-300">
+                  <p className="text-sm font-normal text-gray-600 print:text-gray-600">
                     <span className="font-semibold">REF: Bill</span> #{order.orderNumber}
                   </p>
-                  <p className="text-sm font-normal text-gray-600 dark:text-slate-300">
+                  <p className="text-sm font-normal text-gray-600 print:text-gray-600">
                     <span className="font-semibold">Client:</span> {customerName}
                   </p>
                 </div>
@@ -203,7 +262,7 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
                 </Table>
               </div>
               <div className="py-8">
-                <h2 className="text-xs font-bold tracking-widest text-gray-400 uppercase dark:text-gray-500">
+                <h2 className="text-xs font-bold tracking-widest text-gray-400 uppercase print:text-gray-600">
                   Order Items
                 </h2>
 
@@ -227,7 +286,7 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
                             </div>
 
                             <div className="flex flex-col justify-between ml-5 w-72">
-                              <p className="flex-1 text-sm font-medium text-gray-900 dark:text-gray-300 ">
+                              <p className="flex-1 text-sm font-medium text-gray-900 print:text-gray-900">
                                 {item.name}
                               </p>
                               <p className="text-[11px] font-medium text-gray-500">
@@ -237,7 +296,7 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
                           </div>
 
                           <div className="ml-auto">
-                            <p className="text-sm font-bold text-right text-gray-900 dark:text-gray-300">
+                            <p className="text-sm font-bold text-right text-gray-900 print:text-gray-900">
                               {(Number(item.price) * Number(item.qty))} FCFA
                             </p>
                           </div>

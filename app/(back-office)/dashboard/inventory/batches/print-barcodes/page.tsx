@@ -345,6 +345,11 @@ export default function PrintBarcodesPage({ batches }: PrintBarcodesPageProps) {
         )}
       </div>
       
+      {/* Print button for mobile - always visible at top */}
+      <div className="lg:hidden">
+        <BarcodeSheet selectedBatches={selectedBatches} clearAllBatches={clearAllBatches} />
+      </div>
+      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
           <DataTable
@@ -357,7 +362,10 @@ export default function PrintBarcodesPage({ batches }: PrintBarcodesPageProps) {
         </div>
         <div className="space-y-4">
           <SelectedBatchesList />
-          <BarcodeSheet selectedBatches={selectedBatches} clearAllBatches={clearAllBatches} />
+          {/* Print button for desktop - in sidebar */}
+          <div className="hidden lg:block">
+            <BarcodeSheet selectedBatches={selectedBatches} clearAllBatches={clearAllBatches} />
+          </div>
         </div>
       </div>
     </div>

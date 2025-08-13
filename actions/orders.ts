@@ -16,6 +16,8 @@ enum PaymentMethod {
 
 export async function getOrderById(id: string) {
   try {
+    console.log(`Fetching order with id: ${id}`);
+    
     const order = await prisma.lineOrder.findUnique({
       where: {
         id,
@@ -24,9 +26,17 @@ export async function getOrderById(id: string) {
         lineOrderItems: true,
       },
     });
+    
+    if (!order) {
+      console.log(`Order not found with id: ${id}`);
+      return null;
+    }
+    
+    console.log(`Order found: ${order.orderNumber}`);
     return order as ILineOrder;
   } catch (error) {
-    console.log(error);
+    console.error('Error fetching order:', error);
+    throw error;
   }
 }
 

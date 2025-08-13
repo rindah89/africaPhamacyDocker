@@ -177,14 +177,16 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 sticky top-0 bg-background z-10 py-2">
         <Button 
           onClick={handlePrint}
           disabled={selectedBatches.length === 0}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 w-full lg:w-auto"
+          variant={selectedBatches.length === 0 ? "outline" : "default"}
+          size="lg"
         >
           <Printer className="h-4 w-4" />
-          Print {totalBarcodes} Barcodes
+          {selectedBatches.length === 0 ? "Select batches to print" : `Print ${totalBarcodes} Barcodes`}
         </Button>
         {selectedBatches.length > 0 && clearAllBatches && (
           <Button
