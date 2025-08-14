@@ -750,8 +750,8 @@ export async function getAllOrdersSimple(page = 1, limit = 20) {
     
     const result = {
       orders: ordersWithLineItems,
-      totalCount: Math.round(totalCount * 0.8), // Estimate 80% have line items
-      totalPages: Math.ceil((totalCount * 0.8) / limit),
+      totalCount: totalCount, // Use actual count since all orders have line items
+      totalPages: Math.ceil(totalCount / limit),
       currentPage: page
     };
 
@@ -875,9 +875,8 @@ export async function getAllOrdersPaginated(page = 1, limit = 20) {
       // Step 4: Get total count
       const totalOrdersCount = await prisma.lineOrder.count();
       
-      // Estimate orders with line items based on current results
-      const estimatedPercentageWithItems = orders.length > 0 ? (ordersWithLineItems.length / orders.length) : 0.85;
-      const totalCount = Math.round(totalOrdersCount * estimatedPercentageWithItems);
+      // All orders have line items, use the full count
+      const totalCount = totalOrdersCount;
       const totalPages = Math.ceil(totalCount / limit);
 
       return {
@@ -897,23 +896,61 @@ export async function getAllOrdersPaginated(page = 1, limit = 20) {
             take: limit,
             orderBy: { createdAt: "desc" },
             select: {
+              // Core fields
               id: true,
-              orderNumber: true,
+              customerId: true,
               customerName: true,
+              orderNumber: true,
+              customerEmail: true,
+
+              // Order details
               orderAmount: true,
+              amountPaid: true,
+              orderType: true,
+              source: true,
               status: true,
+              paymentMethod: true,
+
+              // ECOMMERCE Personal Details
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+
+              // ECOMMERCE Shipping Details
+              streetAddress: true,
+              apartment: true,
+              city: true,
+              state: true,
+              country: true,
+              zipCode: true,
+
+              // Insurance-related fields
+              insuranceClaimId: true,
+              insuranceAmount: true,
+              customerPaidAmount: true,
+              insurancePercentage: true,
+              insuranceProviderName: true,
+              insurancePolicyNumber: true,
+
+              // Timestamps
               createdAt: true,
+              updatedAt: true,
+
+              // Relations (limited)
               lineOrderItems: {
                 select: {
                   id: true,
+                  orderId: true,
+                  productId: true,
                   name: true,
                   qty: true,
                   price: true,
                   productThumbnail: true,
                 },
-                take: 5
-              }
-            }
+                take: 5,
+              },
+            },
           });
           
           const ordersWithItemsFallback = fallbackOrders.filter(order => order.lineOrderItems.length > 0);
@@ -921,8 +958,8 @@ export async function getAllOrdersPaginated(page = 1, limit = 20) {
           
           return {
             orders: ordersWithItemsFallback,
-            totalCount: Math.round(totalCountFallback * 0.9), // Estimate 90% have line items
-            totalPages: Math.ceil((totalCountFallback * 0.9) / limit),
+            totalCount: totalCountFallback, // Use actual count since all orders have line items
+            totalPages: Math.ceil(totalCountFallback / limit),
             currentPage: page
           };
         } catch (fallbackError) {

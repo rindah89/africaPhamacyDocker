@@ -100,67 +100,14 @@ export default function ReceiptPrint2({
         return Promise.reject(new Error("No items to print"));
       }
 
-      setIsPrinting(true);
-      setIsProcessing(true);
-
-      try {
-        console.log('🔄 Processing order before print...', {
-          orderData,
-          customerData,
-          orderNumber,
-          amountPaid,
-          hasInsurance: !!insuranceData
-        });
-        
-        // Add timeout to prevent indefinite hanging
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Order processing timeout after 30 seconds')), 30000)
-        );
-        
-        const result = await Promise.race([
-          processPaymentAndOrder(
-            orderData,
-            customerData,
-            orderNumber,
-            amountPaid,
-            insuranceData
-          ),
-          timeoutPromise
-        ]);
-
-        if (!result.success) {
-          console.error('❌ Order processing failed:', result.message);
-          toast.error(result.message || "Failed to process order");
-          setIsProcessing(false);
-          setIsPrinting(false);
-          return Promise.reject(new Error(result.message));
-        }
-
-        console.log('✅ Order processed successfully:', {
-          orderId: result.order?.id,
-          orderNumber: result.order?.orderNumber
-        });
-        
-        // Mark as printed since order is successfully processed
-        setHasPrinted(true);
-        toast.success("Order processed successfully");
-        
-        return Promise.resolve();
-      } catch (error: any) {
-        console.error('❌ Order processing error:', error);
-        console.error('Error details:', {
-          message: error.message,
-          stack: error.stack,
-          orderData,
-          customerData
-        });
-        toast.error(error.message || "Failed to process order");
-        setIsProcessing(false);
-        setIsPrinting(false);
-        return Promise.reject(error);
-      } finally {
-        setIsProcessing(false);
+      if (!hasPrinted) {
+        console.error('❌ Order must be processed before printing');
+        toast.error("Please process the order first");
+        return Promise.reject(new Error("Order not processed"));
       }
+
+      setIsPrinting(true);
+      return Promise.resolve();
     },
     onAfterPrint: () => {
       console.log('✅ Print dialog handled');
@@ -195,12 +142,12 @@ export default function ReceiptPrint2({
     }
   };
 
-  const handleCompleteWithoutPrint = async () => {
-    console.log('💾 Completing sale without printing...');
+  const processOrder = async () => {
+    console.log('💾 Processing order...');
     setIsProcessing(true);
 
     try {
-      console.log('🔄 Processing order without print...', {
+      console.log('🔄 Processing order...', {
         orderData,
         customerData,
         orderNumber,
@@ -208,33 +155,76 @@ export default function ReceiptPrint2({
         hasInsurance: !!insuranceData
       });
       
-      const result = await processPaymentAndOrder(
-        orderData,
-        customerData,
-        orderNumber,
-        amountPaid,
-        insuranceData
+      // Add timeout to prevent indefinite hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Order processing timeout after 30 seconds')), 30000)
       );
+      
+      const result = await Promise.race([
+        processPaymentAndOrder(
+          orderData,
+          customerData,
+          orderNumber,
+          amountPaid,
+          insuranceData
+        ),
+        timeoutPromise
+      ]);
 
       if (!result.success) {
         console.error('❌ Order processing failed:', result.message);
         toast.error(result.message || "Failed to process order");
-        return;
+        setIsProcessing(false);
+        return false;
       }
 
-      console.log('✅ Order processed successfully without printing:', {
+      console.log('✅ Order processed successfully:', {
         orderId: result.order?.id,
         orderNumber: result.order?.orderNumber
       });
       
       setHasPrinted(true);
-      toast.success("Sale completed successfully");
-      
+      toast.success("Order processed successfully");
+      return true;
     } catch (error: any) {
       console.error('❌ Order processing error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        orderData,
+        customerData
+      });
       toast.error(error.message || "Failed to process order");
+      return false;
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handlePrintAndComplete = async () => {
+    if (!hasPrinted) {
+      const success = await processOrder();
+      if (success) {
+        handlePrint();
+      }
+    } else {
+      handlePrint();
+    }
+  };
+
+  const handleCompleteWithoutPrint = async () => {
+    console.log('💾 Completing sale without printing...');
+    
+    if (!hasPrinted) {
+      const success = await processOrder();
+      if (success) {
+        console.log('✅ Order processed successfully without printing');
+        setTimeout(() => {
+          onClose();
+        }, 1000);
+      }
+    } else {
+      onClose();
     }
   };
 
@@ -342,7 +332,7 @@ export default function ReceiptPrint2({
             {!hasPrinted ? (
               <>
                 <Button 
-                  onClick={handlePrint}
+                  onClick={handlePrintAndComplete}
                   disabled={isPrinting || isProcessing}
                 >
                   {isPrinting || isProcessing ? (

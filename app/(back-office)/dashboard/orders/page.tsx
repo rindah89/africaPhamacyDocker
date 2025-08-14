@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 import DataTable from "@/components/DataTableComponents/DataTable";
 import TableHeader from "@/components/dashboard/Tables/TableHeader";
 import React, { Suspense } from "react";
-import { columns } from "./columns";
+import { columns, OrderWithLineItems } from "./columns";
 import { getAllOrdersPaginated, getAllOrdersSimple } from "@/actions/pos";
 import Loading from "./loading";
 import Link from "next/link";
@@ -16,7 +16,7 @@ function LoadMoreButton({ totalCount, currentCount }: { totalCount: number; curr
   return (
     <div className="flex justify-center mt-6">
       <Link
-        href="/dashboard/orders?limit=50"
+        href={`/dashboard/orders?limit=${Math.min(currentCount + 100, 1000)}`}
         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
       >
         Load More Orders ({totalCount - currentCount} remaining)
@@ -29,9 +29,9 @@ async function OrdersContent({ searchParams }: { searchParams?: { limit?: string
   let paginatedResult = null;
   let isUsingFallback = false;
   
-  // Get limit from search params, default to 10 for initial load
-  const requestedLimit = searchParams?.limit ? parseInt(searchParams.limit) : 10;
-  const limit = Math.min(Math.max(requestedLimit, 1), 100); // Between 1 and 100 for performance
+  // Get limit from search params, default to 100 for initial load
+  const requestedLimit = searchParams?.limit ? parseInt(searchParams.limit) : 100;
+  const limit = Math.min(Math.max(requestedLimit, 1), 1000); // Allow up to 1000 orders
   
   try {
     try {
@@ -61,7 +61,7 @@ async function OrdersContent({ searchParams }: { searchParams?: { limit?: string
           model="order"
         />
         
-        <DataTable tableTitle="orders" columns={columns} data={orders} />
+        <DataTable<OrderWithLineItems, any> tableTitle="orders" columns={columns} data={orders as OrderWithLineItems[]} />
         
         <LoadMoreButton totalCount={paginatedResult?.totalCount || 0} currentCount={orders.length} />
       </>

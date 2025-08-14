@@ -18,7 +18,20 @@ import OrderStatusBtn from "@/components/frontend/orders/OrderStatusBtn";
 import FormattedAmount from "@/components/frontend/FormattedAmount";
 import PaymentMethodBtn from "@/components/frontend/orders/PaymentMethodBtn"; // Add this import
 
-export const columns: ColumnDef<LineOrder>[] = [
+// Define the type for orders with line items
+export type OrderWithLineItems = LineOrder & {
+  lineOrderItems?: Array<{
+    id: string;
+    orderId: string;
+    productId: string;
+    name: string;
+    qty: number;
+    price: number;
+    productThumbnail: string;
+  }>;
+};
+
+export const columns: ColumnDef<OrderWithLineItems>[] = [
   {
     id: "select",
     header: ({ table }) => (
