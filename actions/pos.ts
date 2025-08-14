@@ -157,7 +157,8 @@ export async function processPaymentAndOrder(
     customerName: customerData.customerName,
     itemCount: orderData.orderItems.length,
     totalAmount: orderData.orderAmount,
-    hasInsurance: !!insuranceData
+    hasInsurance: !!insuranceData,
+    environment: process.env.NODE_ENV
   });
 
   try {
@@ -348,6 +349,9 @@ export async function processPaymentAndOrder(
       }
 
       return newOrder;
+    }, {
+      maxWait: 30000, // 30 second max wait
+      timeout: 30000  // 30 second timeout
     });
 
     console.log('🎉 Order processing completed successfully:', {

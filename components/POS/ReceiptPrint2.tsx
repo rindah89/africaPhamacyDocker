@@ -160,16 +160,41 @@ export default function ReceiptPrint2({
         setTimeout(() => reject(new Error('Order processing timeout after 30 seconds')), 30000)
       );
       
-      const result = await Promise.race([
-        processPaymentAndOrder(
-          orderData,
-          customerData,
-          orderNumber,
-          amountPaid,
-          insuranceData
-        ),
-        timeoutPromise
-      ]);
+      // Use API route in production for better reliability
+      const useAPI = process.env.NODE_ENV === 'production' || true; // Force API usage
+      
+      let result;
+      if (useAPI) {
+        const response = await fetch('/api/orders/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderData,
+            customerData,
+            orderNumber,
+            amountPaid,
+            insuranceData
+          })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to create order');
+        }
+        
+        result = await response.json();
+      } else {
+        result = await Promise.race([
+          processPaymentAndOrder(
+            orderData,
+            customerData,
+            orderNumber,
+            amountPaid,
+            insuranceData
+          ),
+          timeoutPromise
+        ]);
+      }
 
       if (!result.success) {
         console.error('❌ Order processing failed:', result.message);
