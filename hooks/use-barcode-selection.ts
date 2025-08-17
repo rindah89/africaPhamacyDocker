@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 import { BarcodeBatch } from '@/types/batch';
 
 // Safely retrieve selected batches from localStorage
@@ -8,13 +8,12 @@ const getInitialSelectedBatches = (): BarcodeBatch[] => {
       const storedBatches = localStorage.getItem("selectedBarcodeBatches");
       if (storedBatches) {
         const parsed = JSON.parse(storedBatches);
-        // Convert string dates back to Date objects
         return parsed.map((batch: any) => ({
           ...batch,
-          expiryDate: new Date(batch.expiryDate),
+          expiryDate: batch.expiryDate ? new Date(batch.expiryDate) : null,
           deliveryDate: batch.deliveryDate ? new Date(batch.deliveryDate) : null,
-          createdAt: new Date(batch.createdAt),
-          updatedAt: new Date(batch.updatedAt),
+          createdAt: batch.createdAt ? new Date(batch.createdAt) : new Date(),
+          updatedAt: batch.updatedAt ? new Date(batch.updatedAt) : new Date(),
         }));
       }
     } catch (error) {
@@ -24,8 +23,15 @@ const getInitialSelectedBatches = (): BarcodeBatch[] => {
   return [];
 };
 
-// Save selected batches to localStorage
-const saveSelectedBatchesToLocalStorage = (batches: BarcodeBatch[]) => {
+// Module-scoped store so all hook instances share the same state within a tab
+let selectedBatchesState: BarcodeBatch[] = getInitialSelectedBatches();
+const listeners = new Set<() => void>();
+
+const notifyListeners = () => {
+  listeners.forEach((listener) => listener());
+};
+
+const persist = (batches: BarcodeBatch[]) => {
   if (typeof window !== 'undefined') {
     try {
       localStorage.setItem("selectedBarcodeBatches", JSON.stringify(batches));
@@ -35,43 +41,61 @@ const saveSelectedBatchesToLocalStorage = (batches: BarcodeBatch[]) => {
   }
 };
 
-export const useBarcodeSelection = () => {
-  const [selectedBatches, setSelectedBatches] = useState<BarcodeBatch[]>(getInitialSelectedBatches());
+const setBatches = (updater: (prev: BarcodeBatch[]) => BarcodeBatch[]) => {
+  selectedBatchesState = updater(selectedBatchesState);
+  persist(selectedBatchesState);
+  notifyListeners();
+};
 
-  // Save to localStorage whenever selectedBatches changes
-  useEffect(() => {
-    saveSelectedBatchesToLocalStorage(selectedBatches);
-  }, [selectedBatches]);
+// Cross-tab sync (optional)
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'selectedBarcodeBatches' && event.newValue) {
+      try {
+        const parsed = JSON.parse(event.newValue);
+        selectedBatchesState = parsed;
+        notifyListeners();
+      } catch (_) {
+        // ignore
+      }
+    }
+  });
+}
+
+export const useBarcodeSelection = () => {
+  const selectedBatches = useSyncExternalStore(
+    (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    () => selectedBatchesState,
+    () => selectedBatchesState
+  );
 
   const addBatch = (batch: BarcodeBatch) => {
-    setSelectedBatches(prev => {
-      // Check if batch already exists
-      const existingIndex = prev.findIndex(b => b.id === batch.id);
+    setBatches((prev) => {
+      const existingIndex = prev.findIndex((b) => b.id === batch.id);
       if (existingIndex >= 0) {
-        // Update existing batch
         const updated = [...prev];
         updated[existingIndex] = batch;
         return updated;
       }
-      // Add new batch
       return [...prev, batch];
     });
   };
 
   const removeBatch = (batchId: string) => {
-    setSelectedBatches(prev => prev.filter(batch => batch.id !== batchId));
+    setBatches((prev) => prev.filter((batch) => batch.id !== batchId));
   };
 
   const clearAllBatches = () => {
-    setSelectedBatches([]);
+    setBatches(() => []);
   };
 
   const updateBatchQuantity = (batchId: string, quantity: number) => {
-    setSelectedBatches(prev => 
-      prev.map(batch => 
-        batch.id === batchId 
-          ? { ...batch, quantity: Math.max(1, quantity) } // Ensure quantity is at least 1
-          : batch
+    setBatches((prev) =>
+      prev.map((batch) =>
+        batch.id === batchId ? { ...batch, quantity: Math.max(1, quantity) } : batch
       )
     );
   };
@@ -81,7 +105,7 @@ export const useBarcodeSelection = () => {
   };
 
   const getBatchById = (batchId: string) => {
-    return selectedBatches.find(batch => batch.id === batchId);
+    return selectedBatches.find((batch) => batch.id === batchId);
   };
 
   return {
@@ -93,4 +117,4 @@ export const useBarcodeSelection = () => {
     getTotalBarcodes,
     getBatchById,
   };
-}; 
+};
