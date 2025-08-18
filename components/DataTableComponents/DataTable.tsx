@@ -104,6 +104,8 @@ export default function DataTable<TData, TValue>({
     console.log(`📊 DataTable (${tableTitle}): Primary data prop changed. Resetting searchResults and filteredData.`);
     setSearchResults(data);
     setFilteredData(data);
+    // Clear row selection whenever the underlying data changes to avoid index mismatches
+    setRowSelection({});
   }, [data, tableTitle]);
 
   console.log(`📊 DataTable (${tableTitle}): State initialized:`, {
@@ -115,12 +117,13 @@ export default function DataTable<TData, TValue>({
 
   // Update selected rows when selection changes
   useEffect(() => {
-    if (onSelectionChange) {
-      const selectedRows = Object.keys(rowSelection).map(
-        (index) => (isSearch ? searchResults : filteredData)[parseInt(index)]
-      );
-      onSelectionChange(selectedRows);
-    }
+    if (!onSelectionChange) return;
+    // Build selected rows list safely; filter out undefined when lists shrink
+    const base = isSearch ? searchResults : filteredData;
+    const selectedRows = Object.keys(rowSelection)
+      .map((index) => base[parseInt(index)])
+      .filter(Boolean);
+    onSelectionChange(selectedRows);
   }, [rowSelection, isSearch, searchResults, filteredData, onSelectionChange]);
 
   const table = useReactTable({

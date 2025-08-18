@@ -236,7 +236,7 @@ export default function BatchesContentPaginated() {
         <DataTable 
           columns={columns} 
           data={filteredBatches}
-          initialSorting={[{ id: "expiryDate", desc: false }]}
+          initialSorting={[{ id: "createdAt", desc: true }]}
         />
       </div>
 

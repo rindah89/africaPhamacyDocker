@@ -20,6 +20,10 @@ export default function StockAnalyticsContent() {
   const [selectedTab, setSelectedTab] = useState('overview');
   const [filterCategory, setFilterCategory] = useState<'all' | 'A' | 'B' | 'C'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'stock' | 'sales' | 'efficiency'>('efficiency');
+  const [page, setPage] = useState(1);
+  const [limit] = useState(25);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
 
   const {
     data: analyticsData,
@@ -28,8 +32,8 @@ export default function StockAnalyticsContent() {
     refetch,
     isRefetching
   } = useQuery({
-    queryKey: ['stock-analytics'],
-    queryFn: getStockAnalytics,
+    queryKey: ['stock-analytics', page, limit, searchQuery],
+    queryFn: () => getStockAnalytics(page, limit, searchQuery),
     staleTime: 15 * 60 * 1000, // 15 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
     retry: 2,
@@ -70,6 +74,17 @@ export default function StockAnalyticsContent() {
     a.download = `stock-analytics-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleSearch = () => {
+    setPage(1);
+    setSearchQuery(searchInput.trim());
+  };
+
+  const handleKeyDown: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
   };
 
   const filteredProducts = analyticsData?.products?.filter(product => {
@@ -195,6 +210,21 @@ export default function StockAnalyticsContent() {
       {/* Action Bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
+          <input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Search by name or code"
+            className="px-3 py-1 border rounded-md text-sm"
+            aria-label="Search products"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSearch}
+          >
+            Search
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -282,6 +312,30 @@ export default function StockAnalyticsContent() {
           />
         </TabsContent>
       </Tabs>
+
+      {analyticsData.pagination && (
+        <div className="flex items-center justify-center gap-4 py-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!analyticsData.pagination.hasPreviousPage}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Previous
+          </Button>
+          <div className="text-sm text-muted-foreground">
+            Page {analyticsData.pagination.currentPage} of {analyticsData.pagination.totalPages}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!analyticsData.pagination.hasNextPage}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 } 

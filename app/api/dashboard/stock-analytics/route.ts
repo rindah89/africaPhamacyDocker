@@ -58,20 +58,98 @@ export async function GET(request: NextRequest) {
     
     // Get pagination parameters
     const url = new URL(request.url);
-    const page = parseInt(url.searchParams.get('page') || '1');
-    const limit = parseInt(url.searchParams.get('limit') || '50'); // Reduced from all products
-    const skip = (page - 1) * limit;
+    const pageParam = parseInt(url.searchParams.get('page') || '1');
+    const limitParam = parseInt(url.searchParams.get('limit') || '25');
+    const q = (url.searchParams.get('q') || '').trim();
+    const mode = url.searchParams.get('mode') || 'full';
+    const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1;
+    const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.floor(limitParam) : 25;
+    const skip = Math.max(0, (page - 1) * limit);
     
     // Get date range (last 6 months)
     const currentDate = new Date();
     const sixMonthsAgo = subMonths(currentDate, 6);
     
     // First, get the total count for pagination
-    const totalProducts = await prisma.product.count();
-    
+    const whereFilter = q
+      ? {
+          OR: [
+            { name: { contains: q, mode: 'insensitive' as const } },
+            { productCode: { contains: q, mode: 'insensitive' as const } },
+          ],
+        }
+      : undefined;
+
+    const totalProducts = await prisma.product.count({ where: whereFilter });
+
+    // Fast mode: skip heavy joins, return minimal data to avoid timeouts
+    if (mode === 'fast') {
+      const productsFast = await prisma.product.findMany({
+        where: whereFilter,
+        skip: skip ?? 0,
+        take: limit,
+        select: {
+          id: true,
+          name: true,
+          productCode: true,
+          stockQty: true,
+          alertQty: true,
+          productCost: true,
+          productPrice: true,
+        },
+        orderBy: { id: 'asc' },
+      });
+
+      const analyticsResults: ProductSalesData[] = productsFast.map(p => ({
+        productId: p.id,
+        productName: p.name,
+        productCode: p.productCode,
+        currentStock: p.stockQty,
+        alertQty: p.alertQty,
+        productCost: p.productCost,
+        productPrice: p.productPrice,
+        monthlySales: [],
+        totalSales: 0,
+        averageMonthlySales: 0,
+        salesTrend: 'stable',
+        demandVariability: 0,
+        optimalStock: p.stockQty,
+        safetyStock: 0,
+        reorderPoint: 0,
+        economicOrderQuantity: 0,
+        abcCategory: 'C',
+        recommendations: [],
+      }));
+
+      const summary = {
+        totalProducts: analyticsResults.length,
+        totalCurrentStock: analyticsResults.reduce((s, x) => s + x.currentStock, 0),
+        totalOptimalStock: analyticsResults.reduce((s, x) => s + x.optimalStock, 0),
+        stockEfficiency: 100,
+        overstockedProducts: 0,
+        understockedProducts: 0,
+      };
+
+      const totalPages = Math.ceil(totalProducts / limit);
+      return NextResponse.json({
+        products: analyticsResults,
+        summary,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalProducts,
+          limit,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+        success: true,
+      });
+    }
+
     // Fetch products with pagination and minimal sales data
     const products = await prisma.product.findMany({
-      skip,
+      where: whereFilter,
+      skip: skip ?? 0,
       take: limit,
       select: {
         id: true,
@@ -94,20 +172,8 @@ export async function GET(request: NextRequest) {
             createdAt: true,
           },
         },
-        brand: { select: { title: true } },
-        subCategory: { 
-          select: { 
-            title: true, 
-            category: { 
-              select: { 
-                title: true, 
-                mainCategory: { select: { title: true } } 
-              } 
-            } 
-          } 
-        },
       },
-      orderBy: { name: 'asc' },
+      orderBy: { id: 'asc' },
     });
 
     const analyticsResults: ProductSalesData[] = [];
@@ -232,32 +298,37 @@ export async function GET(request: NextRequest) {
 // Helper functions for stock analytics calculations
 
 function calculateMonthlySales(sales: any[], startDate: Date, endDate: Date): MonthlyData[] {
-  const months = [];
-  let currentMonth = startDate;
-  
-  while (currentMonth <= endDate) {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
-    
-    const monthlySales = sales.filter(sale => {
-      const saleDate = new Date(sale.createdAt);
-      return saleDate >= monthStart && saleDate <= monthEnd;
-    });
-    
-    const totalQty = monthlySales.reduce((sum, sale) => sum + sale.qty, 0);
-    const totalRevenue = monthlySales.reduce((sum, sale) => sum + (sale.qty * sale.salePrice), 0);
-    const avgPrice = totalQty > 0 ? totalRevenue / totalQty : 0;
-    
+  // Aggregate in a single pass by month for better performance
+  const aggregatedByMonth: Record<string, { sales: number; revenue: number }> = {};
+  const periodStart = startOfMonth(startDate);
+  const periodEnd = endOfMonth(endDate);
+
+  for (const sale of sales) {
+    const saleDate = new Date(sale.createdAt);
+    if (saleDate < periodStart || saleDate > periodEnd) continue;
+    const key = format(startOfMonth(saleDate), 'MMM yyyy');
+    if (!aggregatedByMonth[key]) {
+      aggregatedByMonth[key] = { sales: 0, revenue: 0 };
+    }
+    aggregatedByMonth[key].sales += sale.qty;
+    aggregatedByMonth[key].revenue += sale.qty * sale.salePrice;
+  }
+
+  const months: MonthlyData[] = [];
+  let cursor = periodStart;
+  while (cursor <= periodEnd) {
+    const label = format(cursor, 'MMM yyyy');
+    const entry = aggregatedByMonth[label] || { sales: 0, revenue: 0 };
+    const avgPrice = entry.sales > 0 ? entry.revenue / entry.sales : 0;
     months.push({
-      month: format(currentMonth, 'MMM yyyy'),
-      sales: totalQty,
-      revenue: totalRevenue,
+      month: label,
+      sales: entry.sales,
+      revenue: entry.revenue,
       avgPrice,
     });
-    
-    currentMonth = subMonths(currentMonth, -1);
+    cursor = subMonths(cursor, -1);
   }
-  
+
   return months;
 }
 

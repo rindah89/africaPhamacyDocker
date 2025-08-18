@@ -107,6 +107,19 @@ export const columns: ColumnDef<ProductBatch>[] = [
     enableHiding: true,
   },
   {
+    accessorKey: "createdAt",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Created" />
+    ),
+    cell: ({ row }) => (
+      <div>
+        {format(new Date(row.getValue("createdAt")), "MMM dd, yyyy")}
+      </div>
+    ),
+    enableSorting: true,
+    enableHiding: true,
+  },
+  {
     accessorKey: "costPerUnit",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Cost Per Unit" />

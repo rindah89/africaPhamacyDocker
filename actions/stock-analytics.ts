@@ -60,30 +60,48 @@ export interface StockAnalyticsResponse {
 /**
  * Fetch comprehensive stock analytics data using server actions
  */
-export const getStockAnalytics = async (page: number = 1, limit: number = 50): Promise<StockAnalyticsResponse> => {
-  console.log(`🔍 getStockAnalytics - Server action called (page: ${page}, limit: ${limit})`);
+export const getStockAnalytics = async (
+  page: number = 1,
+  limit: number = 25,
+  q?: string
+): Promise<StockAnalyticsResponse> => {
+  console.log(`🔍 getStockAnalytics - Server action called (page: ${page}, limit: ${limit}, q: ${q || 'none'})`);
   
-  const cacheKey = `stock-analytics:page-${page}-limit-${limit}`;
+  const cacheKey = `stock-analytics:page-${page}-limit-${limit}-q-${q?.toLowerCase() || 'all'}`;
   
   return withCache(cacheKey, async () => {
     console.log('🔍 getStockAnalytics - Cache miss, fetching from database');
     
     return executeWithConnectionRetry(async () => {
       try {
-        // Get pagination parameters
-        const skip = (page - 1) * limit;
+        // Get pagination parameters (hardened to always include valid skip/take)
+        const normalizedPage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+        const normalizedLimit = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 25;
+        const skip = Math.max(0, (normalizedPage - 1) * normalizedLimit);
+        const search = (q || '').trim();
         
         // Get date range (last 6 months)
         const currentDate = new Date();
         const sixMonthsAgo = subMonths(currentDate, 6);
         
+        // Build optional search filter
+        const whereFilter = search
+          ? {
+              OR: [
+                { name: { contains: search, mode: 'insensitive' as const } },
+                { productCode: { contains: search, mode: 'insensitive' as const } }
+              ]
+            }
+          : undefined;
+
         // First, get the total count for pagination
-        const totalProducts = await prisma.product.count();
+        const totalProducts = await prisma.product.count({ where: whereFilter });
         
         // Fetch products with pagination and minimal sales data
         const products = await prisma.product.findMany({
-          skip,
-          take: limit,
+          where: whereFilter,
+          skip: skip ?? 0,
+          take: normalizedLimit,
           select: {
             id: true,
             name: true,
@@ -264,32 +282,37 @@ export const getProductStockAnalytics = async (productId: string): Promise<Stock
 // Helper functions for stock analytics calculations
 
 function calculateMonthlySales(sales: any[], startDate: Date, endDate: Date): MonthlyData[] {
-  const months = [];
-  let currentMonth = startDate;
-  
-  while (currentMonth <= endDate) {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(currentMonth);
-    
-    const monthlySales = sales.filter(sale => {
-      const saleDate = new Date(sale.createdAt);
-      return saleDate >= monthStart && saleDate <= monthEnd;
-    });
-    
-    const totalQty = monthlySales.reduce((sum, sale) => sum + sale.qty, 0);
-    const totalRevenue = monthlySales.reduce((sum, sale) => sum + (sale.qty * sale.salePrice), 0);
-    const avgPrice = totalQty > 0 ? totalRevenue / totalQty : 0;
-    
+  // Aggregate in a single pass by month for better performance
+  const aggregatedByMonth: Record<string, { sales: number; revenue: number }> = {};
+  const periodStart = startOfMonth(startDate);
+  const periodEnd = endOfMonth(endDate);
+
+  for (const sale of sales) {
+    const saleDate = new Date(sale.createdAt);
+    if (saleDate < periodStart || saleDate > periodEnd) continue;
+    const key = format(startOfMonth(saleDate), 'MMM yyyy');
+    if (!aggregatedByMonth[key]) {
+      aggregatedByMonth[key] = { sales: 0, revenue: 0 };
+    }
+    aggregatedByMonth[key].sales += sale.qty;
+    aggregatedByMonth[key].revenue += sale.qty * sale.salePrice;
+  }
+
+  const months: MonthlyData[] = [];
+  let cursor = periodStart;
+  while (cursor <= periodEnd) {
+    const label = format(cursor, 'MMM yyyy');
+    const entry = aggregatedByMonth[label] || { sales: 0, revenue: 0 };
+    const avgPrice = entry.sales > 0 ? entry.revenue / entry.sales : 0;
     months.push({
-      month: format(currentMonth, 'MMM yyyy'),
-      sales: totalQty,
-      revenue: totalRevenue,
+      month: label,
+      sales: entry.sales,
+      revenue: entry.revenue,
       avgPrice,
     });
-    
-    currentMonth = subMonths(currentMonth, -1);
+    cursor = subMonths(cursor, -1);
   }
-  
+
   return months;
 }
 

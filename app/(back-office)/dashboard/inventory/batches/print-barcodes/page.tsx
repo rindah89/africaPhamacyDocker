@@ -5,7 +5,7 @@ import { useBarcodeColumns } from "./columns";
 import { Button } from "@/components/ui/button";
 import BarcodeSheet from "@/components/dashboard/BarcodeSheet";
 import SelectedBatchesList from "@/components/dashboard/SelectedBatchesList";
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, X, Trash2, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,16 +13,31 @@ import { useBarcodeSelection } from "@/hooks/use-barcode-selection";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { PrintBarcodesPageProps } from "@/types/batch";
+import { PrintBarcodesPageProps, ProductBatch } from "@/types/batch";
+import { useSearchParams } from "next/navigation";
 
 type DatePreset = "lifetime" | "today" | "last7days" | "thismonth" | "thisyear" | "custom";
 
 export default function PrintBarcodesPage({ batches }: PrintBarcodesPageProps) {
-  const { selectedBatches, clearAllBatches, getTotalBarcodes } = useBarcodeSelection();
+  const { selectedBatches, clearAllBatches, getTotalBarcodes, addBatch } = useBarcodeSelection();
   const columns = useBarcodeColumns();
   const [searchTerm, setSearchTerm] = useState("");
   const [datePreset, setDatePreset] = useState<DatePreset>("lifetime");
   const [showDateFilters, setShowDateFilters] = useState(false);
+  const searchParams = useSearchParams();
+  const idsParam = searchParams.get('ids');
+
+  // Preselect from ids param if provided
+  useEffect(() => {
+    if (!idsParam) return;
+    const ids = idsParam.split(',').filter(Boolean);
+    if (ids.length === 0) return;
+    const map = new Map(batches.map((b) => [b.id, b] as [string, ProductBatch]));
+    ids.forEach((id) => {
+      const hit = map.get(id);
+      if (hit) addBatch(hit as any);
+    });
+  }, [idsParam, batches, addBatch]);
   
   // Date filters
   const [expiryDateFrom, setExpiryDateFrom] = useState("");

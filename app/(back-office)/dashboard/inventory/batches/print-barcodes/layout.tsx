@@ -1,7 +1,10 @@
 import prisma from "@/lib/db";
 import PrintBarcodesPage from "./page";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-export default async function PrintBarcodesLayout() {
+export default async function PrintBarcodesLayout({ searchParams }: { searchParams?: { ids?: string } }) {
+  const idsParam = searchParams?.ids?.trim();
   const batches = await prisma.productBatch.findMany({
     select: {
       id: true,
