@@ -49,9 +49,9 @@ export async function getInventoryReport() {
     const inventoryReport = products.map(product => {
       return {
         ...product,
-        category: product.subCategory.category.title,
-        subCategory: product.subCategory.title,
-        brand: product.brand.title
+        category: product.subCategory?.category?.title || 'Uncategorized',
+        subCategory: product.subCategory?.title || 'Uncategorized',
+        brand: product.brand?.title || 'No Brand'
       };
     });
 

@@ -14,14 +14,14 @@ interface InventoryReportProps {
   };
 }
 
-export default function InventoryReport({ products, totals }: InventoryReportProps) {
+export default function InventoryReport({ products = [], totals }: InventoryReportProps) {
   const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
   
   // Sort products by name alphabetically (memoized)
-  const sortedProducts = useMemo(() => 
-    [...products].sort((a, b) => a.name.localeCompare(b.name)),
-    [products]
-  );
+  const sortedProducts = useMemo(() => {
+    if (!products || products.length === 0) return [];
+    return [...products].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }, [products]);
 
   // Calculate totals based on selected products or use provided totals
   const displayTotals = useMemo(() => {
