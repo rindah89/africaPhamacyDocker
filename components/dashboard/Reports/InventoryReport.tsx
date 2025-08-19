@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { columns } from "@/app/(back-office)/dashboard/reports/inventory/columns";
+import { columns, exportToPDF } from "@/app/(back-office)/dashboard/reports/inventory/columns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoney } from "@/lib/formatMoney";
 import TableHeader from "@/components/dashboard/Tables/TableHeader";
@@ -55,6 +55,7 @@ export default function InventoryReport({ products = [], totals }: InventoryRepo
           data={sortedProducts}
           model="product"
           showPdfExport={true}
+          customExportPDF={exportToPDF}
         />
         <DataTable 
           columns={columns} 

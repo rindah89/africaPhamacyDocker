@@ -17,16 +17,24 @@ declare module 'jspdf' {
 }
 
 export const exportToPDF = (data: IProduct[]) => {
-  const doc = new jsPDF();
-  
-  // Title and date
-  doc.setFontSize(16);
-  doc.text("Karen Pharmacy Inventory Report", 20, 20);
-  doc.setFontSize(10);
-  doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 30);
+  try {
+    console.log("Starting PDF export with data:", data?.length || 0, "items");
+    
+    if (!data || data.length === 0) {
+      alert("No data to export");
+      return;
+    }
+    
+    const doc = new jsPDF();
+    
+    // Title and date
+    doc.setFontSize(16);
+    doc.text("Karen Pharmacy Inventory Report", 20, 20);
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 30);
 
   // Calculate inventory statistics
-  const totalItems = data.reduce((sum, item) => sum + item.stockQty, 0);
+  const totalItems = data.reduce((sum, item) => sum + (item.stockQty || 0), 0);
 
   // Summary table
   doc.autoTable({
@@ -55,10 +63,10 @@ export const exportToPDF = (data: IProduct[]) => {
 
   const tableRows = data.map((item) => {
     return [
-      item.name,
-      item.stockQty.toString(),
-      item.supplierPrice.toLocaleString('en-US'),
-      item.productPrice.toLocaleString('en-US')
+      item.name || 'Unknown Product',
+      (item.stockQty || 0).toString(),
+      (item.supplierPrice || 0).toLocaleString('en-US'),
+      (item.productPrice || 0).toLocaleString('en-US')
     ];
   });
 
@@ -88,7 +96,12 @@ export const exportToPDF = (data: IProduct[]) => {
     }
   });
 
-  doc.save("inventory-report.pdf");
+    doc.save("inventory-report.pdf");
+    console.log("PDF export completed successfully");
+  } catch (error) {
+    console.error("Error exporting PDF:", error);
+    alert("Failed to export PDF. Please check the console for details.");
+  }
 };
 
 export const columns: ColumnDef<any>[] = [
