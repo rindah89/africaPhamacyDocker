@@ -80,6 +80,17 @@ export const useBarcodeColumns = () => {
         return <div>{quantity} tickets</div>;
       },
     },
+    {
+      accessorKey: "expiryDate",
+      header: "Expiry Date",
+      cell: ({ row }) => {
+        const date = row.getValue("expiryDate");
+        if (!date) return "-";
+        return new Date(date as string).toLocaleDateString();
+      },
+      enableHiding: true,
+      enableSorting: true,
+    },
   ];
 
   return columns;

@@ -24,20 +24,24 @@ export default function PrintBarcodesPage({ batches }: PrintBarcodesPageProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [datePreset, setDatePreset] = useState<DatePreset>("lifetime");
   const [showDateFilters, setShowDateFilters] = useState(false);
+  const [idsProcessed, setIdsProcessed] = useState(false);
   const searchParams = useSearchParams();
   const idsParam = searchParams.get('ids');
 
   // Preselect from ids param if provided
   useEffect(() => {
-    if (!idsParam) return;
+    if (!idsParam || idsProcessed) return;
     const ids = idsParam.split(',').filter(Boolean);
     if (ids.length === 0) return;
+    
     const map = new Map(batches.map((b) => [b.id, b] as [string, ProductBatch]));
     ids.forEach((id) => {
       const hit = map.get(id);
       if (hit) addBatch(hit as any);
     });
-  }, [idsParam, batches, addBatch]);
+    
+    setIdsProcessed(true);
+  }, [idsParam, batches, addBatch, idsProcessed]);
   
   // Date filters
   const [expiryDateFrom, setExpiryDateFrom] = useState("");
@@ -370,7 +374,6 @@ export default function PrintBarcodesPage({ batches }: PrintBarcodesPageProps) {
           <DataTable
             columns={columns}
             data={filteredBatches}
-            initialSorting={[{ id: "expiryDate", desc: false }]}
             hideSearch={true}
             hideFilters={true}
           />

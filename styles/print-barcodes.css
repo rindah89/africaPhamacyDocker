@@ -1,0 +1,152 @@
+/* Print styles for barcode printing */
+@media print {
+  @page {
+    size: A4;
+    margin: 13mm 13mm 15mm 11mm;
+  }
+  
+  html, body {
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Hide non-print elements */
+  body > *:not(.print-wrapper) {
+    display: none !important;
+  }
+  
+  /* Show print content */
+  .print-wrapper,
+  .print-wrapper * {
+    visibility: visible !important;
+  }
+  
+  .print-content {
+    display: block !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+  }
+  
+  /* Barcode specific styles */
+  .barcode-item {
+    page-break-inside: avoid !important;
+    border: 0.5px dotted #999 !important;
+    width: 52.5mm !important;
+    height: 21.1mm !important;
+    padding: 1mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    position: relative !important;
+  }
+  
+  /* Ensure barcodes render properly */
+  .barcode-item svg {
+    display: block !important;
+    margin: 0 auto !important;
+  }
+  
+  /* Ensure text is black */
+  .barcode-item * {
+    color: black !important;
+  }
+  
+  /* Page break control */
+  .page-break-after {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+  
+  .page-break-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+  /* Ensure each page starts fresh */
+  .page-break-after > div {
+    min-height: 297mm !important;
+  }
+  
+  /* Row layout */
+  .barcode-row {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    height: 21.1mm !important;
+    width: 100% !important;
+    gap: 2mm !important;
+    page-break-inside: avoid !important;
+  }
+  
+  /* Empty placeholder styling */
+  .barcode-placeholder {
+    width: 52.5mm !important;
+    height: 21.1mm !important;
+    visibility: hidden !important;
+  }
+  
+  /* Corner guides */
+  .barcode-item .corner-guide {
+    position: absolute !important;
+    width: 4px !important;
+    height: 4px !important;
+  }
+  
+  .barcode-item .corner-guide.top-left {
+    top: -2px !important;
+    left: -2px !important;
+    border-top: 1px solid #666 !important;
+    border-left: 1px solid #666 !important;
+  }
+  
+  .barcode-item .corner-guide.top-right {
+    top: -2px !important;
+    right: -2px !important;
+    border-top: 1px solid #666 !important;
+    border-right: 1px solid #666 !important;
+  }
+  
+  .barcode-item .corner-guide.bottom-left {
+    bottom: -2px !important;
+    left: -2px !important;
+    border-bottom: 1px solid #666 !important;
+    border-left: 1px solid #666 !important;
+  }
+  
+  .barcode-item .corner-guide.bottom-right {
+    bottom: -2px !important;
+    right: -2px !important;
+    border-bottom: 1px solid #666 !important;
+    border-right: 1px solid #666 !important;
+  }
+}
+
+/* Screen styles to ensure proper preview */
+@media screen {
+  .print-content {
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin: 20px auto;
+  }
+  
+  .barcode-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 2mm;
+    width: 100%;
+    margin-bottom: 2mm;
+  }
+  
+  .barcode-placeholder {
+    width: 52.5mm;
+    height: 21.1mm;
+    visibility: hidden;
+  }
+}
