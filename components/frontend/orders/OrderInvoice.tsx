@@ -43,31 +43,194 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
     pageStyle: `
       @page {
         size: A4;
-        margin: 1cm;
+        margin: 15mm 12mm 15mm 12mm;
+        padding: 0;
       }
       @media print {
-        body { 
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
+        html, body {
+          width: 210mm;
+          height: 297mm;
+          margin: 0 !important;
+          padding: 0 !important;
+          font-size: 12px !important;
+          line-height: 1.4 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
         }
-        * { 
+        
+        * {
           color: black !important;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
+          background: white !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+          box-shadow: none !important;
+          text-shadow: none !important;
         }
-        .dark * {
-          color: black !important;
-          background-color: white !important;
-        }
-        img {
-          max-width: 100%;
-          page-break-inside: avoid;
-        }
-        .print\\:hidden {
+        
+        /* Hide non-print elements */
+        .print\\:hidden,
+        button:not(.print-show),
+        [data-print="hidden"] {
           display: none !important;
         }
-        .print\\:bg-white {
-          background-color: white !important;
+        
+        /* Invoice container optimization */
+        .invoice-container {
+          width: 186mm !important;
+          max-width: 186mm !important;
+          margin: 0 auto !important;
+          padding: 8mm 0 !important;
+          font-size: 11px !important;
+        }
+        
+        /* Header section */
+        .invoice-header {
+          text-align: center !important;
+          margin-bottom: 8mm !important;
+          page-break-inside: avoid !important;
+        }
+        
+        .invoice-title {
+          font-size: 18px !important;
+          font-weight: bold !important;
+          margin: 4mm 0 !important;
+          color: #166534 !important;
+        }
+        
+        .company-info {
+          font-size: 9px !important;
+          color: #666666 !important;
+          margin: 2mm 0 !important;
+        }
+        
+        .order-details {
+          font-size: 10px !important;
+          margin: 4mm 0 !important;
+          text-align: left !important;
+        }
+        
+        /* Table improvements */
+        .invoice-table {
+          width: 100% !important;
+          border-collapse: collapse !important;
+          margin: 4mm 0 !important;
+          font-size: 9px !important;
+        }
+        
+        .invoice-table th,
+        .invoice-table td {
+          padding: 2mm !important;
+          border: 0.5px solid #cccccc !important;
+          text-align: left !important;
+          vertical-align: top !important;
+        }
+        
+        .invoice-table th {
+          background-color: #f5f5f5 !important;
+          font-weight: bold !important;
+          color: black !important;
+        }
+        
+        /* Product items section */
+        .product-items {
+          margin: 6mm 0 !important;
+          page-break-inside: auto !important;
+        }
+        
+        .product-item {
+          display: flex !important;
+          padding: 2mm 0 !important;
+          border-bottom: 0.5px solid #e5e5e5 !important;
+          page-break-inside: avoid !important;
+          align-items: flex-start !important;
+        }
+        
+        .product-item img {
+          width: 12mm !important;
+          height: 12mm !important;
+          object-fit: cover !important;
+          margin-right: 3mm !important;
+          flex-shrink: 0 !important;
+        }
+        
+        .product-details {
+          flex-grow: 1 !important;
+          font-size: 10px !important;
+        }
+        
+        .product-name {
+          font-weight: bold !important;
+          margin-bottom: 1mm !important;
+          color: black !important;
+        }
+        
+        .product-price-qty {
+          font-size: 9px !important;
+          color: #666666 !important;
+        }
+        
+        .product-total {
+          text-align: right !important;
+          font-weight: bold !important;
+          min-width: 20mm !important;
+        }
+        
+        /* Totals section */
+        .totals-section {
+          margin-top: 6mm !important;
+          padding-top: 4mm !important;
+          border-top: 1px solid #cccccc !important;
+        }
+        
+        .total-line {
+          display: flex !important;
+          justify-content: space-between !important;
+          margin: 1mm 0 !important;
+          font-size: 10px !important;
+        }
+        
+        .total-line.final-total {
+          font-weight: bold !important;
+          font-size: 12px !important;
+          border-top: 1px solid #cccccc !important;
+          padding-top: 2mm !important;
+          margin-top: 3mm !important;
+        }
+        
+        /* Amount in words */
+        .amount-words {
+          font-style: italic !important;
+          font-size: 9px !important;
+          margin-top: 3mm !important;
+          color: #666666 !important;
+        }
+        
+        /* Page breaks */
+        .page-break-before {
+          page-break-before: always !important;
+        }
+        
+        .page-break-after {
+          page-break-after: always !important;
+        }
+        
+        .page-break-avoid {
+          page-break-inside: avoid !important;
+        }
+        
+        /* Status badges - convert to text for print */
+        .status-badge,
+        .payment-badge {
+          display: inline-block !important;
+          padding: 1mm 2mm !important;
+          border: 0.5px solid #cccccc !important;
+          border-radius: 0 !important;
+          font-size: 8px !important;
+          font-weight: normal !important;
+          background: white !important;
+          color: black !important;
         }
       }
     `,
@@ -164,7 +327,7 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
     <div className="max-w-5xl mx-auto p-8">
       <div className="max-w-2xl mx-auto">
         <div className="relative mt-4 overflow-hidden bg-white dark:bg-slate-700 rounded-lg shadow">
-          <div className="absolute top-4 right-4 print:hidden">
+          <div className="absolute top-4 right-4 print:hidden" data-print="hidden">
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
               <DialogTrigger asChild>
                 <Button size={"sm"} variant={"outline"}>
@@ -198,174 +361,154 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
             </Dialog>
           </div>
 
-          <div ref={componentRef} className="px-4 py-6 sm:px-8 sm:py-10 bg-white print:bg-white" style={{ backgroundColor: 'white', color: 'black' }}>
-            <div className="-my-8 divide-y divide-gray-200 print:divide-gray-200">
-              <div className="pt-16 pb-8 text-center sm:py-8">
+          <div ref={componentRef} className="invoice-container px-4 py-6 sm:px-8 sm:py-10 bg-white print:bg-white" style={{ backgroundColor: 'white', color: 'black' }}>
+            <div className="page-break-avoid">
+              <div className="invoice-header pt-16 pb-8 text-center sm:py-8">
                 <Logo />
-                <h1 className="mt-4 text-2xl font-bold text-green-700 print:text-green-700">
+                <h1 className="invoice-title mt-4 text-2xl font-bold text-green-700">
                   KAREN PHARMACY PURCHASE ORDER
                 </h1>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="company-info text-[10px] text-muted-foreground">
                   N0 4012/A/MINSANTE DU 09 JUIN 2024/ UIN: P095800234204H
                 </p>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="company-info text-[10px] text-muted-foreground">
                   Bojongo - Douala
                 </p>
                 
-                <div className="mt-6 text-left space-y-1">
-                  <p className="text-sm font-normal text-gray-600 print:text-gray-600">
+                <div className="order-details mt-6 text-left space-y-1">
+                  <p className="text-sm font-normal text-gray-600">
                     <span className="font-semibold">Date:</span> {currentDate}
                   </p>
-                  <p className="text-sm font-normal text-gray-600 print:text-gray-600">
+                  <p className="text-sm font-normal text-gray-600">
                     <span className="font-semibold">REF: Bill</span> #{order.orderNumber}
                   </p>
-                  <p className="text-sm font-normal text-gray-600 print:text-gray-600">
+                  <p className="text-sm font-normal text-gray-600">
                     <span className="font-semibold">Client:</span> {customerName}
                   </p>
                 </div>
-
-                
               </div>
-              <div className="py-4 text-xs">
+
+              <div className="py-4 text-xs page-break-avoid">
                 <h2 className="mb-4 text-center font-semibold text-base">
                   Purchase Order for Medications
                 </h2>
-                <Table className="text-xs">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Order Date</TableHead>
-                      <TableHead>Order No</TableHead>
-                      <TableHead>P. Method</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>{currentDate}</TableCell>
-                      <TableCell>#{order.orderNumber}</TableCell>
-                      <TableCell>
-                        <span className={`py-1.5 px-3 rounded-full ${getPaymentMethodColor(order.paymentMethod)}`}>
+                <table className="invoice-table w-full text-xs border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="border border-gray-300 p-2 bg-gray-100 text-left">Order Date</th>
+                      <th className="border border-gray-300 p-2 bg-gray-100 text-left">Order No</th>
+                      <th className="border border-gray-300 p-2 bg-gray-100 text-left">P. Method</th>
+                      <th className="border border-gray-300 p-2 bg-gray-100 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="border border-gray-300 p-2">{currentDate}</td>
+                      <td className="border border-gray-300 p-2">#{order.orderNumber}</td>
+                      <td className="border border-gray-300 p-2">
+                        <span className="payment-badge">
                           {getPaymentMethodDisplay(order.paymentMethod)}
                         </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`py-1.5 px-3 rounded-full ${
-                          order.status === 'DELIVERED' ? 'bg-green-200' :
-                          order.status === 'PROCESSING' ? 'bg-yellow-200' :
-                          order.status === 'PENDING' ? 'bg-orange-200' : 'bg-red-200'
-                        }`}>
+                      </td>
+                      <td className="border border-gray-300 p-2">
+                        <span className="status-badge">
                           {order.status}
                         </span>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-              <div className="py-8">
-                <h2 className="text-xs font-bold tracking-widest text-gray-400 uppercase print:text-gray-600">
+
+              <div className="product-items py-8">
+                <h2 className="text-xs font-bold tracking-widest text-gray-400 uppercase mb-4">
                   Order Items
                 </h2>
 
-                <div className="flow-root mt-8">
-                  <ul className="divide-y divide-gray-200 -my-5">
-                    {order.lineOrderItems.length > 0 &&
-                      order.lineOrderItems.map((item, i) => (
-                        <li
-                          key={i}
-                          className="flex items-start justify-between space-x-5 py-3 md:items-stretch"
-                        >
-                          <div className="flex items-stretch">
-                            <div className="flex-shrink-0">
-                              <Image
-                                width={200}
-                                height={200}
-                                className="object-cover w-14 h-14 rounded-lg"
-                                src={item.productThumbnail}
-                                alt={item.name}
-                              />
-                            </div>
+                <div className="mt-4">
+                  {order.lineOrderItems.length > 0 &&
+                    order.lineOrderItems.map((item, i) => (
+                      <div key={i} className="product-item flex items-start py-3 border-b border-gray-200">
+                        <div className="flex-shrink-0">
+                          <Image
+                            width={48}
+                            height={48}
+                            className="object-cover w-12 h-12 rounded"
+                            src={item.productThumbnail}
+                            alt={item.name}
+                          />
+                        </div>
 
-                            <div className="flex flex-col justify-between ml-5 w-72">
-                              <p className="flex-1 text-sm font-medium text-gray-900 print:text-gray-900">
-                                {item.name}
-                              </p>
-                              <p className="text-[11px] font-medium text-gray-500">
-                                ({item.price}x{item.qty}) 
-                              </p>
-                            </div>
-                          </div>
+                        <div className="product-details flex-grow ml-4">
+                          <p className="product-name font-medium text-gray-900">
+                            {item.name}
+                          </p>
+                          <p className="product-price-qty text-xs text-gray-500 mt-1">
+                            {Number(item.price).toLocaleString('fr-CM')} FCFA × {item.qty}
+                          </p>
+                        </div>
 
-                          <div className="ml-auto">
-                            <p className="text-sm font-bold text-right text-gray-900 print:text-gray-900">
-                              {(Number(item.price) * Number(item.qty))} FCFA
-                            </p>
-                          </div>
-                        </li>
-                      ))} 
-                  </ul>
+                        <div className="product-total text-right">
+                          <p className="text-sm font-bold text-gray-900">
+                            {(Number(item.price) * Number(item.qty)).toLocaleString('fr-CM')} FCFA
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </div>
 
-              <div className="py-4">
-                <ul className="space-y-2">
-                  <li className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                      Sub total
-                    </p>
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                      {Number(totalSum)} FCFA
-                    </p>
-                  </li>
+              <div className="totals-section py-4 page-break-avoid">
+                <div className="space-y-2">
+                  <div className="total-line flex justify-between">
+                    <span className="text-sm font-medium text-gray-600">Sub total</span>
+                    <span className="text-sm font-medium text-gray-600">
+                      {Number(totalSum).toLocaleString('fr-CM')} FCFA
+                    </span>
+                  </div>
                   
                   {/* Insurance Information */}
                   {order.paymentMethod === 'INSURANCE' && order.insuranceAmount && (
                     <>
-                      <li className="flex items-center justify-between border-t pt-2">
-                        <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                      <div className="total-line flex justify-between border-t pt-2">
+                        <span className="text-sm font-medium text-blue-600">
                           Insurance Coverage ({order.insurancePercentage}%)
-                        </p>
-                        <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                          -{Number(order.insuranceAmount)} FCFA
-                        </p>
-                      </li>
+                        </span>
+                        <span className="text-sm font-medium text-blue-600">
+                          -{Number(order.insuranceAmount).toLocaleString('fr-CM')} FCFA
+                        </span>
+                      </div>
                       {order.insuranceProviderName && (
-                        <li className="flex items-center justify-between">
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Provider: {order.insuranceProviderName}
-                          </p>
+                        <div className="flex justify-between text-xs text-gray-500">
+                          <span>Provider: {order.insuranceProviderName}</span>
                           {order.insurancePolicyNumber && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              Policy: {order.insurancePolicyNumber}
-                            </p>
+                            <span>Policy: {order.insurancePolicyNumber}</span>
                           )}
-                        </li>
+                        </div>
                       )}
-                      <li className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                          Customer Paid
-                        </p>
-                        <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                          {Number(order.customerPaidAmount || order.amountPaid)} FCFA
-                        </p>
-                      </li>
+                      <div className="total-line flex justify-between">
+                        <span className="text-sm font-medium text-green-600">Customer Paid</span>
+                        <span className="text-sm font-medium text-green-600">
+                          {Number(order.customerPaidAmount || order.amountPaid).toLocaleString('fr-CM')} FCFA
+                        </span>
+                      </div>
                     </>
                   )}
                   
-                  <li className="flex items-center justify-between border-t pt-2">
-                    <p className="text-base font-medium text-gray-900 dark:text-white">
-                      Total
-                    </p>
-                    <p className="text-base font-bold text-gray-900 dark:text-white">
-                      {Number(totalSum)} FCFA
-                    </p>
-                  </li>
-                </ul>
-                <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+                  <div className="total-line final-total flex justify-between border-t pt-2">
+                    <span className="text-base font-medium text-gray-900">Total</span>
+                    <span className="text-base font-bold text-gray-900">
+                      {Number(totalSum).toLocaleString('fr-CM')} FCFA
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="amount-words mt-4 text-sm text-gray-600">
                   <p className="italic">
                     Amount in words: {numberToWords(Number(totalSum))} CFA Francs
                   </p>
                   {order.paymentMethod === 'INSURANCE' && (
-                    <p className="italic text-xs mt-2 text-blue-600 dark:text-blue-400">
+                    <p className="italic text-xs mt-2 text-blue-600">
                       Insurance claim processed for {order.insuranceProviderName}
                     </p>
                   )}
@@ -374,7 +517,6 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
             </div>
           </div>
         </div>
-      
       </div>
     </div>
   );

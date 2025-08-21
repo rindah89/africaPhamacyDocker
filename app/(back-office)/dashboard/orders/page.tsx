@@ -25,12 +25,15 @@ function LoadMoreButton({ totalCount, currentCount }: { totalCount: number; curr
   );
 }
 
-async function OrdersContent({ searchParams }: { searchParams?: { limit?: string } }) {
+async function OrdersContent({ searchParams }: { searchParams?: Promise<{ limit?: string }> }) {
   let paginatedResult = null;
   let isUsingFallback = false;
   
+  // Await searchParams before accessing its properties
+  const params = await searchParams;
+  
   // Get limit from search params, default to 100 for initial load
-  const requestedLimit = searchParams?.limit ? parseInt(searchParams.limit) : 100;
+  const requestedLimit = params?.limit ? parseInt(params.limit) : 100;
   const limit = Math.min(Math.max(requestedLimit, 1), 1000); // Allow up to 1000 orders
   
   try {
@@ -79,7 +82,7 @@ async function OrdersContent({ searchParams }: { searchParams?: { limit?: string
   }
 }
 
-export default function page({ searchParams }: { searchParams?: { limit?: string } }) {
+export default function page({ searchParams }: { searchParams?: Promise<{ limit?: string }> }) {
   return (
     <div>
       <Suspense fallback={<Loading />}>

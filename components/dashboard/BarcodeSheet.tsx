@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 import { formatMoney } from '@/lib/formatMoney';
 import { Trash2, Printer, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
-import '@/styles/print-barcodes.css';
+// Removed external CSS import - using inline print styles instead
 
 interface BarcodeItemProps {
   productName: string;
@@ -32,7 +32,9 @@ const BarcodeItem = ({ productName, price, productCode, deliveryDate, supplierNa
         height: '21.1mm',
         border: '0.5px dotted #999',
         position: 'relative',
-        pageBreakInside: 'avoid'
+        pageBreakInside: 'avoid',
+        flexShrink: 0,
+        flexGrow: 0
       }}
     >
       {/* Corner cutting guides */}
@@ -44,7 +46,7 @@ const BarcodeItem = ({ productName, price, productCode, deliveryDate, supplierNa
       {/* Product name and supplier - top section */}
       <div className="flex-shrink-0" style={{ minHeight: '16px', paddingTop: '1px' }}>
         <div
-          className="text-[7px] font-semibold leading-tight mb-0.5"
+          className="barcode-product-name text-[7px] font-semibold leading-tight mb-0.5"
           style={{
             height: '10px',
             overflow: 'hidden',
@@ -56,7 +58,7 @@ const BarcodeItem = ({ productName, price, productCode, deliveryDate, supplierNa
           {productName}
         </div>
         <div
-          className="text-[6px] leading-tight"
+          className="barcode-supplier text-[6px] leading-tight"
           style={{
             height: '8px',
             overflow: 'hidden',
@@ -90,9 +92,9 @@ const BarcodeItem = ({ productName, price, productCode, deliveryDate, supplierNa
       
       {/* Price and delivery date - bottom section */}
       <div className="flex-shrink-0 flex justify-between items-end" style={{ minHeight: '12px', paddingBottom: '1px' }}>
-        <div className="text-[7px] font-bold" style={{ lineHeight: '1' }}>{formatMoney(price)}</div>
+        <div className="barcode-price text-[7px] font-bold" style={{ lineHeight: '1' }}>{formatMoney(price)}</div>
         <div
-          className="text-[6px] leading-tight"
+          className="barcode-date text-[6px] leading-tight"
           style={{
             maxWidth: '20mm',
             textOverflow: 'ellipsis',
@@ -135,6 +137,208 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
     documentTitle: 'Batch-Barcodes',
+    pageStyle: `
+      @page {
+        size: A4;
+        margin: 13mm 13mm 15mm 11mm;
+        padding: 0;
+      }
+      @media print {
+        html, body {
+          width: 210mm !important;
+          height: 297mm !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: visible !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }
+        
+        * {
+          color: black !important;
+          background: white !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+          box-shadow: none !important;
+          text-shadow: none !important;
+        }
+        
+        /* Hide non-print elements */
+        .print\\:hidden,
+        button:not(.print-show),
+        [data-print="hidden"] {
+          display: none !important;
+        }
+        
+        /* Barcode print container */
+        .barcode-print-container {
+          display: block !important;
+          width: 210mm !important;
+          min-height: 297mm !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          background: white !important;
+        }
+        
+        /* Barcode specific styles */
+        .barcode-item {
+          page-break-inside: avoid !important;
+          border: 0.5px dotted #999 !important;
+          width: 52.5mm !important;
+          height: 21.1mm !important;
+          padding: 1mm !important;
+          display: flex !important;
+          flex-direction: column !important;
+          justify-content: space-between !important;
+          position: relative !important;
+          background: white !important;
+        }
+        
+        /* Ensure barcodes render properly */
+        .barcode-item svg {
+          display: block !important;
+          margin: 0 auto !important;
+          background: white !important;
+        }
+        
+        /* Ensure text is black */
+        .barcode-item * {
+          color: black !important;
+          background: white !important;
+        }
+        
+        /* Page break control */
+        .page-break-after {
+          page-break-after: always !important;
+          break-after: page !important;
+        }
+        
+        .page-break-avoid {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+        
+        /* Ensure each page starts fresh */
+        .page-break-after > div {
+          min-height: 297mm !important;
+        }
+        
+        /* Row layout */
+        .barcode-row {
+          display: flex !important;
+          flex-direction: row !important;
+          justify-content: flex-start !important;
+          height: 21.1mm !important;
+          width: 100% !important;
+          gap: 2mm !important;
+          page-break-inside: avoid !important;
+          margin-bottom: 2mm !important;
+        }
+        
+        /* Empty placeholder styling */
+        .barcode-placeholder {
+          width: 52.5mm !important;
+          height: 21.1mm !important;
+          visibility: hidden !important;
+        }
+        
+        /* Corner guides */
+        .corner-guide {
+          position: absolute !important;
+          width: 4px !important;
+          height: 4px !important;
+        }
+        
+        .corner-guide.top-left {
+          top: -2px !important;
+          left: -2px !important;
+          border-top: 1px solid #666 !important;
+          border-left: 1px solid #666 !important;
+        }
+        
+        .corner-guide.top-right {
+          top: -2px !important;
+          right: -2px !important;
+          border-top: 1px solid #666 !important;
+          border-right: 1px solid #666 !important;
+        }
+        
+        .corner-guide.bottom-left {
+          bottom: -2px !important;
+          left: -2px !important;
+          border-bottom: 1px solid #666 !important;
+          border-left: 1px solid #666 !important;
+        }
+        
+        .corner-guide.bottom-right {
+          bottom: -2px !important;
+          right: -2px !important;
+          border-bottom: 1px solid #666 !important;
+          border-right: 1px solid #666 !important;
+        }
+        
+        /* Font sizes and typography */
+        .barcode-product-name {
+          font-size: 7px !important;
+          font-weight: bold !important;
+          line-height: 1.1 !important;
+          color: black !important;
+        }
+        
+        .barcode-supplier {
+          font-size: 6px !important;
+          line-height: 1.1 !important;
+          color: black !important;
+        }
+        
+        .barcode-price {
+          font-size: 7px !important;
+          font-weight: bold !important;
+          color: black !important;
+        }
+        
+        .barcode-date {
+          font-size: 6px !important;
+          color: black !important;
+        }
+      }
+      
+      /* Screen styles to ensure 4-column layout is visible on screen */
+      @media screen {
+        .barcode-print-container {
+          box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+          margin: 20px auto;
+        }
+        
+        .barcode-row {
+          display: flex;
+          flex-direction: row;
+          justify-content: flex-start;
+          gap: 2mm;
+          width: 100%;
+          margin-bottom: 2mm;
+          flex-wrap: nowrap;
+        }
+        
+        .barcode-item {
+          width: 52.5mm;
+          height: 21.1mm;
+          border: 0.5px dotted #999;
+          flex-shrink: 0;
+          flex-grow: 0;
+        }
+        
+        .barcode-placeholder {
+          width: 52.5mm;
+          height: 21.1mm;
+          visibility: hidden;
+          flex-shrink: 0;
+          flex-grow: 0;
+        }
+      }
+    `,
     onBeforePrint: () => {
       return new Promise((resolve) => {
         promiseResolveRef.current = resolve;
@@ -283,7 +487,7 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-4 sticky top-0 bg-background z-10 py-2">
+      <div className="flex items-center gap-2 mb-4 sticky top-0 bg-background z-10 py-2 print:hidden" data-print="hidden">
         <Button 
           onClick={handlePrintClick}
           disabled={selectedBatches.length === 0 || isPrinting}
@@ -316,23 +520,35 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
         )}
       </div>
 
-      <div className="print-wrapper">
+      <div>
         <div 
           ref={componentRef} 
-          className="bg-white print-content" 
+          className="barcode-print-container bg-white" 
           style={{ 
             width: '210mm', 
             minHeight: '297mm', 
             padding: '0', 
             margin: '0', 
-            overflow: 'visible'
+            overflow: 'visible',
+            backgroundColor: 'white'
           }}
         >
           {pages.map((pageRows, pageIndex) => (
             <div key={pageIndex} className={pageIndex > 0 ? 'page-break-after' : ''}>
               <div className="flex flex-col" style={{ gap: '2mm', width: '100%', minHeight: pageIndex === pages.length - 1 ? 'auto' : '297mm' }}>
                 {pageRows.map((row, rowIndex) => (
-                  <div key={`${pageIndex}-${rowIndex}`} className="barcode-row">
+                  <div 
+                    key={`${pageIndex}-${rowIndex}`} 
+                    className="barcode-row"
+                    style={{ 
+                      display: 'flex', 
+                      flexDirection: 'row', 
+                      gap: '2mm', 
+                      width: '100%',
+                      flexWrap: 'nowrap',
+                      justifyContent: 'flex-start'
+                    }}
+                  >
                     {row.map((batch, colIndex) => (
                       batch ? (
                         <BarcodeItem
@@ -344,7 +560,17 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
                           supplierName={batch.product.supplier?.name}
                         />
                       ) : (
-                        <div key={`empty-${pageIndex}-${rowIndex}-${colIndex}`} className="barcode-placeholder" />
+                        <div 
+                          key={`empty-${pageIndex}-${rowIndex}-${colIndex}`} 
+                          className="barcode-placeholder"
+                          style={{
+                            width: '52.5mm',
+                            height: '21.1mm',
+                            visibility: 'hidden',
+                            flexShrink: 0,
+                            flexGrow: 0
+                          }}
+                        />
                       )
                     ))}
                   </div>

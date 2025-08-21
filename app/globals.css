@@ -257,14 +257,14 @@ h4 {
   background-image: none;
 } */
 
-/* Print styles for receipt */
+/* Print styles for thermal receipt only - scoped to specific component */
 @media print {
-  /* First, hide everything */
-  * {
+  /* Only apply to elements with receipt-print class */
+  .receipt-print-only * {
     visibility: hidden !important;
   }
   
-  /* Then show only the receipt content */
+  /* Thermal receipt specific styles - only when printing receipts */
   .receipt-print-content {
     visibility: visible !important;
     position: fixed !important;
@@ -281,7 +281,7 @@ h4 {
     background: white !important;
   }
   
-  /* Force text to be black */
+  /* Force text to be black for receipts */
   .receipt-print-content p,
   .receipt-print-content span,
   .receipt-print-content div {
@@ -290,24 +290,19 @@ h4 {
     print-color-adjust: exact !important;
   }
   
-  /* Preserve flex layouts */
+  /* Preserve flex layouts for receipts */
   .receipt-print-content .flex {
     display: flex !important;
   }
   
-  /* Hide buttons and footer */
-  .DrawerFooter {
+  /* Hide buttons and footer for receipts */
+  .receipt-print-content .DrawerFooter {
     display: none !important;
   }
   
-  /* Page setup */
-  @page {
-    size: 80mm auto;
-    margin: 0;
-  }
-  
-  body {
-    margin: 0;
-    padding: 0;
+  /* Thermal printer page setup - only for receipt printing */
+  .receipt-print-content {
+    /* Apply thermal printer dimensions only to receipts */
+    width: 80mm !important;
   }
 }
