@@ -232,9 +232,9 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
           justify-content: flex-start !important;
           height: 21.1mm !important;
           width: 100% !important;
-          gap: 2mm !important;
+          gap: 0 !important;
           page-break-inside: avoid !important;
-          margin-bottom: 2mm !important;
+          margin-bottom: 0 !important;
         }
         
         /* Empty placeholder styling */
@@ -316,9 +316,9 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
           display: flex;
           flex-direction: row;
           justify-content: flex-start;
-          gap: 2mm;
+          gap: 0;
           width: 100%;
-          margin-bottom: 2mm;
+          margin-bottom: 0;
           flex-wrap: nowrap;
         }
         
@@ -535,7 +535,7 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
         >
           {pages.map((pageRows, pageIndex) => (
             <div key={pageIndex} className={pageIndex > 0 ? 'page-break-after' : ''}>
-              <div className="flex flex-col" style={{ gap: '2mm', width: '100%', minHeight: pageIndex === pages.length - 1 ? 'auto' : '297mm' }}>
+              <div className="flex flex-col" style={{ gap: '0', width: '100%', minHeight: pageIndex === pages.length - 1 ? 'auto' : '297mm' }}>
                 {pageRows.map((row, rowIndex) => (
                   <div 
                     key={`${pageIndex}-${rowIndex}`} 
@@ -543,7 +543,7 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
                     style={{ 
                       display: 'flex', 
                       flexDirection: 'row', 
-                      gap: '2mm', 
+                      gap: '0', 
                       width: '100%',
                       flexWrap: 'nowrap',
                       justifyContent: 'flex-start'
