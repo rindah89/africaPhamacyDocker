@@ -41,6 +41,9 @@ const BarcodeScanner = forwardRef<BarcodeScannerRef, BarcodeScannerProps>(({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const codeReaderRef = useRef<any>(null);
+  const lastScannedCodeRef = useRef<string | null>(null);
+  const lastScanTimeRef = useRef<number>(0);
+  const SCAN_COOLDOWN_MS = 800;
 
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
@@ -56,7 +59,26 @@ const BarcodeScanner = forwardRef<BarcodeScannerRef, BarcodeScannerProps>(({
     const initializeScanner = async () => {
       try {
         const { BrowserMultiFormatReader } = await import('@zxing/browser');
-        codeReaderRef.current = new BrowserMultiFormatReader();
+        try {
+          const { DecodeHintType, BarcodeFormat } = await import('@zxing/library');
+          const hints = new Map();
+          hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+            BarcodeFormat.CODE_128,
+            BarcodeFormat.EAN_13,
+            BarcodeFormat.EAN_8,
+            BarcodeFormat.UPC_A,
+            BarcodeFormat.UPC_E,
+            BarcodeFormat.ITF,
+            BarcodeFormat.CODE_39,
+            BarcodeFormat.QR_CODE,
+          ]);
+          hints.set(DecodeHintType.TRY_HARDER, true);
+          const reader = new BrowserMultiFormatReader();
+          try { (reader as any).hints = hints; } catch (_) {}
+          codeReaderRef.current = reader;
+        } catch (_) {
+          codeReaderRef.current = new BrowserMultiFormatReader();
+        }
       } catch (error) {
         console.error('Failed to initialize barcode scanner:', error);
         setCameraError('Camera scanning not supported on this device');
@@ -79,16 +101,70 @@ const BarcodeScanner = forwardRef<BarcodeScannerRef, BarcodeScannerProps>(({
     }
   };
 
+  // Sanitize and normalize barcode input
+  const sanitizeBarcode = (input: string) => {
+    // Remove control chars (incl. GS1 separators), zero-width chars, and trim
+    return input
+      .replace(/[\x00-\x1F\x7F]/g, '')
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .trim();
+  };
+
+  const digitsOnly = (input: string) => input.replace(/\D/g, '');
+
+  const extractGtin = (raw: string) => {
+    const s = sanitizeBarcode(raw);
+    const m = s.match(/\(?01\)?[^\d]*(\d{14})/);
+    if (m && m[1]) return m[1];
+    return '';
+  };
+
+  const generateBarcodeVariants = (raw: string) => {
+    const code = sanitizeBarcode(raw);
+    const variants = new Set<string>();
+    if (!code) return variants;
+    variants.add(code);
+    const digits = digitsOnly(code);
+    if (digits) variants.add(digits);
+    const gtin14 = extractGtin(code);
+    if (gtin14) {
+      variants.add(gtin14);
+      variants.add(digitsOnly(gtin14));
+    }
+    // UPC-A (12) <-> EAN-13 (leading 0)
+    if (code.length === 12) variants.add('0' + code);
+    if (code.length === 13 && code.startsWith('0')) variants.add(code.slice(1));
+    if (digits.length === 12) variants.add('0' + digits);
+    if (digits.length === 13 && digits.startsWith('0')) variants.add(digits.slice(1));
+    return variants;
+  };
+
   // Process scanned barcode
   const processBarcode = (code: string) => {
-    if (!code) {
+    const variants = generateBarcodeVariants(code);
+    if (variants.size === 0) {
       toast.error('Please scan or enter a barcode');
       return;
     }
-
-    const scannedProduct = products.find(p => p.productCode === code);
+    const normalizedFirst = Array.from(variants)[0] || '';
+    const now = Date.now();
+    if (
+      lastScannedCodeRef.current === normalizedFirst &&
+      now - lastScanTimeRef.current < SCAN_COOLDOWN_MS
+    ) {
+      return;
+    }
+    const scannedProduct = products.find(p => {
+      const productCode = sanitizeBarcode(p.productCode || '');
+      if (!productCode) return false;
+      if (variants.has(productCode)) return true;
+      const productDigits = digitsOnly(productCode);
+      return productDigits ? variants.has(productDigits) : false;
+    });
     
     if (scannedProduct) {
+      lastScannedCodeRef.current = normalizedFirst;
+      lastScanTimeRef.current = now;
       if (scannedProduct.stockQty <= 0) {
         toast.error(`${scannedProduct.name} is out of stock`);
       } else {
@@ -103,7 +179,8 @@ const BarcodeScanner = forwardRef<BarcodeScannerRef, BarcodeScannerProps>(({
         }
       }
     } else {
-      toast.error(`Product not found for barcode: ${code}`);
+      const shown = Array.from(variants)[0] || '';
+      toast.error(`Product not found for barcode: ${shown}`);
       setBarcodeInput('');
     }
   };
