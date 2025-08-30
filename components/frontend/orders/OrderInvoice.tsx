@@ -52,11 +52,28 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
           height: 297mm;
           margin: 0 !important;
           padding: 0 !important;
+          overflow: visible !important;
           font-size: 12px !important;
           line-height: 1.4 !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
           color-adjust: exact !important;
+        }
+
+        /* Ensure the print root is not constrained by screen max-width containers */
+        .invoice-print-root {
+          width: 210mm !important;
+          max-width: 210mm !important;
+          margin: 0 auto !important;
+          padding: 0 !important;
+          background: white !important;
+        }
+
+        /* Neutralize Tailwind max-width wrappers inside the print root */
+        .invoice-print-root .max-w-5xl,
+        .invoice-print-root .max-w-2xl {
+          max-width: none !important;
+          width: auto !important;
         }
         
         * {
@@ -234,7 +251,7 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
         }
       }
     `,
-    onBeforePrint: () => {
+    onBeforePrint: async () => {
       console.log("Preparing to print...");
     },
     onPrintError: (error) => {
@@ -324,8 +341,8 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="max-w-5xl mx-auto p-8 invoice-print-root" style={{ width: '210mm', margin: '0 auto' }}>
+      <div className="mx-auto">
         <div className="relative mt-4 overflow-hidden bg-white dark:bg-slate-700 rounded-lg shadow">
           <div className="absolute top-4 right-4 print:hidden" data-print="hidden">
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -361,7 +378,7 @@ export default function OrderInvoice({ order, readOnly = true }: { order: ILineO
             </Dialog>
           </div>
 
-          <div ref={componentRef} className="invoice-container px-4 py-6 sm:px-8 sm:py-10 bg-white print:bg-white" style={{ backgroundColor: 'white', color: 'black' }}>
+          <div ref={componentRef} className="invoice-container px-4 py-6 sm:px-8 sm:py-10 bg-white print:bg-white" style={{ backgroundColor: 'white', color: 'black', width: '186mm', minHeight: '297mm', margin: '0 auto', boxShadow: '0 0 10px rgba(0,0,0,0.06)' }}>
             <div className="page-break-avoid">
               <div className="invoice-header pt-16 pb-8 text-center sm:py-8">
                 <Logo />
