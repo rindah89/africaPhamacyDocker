@@ -92,6 +92,32 @@ export default function ReceiptPrint2({
     contentRef: componentRef,
     documentTitle: `Receipt-${orderNumber}`,
     removeAfterPrint: false,
+    pageStyle: `
+      @page {
+        size: 58mm auto;
+        margin: 0;
+        padding: 0;
+      }
+      @media print {
+        html, body {
+          width: 58mm !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: visible !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+          color-adjust: exact !important;
+        }
+        .receipt-print-content {
+          width: 58mm !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: white !important;
+        }
+        /* Hide UI-only elements */
+        button, [data-print="hidden"], .DrawerFooter { display: none !important; }
+      }
+    `,
     onBeforeGetContent: async () => {
       console.log('🖨️ Starting print process...', { isPrinting, hasPrinted });
       if (!orderItems || orderItems.length === 0) {
@@ -398,6 +424,11 @@ export default function ReceiptPrint2({
                           <head>
                             <title>Receipt ${orderNumber}</title>
                             <style>
+                              @page { size: 58mm auto; margin: 0; padding: 0; }
+                              @media print {
+                                html, body { width: 58mm !important; margin: 0 !important; padding: 0 !important; }
+                                .receipt-print-content { width: 58mm !important; margin: 0 !important; padding: 0 !important; }
+                              }
                               body { 
                                 font-family: monospace; 
                                 margin: 0; 

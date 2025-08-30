@@ -76,12 +76,14 @@ const BarcodeItem = ({ productName, price, productCode, deliveryDate, supplierNa
         <div className="w-full flex justify-center">
           <Barcode
             value={productCode}
-            width={1.0}
-            height={22}
-            fontSize={7}
-            margin={1}
+            width={1.5}
+            height={30}
+            fontSize={8}
+            margin={6}
+            marginLeft={6}
+            marginRight={6}
             displayValue={true}
-            textMargin={1}
+            textMargin={2}
             font="monospace"
             textAlign="center"
             background="#ffffff"
@@ -201,6 +203,15 @@ const BarcodeSheet = ({ selectedBatches, clearAllBatches }: BarcodeSheetProps) =
           display: block !important;
           margin: 0 auto !important;
           background: white !important;
+          shape-rendering: crispEdges !important;
+          transform: none !important;
+          max-width: none !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .barcode-item svg rect {
+          shape-rendering: crispEdges !important;
+          vector-effect: non-scaling-stroke !important;
         }
         
         /* Ensure text is black */

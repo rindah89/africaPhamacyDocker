@@ -303,6 +303,6 @@ h4 {
   /* Thermal printer page setup - only for receipt printing */
   .receipt-print-content {
     /* Apply thermal printer dimensions only to receipts */
-    width: 80mm !important;
+    width: 58mm !important;
   }
 }
