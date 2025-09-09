@@ -3,9 +3,6 @@ const nextConfig = {
   // Remove hardcoded asset prefix - let Vercel handle this automatically
   // assetPrefix: process.env.NODE_ENV === 'production' ? 'https://africapharmacy.health' : '',
   
-  // Enable standalone output for Docker
-  output: 'standalone',
-  
   // Experimental optimizations
   experimental: {
     optimizePackageImports: [
@@ -61,8 +58,6 @@ const nextConfig = {
     return config;
   },
 
-  // Output optimization
-  output: 'standalone',
   
   // Compression
   compress: true,
