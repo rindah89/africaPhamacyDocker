@@ -1,0 +1,70 @@
+# Simple development Dockerfile without build step
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache libc6-compat netcat-openbsd
+
+# Copy package files first for caching
+COPY package.json package-lock.json* .npmrc* ./
+COPY prisma ./prisma/
+
+# Install dependencies
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+
+# Generate Prisma Client with dummy URL
+ENV DATABASE_URL="mongodb://dummy:dummy@dummy:27017/dummy?authSource=admin"
+RUN npx prisma generate
+
+# Copy all source files
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p /app/.next /app/public/uploads
+
+# Create start script
+RUN cat > /app/docker-start.sh << 'EOF'
+#!/bin/sh
+set -e
+
+echo "Africa Pharmacy Docker Container Starting..."
+
+# Environment setup
+export MONGO_HOST=${MONGO_HOST:-mongodb}
+export MONGO_PORT=${MONGO_PORT:-27017}
+
+# Wait for MongoDB
+echo "Waiting for MongoDB at $MONGO_HOST:$MONGO_PORT..."
+while ! nc -z $MONGO_HOST $MONGO_PORT; do
+  echo "MongoDB is not ready, waiting..."
+  sleep 2
+done
+echo "MongoDB is ready!"
+
+# Push Prisma schema
+echo "Syncing database schema..."
+npx prisma db push --skip-generate || echo "Schema sync completed"
+
+# Start Next.js in development mode
+echo "Starting Next.js development server..."
+exec npm run dev
+EOF
+
+# Make script executable
+RUN chmod +x /app/docker-start.sh
+
+# Expose port
+EXPOSE 3000
+
+# Environment variables
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Run as root to avoid permission issues in development
+USER root
+
+# Use the start script
+CMD ["/app/docker-start.sh"]

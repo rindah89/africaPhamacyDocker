@@ -1,0 +1,51 @@
+# Development Dockerfile for Africa Pharmacy
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json* .npmrc* ./
+COPY prisma ./prisma/
+
+# Install all dependencies
+RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+
+# Development image
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=development
+
+# Install netcat for health checks
+RUN apk add --no-cache netcat-openbsd
+
+# Create user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy everything
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Create necessary directories and set permissions
+RUN mkdir -p /app/public/uploads /app/.next && \
+    chown -R nextjs:nodejs /app
+
+# Make start script executable
+RUN chmod +x /app/start-dev.sh
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Start the application in dev mode
+CMD ["./start-dev.sh"]

@@ -1,0 +1,91 @@
+appId: com.africapharmacy.app
+productName: Africa Pharmacy
+directories:
+  output: dist
+  buildResources: build-resources
+
+# Files to include in the app
+files:
+  - "**/*"
+  - "!**/*.ts"
+  - "!**/*.tsx"
+  - "!src/**/*"
+  - "!electron/splash.html"
+  - "electron/**/*"
+  - ".next/**/*"
+  - "public/**/*"
+  - "prisma/**/*"
+  - "node_modules/**/*"
+  - "package.json"
+  - "!**/*.map"
+  - "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}"
+
+# Include MongoDB binaries
+extraResources:
+  - from: "mongodb/bin"
+    to: "mongodb/bin"
+    filter: ["**/*"]
+
+# Windows configuration
+win:
+  target: 
+    - nsis
+    - portable
+  icon: build-resources/icon.ico
+  publisherName: "Africa Pharmacy Ltd"
+  certificateFile: null
+  certificatePassword: null
+
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: "Africa Pharmacy"
+  artifactName: "AfricaPharmacy-Setup-${version}.${ext}"
+
+portable:
+  artifactName: "AfricaPharmacy-Portable-${version}.${ext}"
+
+# macOS configuration  
+mac:
+  target:
+    - dmg
+    - zip
+  icon: build-resources/icon.icns
+  category: public.app-category.business
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  entitlements: build-resources/entitlements.mac.plist
+  entitlementsInherit: build-resources/entitlements.mac.plist
+
+dmg:
+  title: "Africa Pharmacy"
+  icon: build-resources/icon.icns
+  background: build-resources/background.png
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 410
+      y: 190
+      type: link
+      path: /Applications
+    - x: 130
+      y: 190
+      type: file
+
+# Linux configuration
+linux:
+  target:
+    - AppImage
+    - deb
+  icon: build-resources
+  category: Office
+  synopsis: "Pharmacy Management System"
+  description: "A comprehensive pharmacy management solution for Africa"
+  desktop:
+    Name: Africa Pharmacy
+    Comment: Pharmacy Management System
+    Categories: Office;Business;

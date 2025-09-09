@@ -52,20 +52,21 @@ export async function generateMetadata({
     },
   };
 }
-export async function generateStaticParams() {
-  try {
-    const products = (await getAllProducts()) || [];
-    if (products.length > 0) {
-      return products.map((product) => ({
-        slug: product.slug,
-      }));
-    }
-    return [];
-  } catch (error) {
-    console.log(error);
-    return [];
-  }
-}
+// Commented out for Docker builds - uncomment if you need static generation
+// export async function generateStaticParams() {
+//   try {
+//     const products = (await getAllProducts()) || [];
+//     if (products.length > 0) {
+//       return products.map((product) => ({
+//         slug: product.slug,
+//       }));
+//     }
+//     return [];
+//   } catch (error) {
+//     console.log(error);
+//     return [];
+//   }
+// }
 
 export const dynamic = 'force-dynamic';
 

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate Africa Pharmacy Icon</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: #f0f0f0;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        canvas {
+            border: 1px solid #ddd;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        .size-btn {
+            margin: 5px;
+            padding: 10px 20px;
+            border: none;
+            background: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .size-btn:hover {
+            background: #45a049;
+        }
+        #downloadBtn {
+            padding: 15px 30px;
+            font-size: 18px;
+            background: #2196F3;
+            margin-top: 20px;
+        }
+        #downloadBtn:hover {
+            background: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Africa Pharmacy Icon Generator</h1>
+        <p>Click to download icon in different sizes:</p>
+        
+        <canvas id="canvas" width="256" height="256"></canvas>
+        
+        <div>
+            <button class="size-btn" onclick="generateIcon(16)">16x16</button>
+            <button class="size-btn" onclick="generateIcon(32)">32x32</button>
+            <button class="size-btn" onclick="generateIcon(64)">64x64</button>
+            <button class="size-btn" onclick="generateIcon(128)">128x128</button>
+            <button class="size-btn" onclick="generateIcon(256)">256x256</button>
+            <button class="size-btn" onclick="generateIcon(512)">512x512</button>
+        </div>
+        
+        <button id="downloadBtn" class="size-btn" onclick="generateIcon(256)">
+            Download icon.png (256x256)
+        </button>
+        
+        <p style="margin-top: 30px; color: #666;">
+            For Windows .ico file, use an online converter with the 256x256 PNG
+        </p>
+    </div>
+
+    <script>
+        // Draw the icon
+        function drawIcon(size) {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = size;
+            canvas.height = size;
+            
+            // Background
+            ctx.fillStyle = '#4CAF50';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Add gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#4CAF50');
+            gradient.addColorStop(1, '#388E3C');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Draw pill emoji or shape
+            ctx.font = `${size * 0.5}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'white';
+            ctx.fillText('💊', size/2, size/2);
+            
+            // Add text for larger sizes
+            if (size >= 128) {
+                ctx.font = `${size * 0.08}px Arial`;
+                ctx.fillText('AFRICA PHARMACY', size/2, size * 0.85);
+            }
+        }
+        
+        // Generate and download icon
+        function generateIcon(size) {
+            drawIcon(size);
+            
+            const canvas = document.getElementById('canvas');
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `africa-pharmacy-icon-${size}x${size}.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        }
+        
+        // Initial draw
+        drawIcon(256);
+    </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { atomOneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Copy, Check } from "lucide-react";
 import Link from "next/link";
 
@@ -37,7 +37,7 @@ export default function CustomCodeBlock({
       </button>
       <SyntaxHighlighter
         language={language}
-        style={atomOneLight}
+        style={oneLight}
         showLineNumbers={showLineNumbers}
         customStyle={{
           margin: 0,

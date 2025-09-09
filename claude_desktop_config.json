@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "mongodb": {
+      "command": "node",
+      "args": ["/Users/remyngwanyam/karen/AfricaPharmacy/mcp-servers/mongodb/dist/index.js"],
+      "env": {
+        "DATABASE_URL": "YOUR_MONGODB_CONNECTION_STRING_HERE"
+      }
+    }
+  }
+}

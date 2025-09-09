@@ -1,120 +1,337 @@
-# Modern Next.js & TypeScript 3 Systems in 1 Application Source Code: Ecommerce, POS, and Inventory Management
+# Africa Pharmacy Management System
 
-## Getting Started
+A comprehensive pharmacy management solution designed for African pharmacies, featuring inventory management, point-of-sale, and reporting capabilities.
 
-Follow these steps to set up and run the project on your local machine.
+## 🚀 Quick Start for End Users
 
-## Preview the read Me
+### For Windows Users
+1. Extract the AfricaPharmacy folder to your desktop
+2. Double-click `SETUP.bat`
+3. A desktop icon will be created automatically
+4. The application will start in your browser
 
-Use the following command to preview the readme file : `Ctr + shift + V `
+### For Mac Users
+1. Extract the AfricaPharmacy folder to Applications
+2. Double-click `AfricaPharmacy.command`
+3. The application will start in your browser
+
+### Default Login
+- **Email**: admin@africapharmacy.com
+- **Password**: P@ssw0rd2025!
+
+⚠️ **Important**: Change the admin password immediately after first login!
+
+## 📋 System Requirements
+
+- **Operating System**: Windows 10/11, macOS 10.14+, or Linux
+- **RAM**: Minimum 4GB (8GB recommended)
+- **Storage**: 10GB free space
+- **Docker Desktop**: Required for database
+- **Browser**: Chrome, Firefox, Safari, or Edge (latest version)
+
+## 🛠️ Developer Setup
 
 ### Prerequisites
+1. **Node.js 18+** - [Download](https://nodejs.org/)
+2. **Docker Desktop** - [Download](https://www.docker.com/products/docker-desktop)
+3. **Git** - For version control
 
-Ensure your machine has the following installed:
+### Initial Setup
+```bash
+# Clone the repository
+git clone [repository-url]
+cd AfricaPharmacy
 
-- Git
-- Node.js
+# Install dependencies
+npm install --legacy-peer-deps
 
-### Installation
+# Copy environment file
+cp .env.production .env.local
+```
 
-1. **Download and Unzip the Source Code**
+### Database Setup
+```bash
+# Start MongoDB with Docker
+docker-compose -f docker-compose-mongodb.yml up -d
 
-   - Download the source code from the provided link.
-   - Unzip the file and open the source code in Visual Studio Code.
+# Push database schema
+npx prisma db push
 
-2. **Install Dependencies**
+# Seed the database (first time only)
+npx prisma db seed
+```
 
-   - Open the terminal in VS Code.
-   - Run the following command to install all necessary dependencies:
-     ```bash
-     npm install
-     ```
+### Development
+```bash
+# Run in development mode
+npm run dev
 
-3. **Set Up Environment Variables**
+# Build for production
+npm run build
 
-   - Open the `.env.example` file.
-   - Create a new file named `.env` in the root directory.
-   - Copy all the variables from `.env.example` to `.env`.
-   - Populate the variables with your credentials:
+# Start production server
+npm start
+```
 
-     ```env
-     # Environment variables declared in this file are automatically made available to Prisma.
-     # See the documentation for more detail: https://pris.ly/d/prisma-schema#accessing-environment-variables-from-the-schema
+## 📦 Creating Distribution Package
 
-     STRIPE_SECRET_API_KEY=""
-     # Guide: Obtain this key from your Stripe account dashboard under Developers > API keys.
+### For Developers - Preparing for Deployment
 
-     DATABASE_URL=""
-     # Guide: This should be your MongoDB connection string. You can get this from your MongoDB Atlas account.
+1. **Build the application**:
+```bash
+npm run build
+```
 
-     NEXTAUTH_URL="http://localhost:3000"
-     NEXT_PUBLIC_BASE_URL="http://localhost:3000"
+2. **Create distribution package**:
+```bash
+./create-distribution.sh
+```
 
-     NEXTAUTH_SECRET=""
-     # Guide: Run `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` to generate this key.
+This creates a ready-to-deploy package in the `dist/` folder containing:
+- Pre-built application (no build step needed)
+- Production dependencies only
+- Launcher scripts for all platforms
+- Desktop icon installers
+- Documentation
 
-     RESEND_API_KEY=""
-     # Guide: Obtain this key from your Resend account.
+## 🖥️ Desktop Deployment
 
-     UPLOADTHING_SECRET=""
-     # Guide: Obtain this secret from your Uploadthing account.
+### Deployment Options
 
-     UPLOADTHING_APP_ID=""
-     # Guide: Obtain this app ID from your Uploadthing account.
-     ```
+#### Option 1: One-Click Setup (Recommended)
+The distribution package includes `SETUP.bat` which:
+- Creates desktop shortcuts automatically
+- Adds Start Menu entries
+- Configures the system
+- Starts the application
 
-4. **Start the Development Server**
+Users just need to:
+1. Extract the zip file
+2. Double-click `SETUP.bat`
+3. Use the desktop icon for daily access
 
-   - After adding all the environment variables, run the following commands in the terminal:
-     ```bash
-     npx prisma db push && npx prisma generate && npm run dev
-     ```
-   - This should start the server on `http://localhost:3000`.
+#### Option 2: Manual Installation
+1. Extract to desired location
+2. Run `INSTALL-DESKTOP-ICON.bat` to create shortcuts
+3. Use `AfricaPharmacy.bat` to start
 
-5. **Seed Initial Data**
+### What Gets Installed
 
-   - Locate the file `actions/seed.ts`. This file is responsible for seeding initial data to the database.
-   - Ensure that you have added a MongoDB database URL in your `.env` file.
-   - Review and update the sample data in `seed.ts` as needed (e.g., users, products). Confirm that the placeholder image `placeholder.svg` exists in the `public` directory.
-   - In your browser, go to `http://localhost:3000` and navigate to the footer. Click on the "Database seeding" link to route to the seed page.
-   - On the seed page, click the "Seed Data" button and wait for the notification indicating that the database seeding is complete.
+- **Desktop Icon**: "Africa Pharmacy" shortcut
+- **Start Menu**: Programs → Africa Pharmacy
+- **Database**: MongoDB in Docker (isolated)
+- **Application**: Runs on http://localhost:3000
 
-6. **Login and Set Up Roles and Users**
+## 🗄️ Database Management
 
-   - Click the login button located at the top right of the navigation bar.
-   - Use the email and password specified in the seed file to log in.
-   - Start by creating a role called "Customer". This role will be assigned to new ecommerce users upon registration.
-   - Create a user called "Walk-in Customer" and assign them the "Customer" role. This user will be used in the Point of Sale system.
-   - Run the following command to open Prisma Studio:
-     ```bash
-     npx prisma studio
-     ```
-   - From Prisma Studio, copy the user ID of the "Walk-in Customer" you created.
-   - Locate the `PointOfSale` component in `/components/PointOfSale.tsx` and replace the user ID in the variable `const initialCustomerId = "666679618a65b2eadc3fe772";` with the user ID you copied.
-   - Go back to Prisma Studio and copy the role ID of the "Customer" role you created. In the `RegisterForm.tsx` component, replace the variable `data.roleId = "666679228a65b2eadc3fe771";` with the role ID you copied.
+### Using MongoDB in Docker
+The system uses MongoDB running in Docker for:
+- Data isolation and security
+- Easy backup and restore
+- Automatic startup
+- No installation conflicts
 
-7. **Add Additional Data**
+### Database Commands
+```bash
+# Start database
+docker-compose -f docker-compose-mongodb.yml up -d
 
-   - Take your time to fill in the necessary data such as categories and products.
+# Stop database
+docker-compose -f docker-compose-mongodb.yml down
 
-8. **Push to GitHub**
+# View database UI (if enabled)
+# http://localhost:8081
+```
 
-   - Once you're happy with the UI and data, push the project to GitHub.
+### Backup & Restore
 
-9. **Deploy to Vercel**
-   - After setting up the project on GitHub, head to Vercel to deploy your project.
-   - Remember to add your environment variables on Vercel before deployment.
-   - If you encounter errors during deployment, try troubleshooting before seeking further assistance.
+#### Creating a Backup
+```bash
+# Windows
+docker exec africapharmacy-mongodb mongodump --archive=/tmp/backup.archive --gzip
+docker cp africapharmacy-mongodb:/tmp/backup.archive ./backup-$(date +%Y%m%d).archive
 
-## Troubleshooting
+# Mac/Linux
+docker exec africapharmacy-mongodb mongodump --archive=/tmp/backup.archive --gzip
+docker cp africapharmacy-mongodb:/tmp/backup.archive ./backup-$(date +%Y%m%d).archive
+```
 
-If you encounter any issues, try the following steps:
+#### Restoring from Backup
+```bash
+docker cp backup.archive africapharmacy-mongodb:/tmp/backup.archive
+docker exec africapharmacy-mongodb mongorestore --archive=/tmp/backup.archive --gzip --drop
+```
 
-- Ensure all environment variables are correctly set.
-- Check for any typos or missing files.
-- Review the error messages in the terminal or browser console.
-- Consult the documentation for Next.js, Prisma, or other libraries used in the project.
+## 🔧 Configuration
 
-If you need further assistance, please reach out for support.
+### Environment Variables
+Key settings in `.env.local`:
+```env
+# Database
+DATABASE_URL="mongodb://localhost:27017/africapharmacy?replicaSet=rs0&directConnection=true"
 
-Happy coding!
+# Application
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-secret-here
+
+# File Storage
+NEXT_PUBLIC_USE_LOCAL_STORAGE=true
+```
+
+### Network Access
+To allow other computers in the pharmacy to access:
+
+1. Find server IP address:
+   - Windows: `ipconfig`
+   - Mac/Linux: `ifconfig`
+
+2. Update `.env.local`:
+```env
+NEXTAUTH_URL=http://YOUR-IP:3000
+NEXT_PUBLIC_BASE_URL=http://YOUR-IP:3000
+```
+
+3. Access from other computers: `http://YOUR-IP:3000`
+
+## 🚀 Features
+
+### Inventory Management
+- Product catalog with categories
+- Stock tracking and alerts
+- Supplier management
+- Batch tracking with expiry dates
+- Barcode support
+
+### Point of Sale (POS)
+- Fast product search
+- Shopping cart
+- Receipt printing
+- Multiple payment methods
+- Customer management
+
+### Reports & Analytics
+- Sales reports
+- Inventory reports
+- Financial summaries
+- Product movement tracking
+- Low stock alerts
+
+### User Management
+- Role-based access control
+- Multiple user accounts
+- Activity tracking
+- Secure authentication
+
+## 🛡️ Security
+
+### Best Practices
+1. **Change default passwords** immediately
+2. **Regular backups** - Daily recommended
+3. **User accounts** - Create individual accounts for staff
+4. **Access control** - Use role-based permissions
+5. **Network security** - Use firewall if networked
+
+### Security Checklist
+- [ ] Changed admin password
+- [ ] Created user accounts for all staff
+- [ ] Configured backup schedule
+- [ ] Restricted network access
+- [ ] Enabled audit logging
+
+## 🔍 Troubleshooting
+
+### Application Won't Start
+1. Ensure Docker Desktop is running
+2. Check if ports 3000 and 27017 are available
+3. Run `docker ps` to verify containers
+4. Check logs: `docker-compose logs`
+
+### Cannot Access Database
+1. Verify MongoDB is running: `docker ps`
+2. Check connection string in `.env.local`
+3. Ensure replica set is initialized
+4. Restart Docker containers
+
+### Performance Issues
+1. Allocate more RAM to Docker Desktop
+2. Close unnecessary applications
+3. Clear browser cache
+4. Check available disk space
+
+### Common Error Messages
+
+**"Port 3000 already in use"**
+- Another application is using the port
+- Change port in `.env.local`: `PORT=3001`
+
+**"Cannot connect to MongoDB"**
+- Docker Desktop not running
+- Start with: `docker-compose -f docker-compose-mongodb.yml up -d`
+
+## 📚 Documentation
+
+### For Users
+- `DESKTOP_APP_GUIDE.md` - End user guide
+- `DEPLOYMENT.md` - Deployment instructions
+
+### For Developers
+- `DEVELOPER_SETUP_GUIDE.md` - Development setup
+- API documentation in `/docs`
+
+## 🏗️ Architecture
+
+### Technology Stack
+- **Frontend**: Next.js 15, React, TailwindCSS
+- **Backend**: Next.js API Routes, Prisma ORM
+- **Database**: MongoDB with replica set
+- **Authentication**: NextAuth.js
+- **File Storage**: Local storage / Cloudinary
+- **Deployment**: Docker, Node.js
+
+### Project Structure
+```
+AfricaPharmacy/
+├── app/                 # Next.js app directory
+├── components/          # React components
+├── lib/                 # Utility functions
+├── prisma/             # Database schema and migrations
+├── public/             # Static assets
+├── docker-compose-mongodb.yml
+├── AfricaPharmacy.bat  # Windows launcher
+├── AfricaPharmacy.command # Mac launcher
+├── SETUP.bat           # One-click installer
+└── README.md           # This file
+```
+
+## 🤝 Support
+
+### Getting Help
+1. Check the troubleshooting section
+2. Review logs in the terminal
+3. Consult documentation
+4. Contact support with:
+   - Error messages
+   - Steps to reproduce
+   - System information
+
+### Maintenance
+- **Daily**: Backup data
+- **Weekly**: Check for updates
+- **Monthly**: Archive old transactions
+- **Quarterly**: Review user access
+
+## 📄 License
+
+Proprietary software. All rights reserved.
+
+## 🙏 Acknowledgments
+
+Built with modern web technologies to serve the needs of African pharmacies.
+
+---
+
+For technical support or questions, please maintain:
+- Application logs
+- Error screenshots
+- System specifications
+- Steps that led to the issue

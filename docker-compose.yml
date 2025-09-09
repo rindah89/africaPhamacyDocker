@@ -1,0 +1,107 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: africapharmacy-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-africapharmacy}
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - africapharmacy-network
+    command: mongod --replSet rs0 --bind_ip_all
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.working
+    container_name: africapharmacy-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Database - Updated for replica set
+      DATABASE_URL: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-password123}@mongodb:27017/${MONGO_DATABASE:-africapharmacy}?authSource=admin&replicaSet=rs0
+      
+      # NextAuth
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      
+      # Email (optional)
+      EMAIL_SERVER: ${EMAIL_SERVER:-}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@africapharmacy.local}
+      
+      # Cloudinary (optional)
+      NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: ${NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      
+      # Other environment variables
+      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:-http://localhost:3000}
+      
+      # Use local storage for file uploads
+      NEXT_PUBLIC_USE_LOCAL_STORAGE: "true"
+    depends_on:
+      - mongodb
+    volumes:
+      - ./public/uploads:/app/public/uploads
+    networks:
+      - africapharmacy-network
+
+  # MongoDB replica set initializer
+  mongo-init:
+    image: mongo:7.0
+    container_name: africapharmacy-mongo-init
+    depends_on:
+      - mongodb
+    networks:
+      - africapharmacy-network
+    restart: "no"
+    command: >
+      mongosh --host mongodb:27017 -u admin -p password123 --authenticationDatabase admin --eval '
+        var status = rs.status();
+        if (status.ok !== 1) {
+          rs.initiate({
+            _id: "rs0",
+            members: [
+              { _id: 0, host: "mongodb:27017", priority: 1 }
+            ]
+          });
+        } else {
+          print("Replica set already initialized");
+        }
+      '
+
+  # Optional: MongoDB Express for database management UI
+  mongo-express:
+    image: mongo-express:latest
+    container_name: africapharmacy-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-password123}@mongodb:27017/?replicaSet=rs0
+      ME_CONFIG_BASICAUTH: false
+    depends_on:
+      - mongodb
+    networks:
+      - africapharmacy-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  africapharmacy-network:
+    driver: bridge

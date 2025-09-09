@@ -24,8 +24,6 @@ import { SearchProduct } from "@/components/global/ShopHeader";
 
 import { ProductWithReviews } from "@/components/frontend/listings/ProductListing";
 
-import { ipcRenderer } from 'electron';
-
 
 
 export interface GroupedProducts {

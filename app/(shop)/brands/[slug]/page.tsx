@@ -25,20 +25,21 @@ export async function generateMetadata({
     },
   };
 }
-export async function generateStaticParams() {
-  try {
-    const brands = (await getAllBrands()) || [];
-    if (brands.length > 0) {
-      return brands.map((brand) => ({
-        slug: brand.slug,
-      }));
-    }
-    return [];
-  } catch (error) {
-    console.log(error);
-    return [];
-  }
-}
+// Commented out for Docker builds - uncomment if you need static generation
+// export async function generateStaticParams() {
+//   try {
+//     const brands = (await getAllBrands()) || [];
+//     if (brands.length > 0) {
+//       return brands.map((brand) => ({
+//         slug: brand.slug,
+//       }));
+//     }
+//     return [];
+//   } catch (error) {
+//     console.log(error);
+//     return [];
+//   }
+// }
 export default async function page({
   params,
   searchParams,
