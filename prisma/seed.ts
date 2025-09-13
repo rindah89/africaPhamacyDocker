@@ -40,8 +40,12 @@ async function main() {
     await prisma.monthlyInsuranceReport.deleteMany({});
     await prisma.insuranceProvider.deleteMany({});
     await prisma.counter.deleteMany({});
-  } catch (error: any) {
-    console.log('⚠️  Could not clear all data (this is normal for first run):', error.message);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.log('⚠️  Could not clear all data (this is normal for first run):', error.message);
+    } else {
+      console.log('⚠️  Could not clear all data (this is normal for first run):', error);
+    }
   }
 
   // Create Roles
@@ -319,12 +323,42 @@ async function main() {
           },
         });
         subCategoryMap.set(subCatTitle, subCategory.id);
+        console.log(`DEBUG: Mapped subCategory: ${subCatTitle} -> ${subCategory.id}`);
       }
     }
   }
 
+  // Ensure 'Autres' subcategory exists for fallback
+  if (!subCategoryMap.has('Autres')) {
+    console.warn("WARNING: 'Autres' subcategory not found. Creating it now for fallback.");
+    const diversCategory = Array.from(categoryMap.entries()).find(([key, value]) => key === 'Divers');
+    let categoryIdForAutres: string;
+
+    if (diversCategory) {
+      categoryIdForAutres = diversCategory[1]; // Get the ID of the 'Divers' category
+    } else {
+      // Fallback if 'Divers' category is not found (should not happen if categoryStructure is consistent)
+      console.error("CRITICAL: 'Divers' category not found. Cannot create 'Autres' subcategory.");
+      // You might need to create a default category here or handle this error more gracefully
+      // For now, let's assume 'Divers' will always exist.
+      // This part might need manual intervention if the category structure changes.
+      return; // Exit seed if critical category is missing
+    }
+
+    const autresSubCategory = await prisma.subCategory.create({
+      data: {
+        title: 'Autres',
+        slug: 'autres',
+        categoryId: categoryIdForAutres,
+      },
+    });
+    subCategoryMap.set('Autres', autresSubCategory.id);
+  }
+
   // Map product families to subcategories
+  console.log(`DEBUG: subCategoryMap.get('Autres') before familleToSubCategory: ${subCategoryMap.get('Autres')}`);
   const familleToSubCategory: Record<string, any> = {
+    // Existing mappings
     'CP': subCategoryMap.get('Autres Comprimés'),
     'CO': subCategoryMap.get('Autres Comprimés'),
     'SIR': subCategoryMap.get('Sirops Pédiatriques'),
@@ -341,6 +375,41 @@ async function main() {
     'FR': subCategoryMap.get('Autres'),
     'GRA': subCategoryMap.get('Autres'),
     'TMP': subCategoryMap.get('Autres'),
+
+    // Add all subcategory titles from categoryStructure to familleToSubCategory
+    'Antibiotiques': subCategoryMap.get('Antibiotiques'),
+    'Analgésiques': subCategoryMap.get('Analgésiques'),
+    'Antipaludiques': subCategoryMap.get('Antipaludiques'),
+    'Vitamines': subCategoryMap.get('Vitamines'),
+    'Autres Comprimés': subCategoryMap.get('Autres Comprimés'),
+    'Sirops Pédiatriques': subCategoryMap.get('Sirops Pédiatriques'),
+    'Solutions Orales': subCategoryMap.get('Solutions Orales'),
+    'Suspensions': subCategoryMap.get('Suspensions'),
+    'Ampoules': subCategoryMap.get('Ampoules'),
+    'Flacons Injectables': subCategoryMap.get('Flacons Injectables'),
+    'Perfusions': subCategoryMap.get('Perfusions'),
+    'Crèmes Dermatologiques': subCategoryMap.get('Crèmes Dermatologiques'),
+    'Pommades': subCategoryMap.get('Pommades'),
+    'Gels': subCategoryMap.get('Gels'),
+    'Collyres Antibiotiques': subCategoryMap.get('Collyres Antibiotiques'),
+    'Collyres Anti-inflammatoires': subCategoryMap.get('Collyres Anti-inflammatoires'),
+    'Laits Infantiles': subCategoryMap.get('Laits Infantiles'),
+    'Céréales': subCategoryMap.get('Céréales'),
+    'Accessoires Bébé': subCategoryMap.get('Accessoires Bébé'),
+    'Hygiène Bébé': subCategoryMap.get('Hygiène Bébé'),
+    'Savons': subCategoryMap.get('Savons'),
+    'Dentifrices': subCategoryMap.get('Dentifrices'),
+    'Soins du Corps': subCategoryMap.get('Soins du Corps'),
+    'Cosmétiques': subCategoryMap.get('Cosmétiques'),
+    'Seringues': subCategoryMap.get('Seringues'),
+    'Thermomètres': subCategoryMap.get('Thermomètres'),
+    'Tensiomètres': subCategoryMap.get('Tensiomètres'),
+    'Glucomètres': subCategoryMap.get('Glucomètres'),
+    'Accessoires': subCategoryMap.get('Accessoires'),
+    'Consommables': subCategoryMap.get('Consommables'),
+    'Autres': subCategoryMap.get('Autres'),
+    // Default fallback for unmapped FAMILLE values
+    'default': subCategoryMap.get('Autres'),
   };
 
   // Load and process products from JSON
@@ -358,13 +427,57 @@ async function main() {
     
     await Promise.all(batch.map(async (item: any) => {
       try {
+        // Validate essential fields before proceeding
+        if (!item.DESIGNATION || typeof item.DESIGNATION !== 'string') {
+          console.error(`Skipping product due to invalid DESIGNATION: ${JSON.stringify(item)}`);
+          return; // Uncomment this line
+        }
+        if (!item['CODE ARTICLE'] || typeof item['CODE ARTICLE'] !== 'string') {
+          console.error(`Skipping product due to invalid CODE ARTICLE: ${JSON.stringify(item)}`);
+          return; // Uncomment this line
+        }
+
         const supplierId = supplierMap.get(item.FOUNISSEUR) || supplierMap.get('Other Suppliers');
-        const subCategoryId = familleToSubCategory[item.FAMILLE] || subCategoryMap.get('Autres');
+        // Ensure subCategoryId is always valid, fallback to 'Autres' if mapping fails
+        let subCategoryId = familleToSubCategory[item.FAMILLE]; // Attempt to get from direct mapping
+
+        // If direct mapping fails, try the 'default' fallback
+        if (!subCategoryId) {
+            subCategoryId = familleToSubCategory['default'];
+        }
+
+        // Final explicit fallback to 'Autres' from subCategoryMap if still null/undefined
+        if (!subCategoryId) {
+            subCategoryId = subCategoryMap.get('Autres');
+            console.warn(`WARNING: Subcategory for ${item.DESIGNATION} (FAMILLE: ${item.FAMILLE}) defaulted to 'Autres' as final fallback.`);
+        }
+
+        // If subCategoryId is still invalid after all fallbacks, skip the product
+        if (!subCategoryId) {
+            console.error(`CRITICAL ERROR: Skipping product ${item.DESIGNATION} (FAMILLE: ${item.FAMILLE}) due to persistent invalid subCategoryId.`);
+            return; // Skip this product
+        }
         const brandId = brandMap.get('Generic');
         const unitId = unitMap.get('BTE');
 
+        // NEW DEBUGGING LOGS
+        console.log(`DEBUG BEFORE IF: item.FAMILLE: ${item.FAMILLE}, item.FOUNISSEUR: ${item.FOUNISSEUR}`);
+        console.log(`DEBUG BEFORE IF: supplierId: ${supplierId}, subCategoryId: ${subCategoryId}, brandId: ${brandId}, unitId: ${unitId}`);
+
         if (supplierId && subCategoryId && brandId && unitId) {
-          const slug = item.DESIGNATION.toLowerCase()
+          // Existing debugging logs (these will now be hit if the outer condition passes)
+          console.log(`DEBUG INSIDE IF: item.FAMILLE: ${item.FAMILLE}`);
+          console.log(`DEBUG INSIDE IF: familleToSubCategory[item.FAMILLE]: ${familleToSubCategory[item.FAMILLE]}`);
+          console.log(`DEBUG INSIDE IF: subCategoryMap.get('Autres'): ${subCategoryMap.get('Autres')}`);
+          console.log(`DEBUG INSIDE IF: final subCategoryId: ${subCategoryId}`);
+
+          // Explicitly check subCategoryId validity
+          if (!subCategoryId) {
+            console.error(`Skipping product ${item.DESIGNATION} due to invalid subCategoryId: ${subCategoryId}`);
+            return; // Skip this product
+          }
+
+          const slug = String(item.DESIGNATION).toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-|-$/g, '')
             .substring(0, 100) + '-' + item['CODE ARTICLE'];
@@ -375,7 +488,7 @@ async function main() {
               slug: slug,
               productCode: String(item['CODE ARTICLE']),
               stockQty: Math.floor(Math.random() * 100) + 10,
-              productCost: item['PRIX REVIENT'] || item['PRIX BASE'],
+              productCost: Number(item['PRIX REVIENT']) || Number(item['PRIX BASE']) || 0,
               productPrice: item['PRIX VENTE'],
               supplierPrice: item['PRIX BASE'],
               alertQty: 10,
@@ -384,12 +497,12 @@ async function main() {
               status: true,
               productThumbnail: '/products/default.jpg',
               productImages: ['/products/default.jpg'],
-              productDetails: `${item.FAMILLE} - ${item['SOUS FAM']}`,
+              productDetails: `${item.FAMILLE || ''} - ${item['SOUS FAM'] || ''}`,
               content: item.DESIGNATION,
-              supplierId,
-              subCategoryId,
-              brandId,
-              unitId,
+              supplier: { connect: { id: supplierId } },
+              subCategory: { connect: { id: subCategoryId } }, // Correct way to connect
+              brand: { connect: { id: brandId } },
+              unit: { connect: { id: unitId } },
             },
           });
           productCount++;

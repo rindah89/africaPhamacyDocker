@@ -6,7 +6,7 @@
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "cross-env DATABASE_URL='mongodb://admin:password123@localhost:27017/africapharmacy?authSource=admin&replicaSet=rs0' next dev",
     "email": "email dev",
     "build": "next build",
     "start": "next start",

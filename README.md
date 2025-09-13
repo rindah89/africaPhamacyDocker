@@ -71,13 +71,15 @@ npm run build
 
 # Start production server
 npm start
+
+ │   docker compose exec africapharmacy-app npx prisma db seed                                                                                                                                             │
 ```
 
 ## 📦 Creating Distribution Package
 
 ### For Developers - Preparing for Deployment
 
-1. **Build the application**:
+1. **Build the application**:can 
 ```bash
 npm run build
 ```
