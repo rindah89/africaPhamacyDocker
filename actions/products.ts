@@ -35,39 +35,36 @@ export interface GroupedProducts {
 }
 
 export async function createProduct(data: ProductProps) {
-
   const slug = data.slug;
 
   try {
-
     const existingProduct = await prisma.product.findUnique({
-
       where: {
-
         slug,
-
       },
-
     });
 
     if (existingProduct) {
-
       return {
-
         error: "This product already exists",
-
         data: existingProduct,
-
         success: false,
-
       };
-
     }
 
+    // Set default image if not provided
+    const productThumbnail = data.productThumbnail || "/Strattera 3_2.webp";
+    const productImages =
+      data.productImages && data.productImages.length > 0
+        ? data.productImages
+        : ["/Strattera 3_2.webp"];
+
     const newProduct = await prisma.product.create({
-
-      data,
-
+      data: {
+        ...data,
+        productThumbnail,
+        productImages,
+      },
     });
 
     // console.log(newProduct);

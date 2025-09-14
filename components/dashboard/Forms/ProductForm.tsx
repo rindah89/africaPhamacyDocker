@@ -87,9 +87,9 @@ export default function ProductForm({
   );
   const [loading, setLoading] = useState(false);
   const initialImages = initialData?.productImages || [
-    "/placeholder.svg",
-    "/placeholder.svg",
-    "/placeholder.svg",
+    "/Strattera 3_2.webp",
+    "/Strattera 3_2.webp",
+    "/Strattera 3_2.webp",
   ];
   const [productImages, setProductImages] = useState(initialImages);
   const initialStatus = {

@@ -432,75 +432,52 @@ async function main() {
           console.error(`Skipping product due to invalid DESIGNATION: ${JSON.stringify(item)}`);
           return; // Uncomment this line
         }
-        if (!item['CODE ARTICLE'] || typeof item['CODE ARTICLE'] !== 'string') {
-          console.error(`Skipping product due to invalid CODE ARTICLE: ${JSON.stringify(item)}`);
-          return; // Uncomment this line
-        }
-
         const supplierId = supplierMap.get(item.FOUNISSEUR) || supplierMap.get('Other Suppliers');
-        // Ensure subCategoryId is always valid, fallback to 'Autres' if mapping fails
-        let subCategoryId = familleToSubCategory[item.FAMILLE]; // Attempt to get from direct mapping
+        let subCategoryId = familleToSubCategory[item.FAMILLE];
 
-        // If direct mapping fails, try the 'default' fallback
-        if (!subCategoryId) {
-            subCategoryId = familleToSubCategory['default'];
-        }
-
-        // Final explicit fallback to 'Autres' from subCategoryMap if still null/undefined
         if (!subCategoryId) {
             subCategoryId = subCategoryMap.get('Autres');
             console.warn(`WARNING: Subcategory for ${item.DESIGNATION} (FAMILLE: ${item.FAMILLE}) defaulted to 'Autres' as final fallback.`);
         }
 
-        // If subCategoryId is still invalid after all fallbacks, skip the product
         if (!subCategoryId) {
             console.error(`CRITICAL ERROR: Skipping product ${item.DESIGNATION} (FAMILLE: ${item.FAMILLE}) due to persistent invalid subCategoryId.`);
-            return; // Skip this product
+            return; 
         }
+
         const brandId = brandMap.get('Generic');
         const unitId = unitMap.get('BTE');
 
-        // NEW DEBUGGING LOGS
-        console.log(`DEBUG BEFORE IF: item.FAMILLE: ${item.FAMILLE}, item.FOUNISSEUR: ${item.FOUNISSEUR}`);
-        console.log(`DEBUG BEFORE IF: supplierId: ${supplierId}, subCategoryId: ${subCategoryId}, brandId: ${brandId}, unitId: ${unitId}`);
+        // Ensure productCode is a string, provide a fallback if missing or invalid
+        const productCode = typeof item['CODE ARTICLE'] === 'string' && item['CODE ARTICLE'] ? item['CODE ARTICLE'] : `UNKNOWN_CODE_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+        // Ensure supplierPrice is a number, provide a fallback if missing or invalid
+        const productCost = Number(item['PRIX REVIENT']) || Number(item['PRIX BASE']) || 0;
+        const productPrice = Number(item['PRIX VENTE']) || 0;
+        const supplierPrice = Number(item['PRIX BASE']) || 0;
 
         if (supplierId && subCategoryId && brandId && unitId) {
-          // Existing debugging logs (these will now be hit if the outer condition passes)
-          console.log(`DEBUG INSIDE IF: item.FAMILLE: ${item.FAMILLE}`);
-          console.log(`DEBUG INSIDE IF: familleToSubCategory[item.FAMILLE]: ${familleToSubCategory[item.FAMILLE]}`);
-          console.log(`DEBUG INSIDE IF: subCategoryMap.get('Autres'): ${subCategoryMap.get('Autres')}`);
-          console.log(`DEBUG INSIDE IF: final subCategoryId: ${subCategoryId}`);
-
-          // Explicitly check subCategoryId validity
-          if (!subCategoryId) {
-            console.error(`Skipping product ${item.DESIGNATION} due to invalid subCategoryId: ${subCategoryId}`);
-            return; // Skip this product
-          }
-
-          const slug = String(item.DESIGNATION).toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-|-$/g, '')
-            .substring(0, 100) + '-' + item['CODE ARTICLE'];
+          const slug = `${String(item.DESIGNATION).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 100)}-${productCode}`;
 
           await prisma.product.create({
             data: {
               name: item.DESIGNATION,
               slug: slug,
-              productCode: String(item['CODE ARTICLE']),
+              productCode: productCode,
               stockQty: Math.floor(Math.random() * 100) + 10,
-              productCost: Number(item['PRIX REVIENT']) || Number(item['PRIX BASE']) || 0,
-              productPrice: item['PRIX VENTE'],
-              supplierPrice: item['PRIX BASE'],
+              productCost: productCost,
+              productPrice: productPrice,
+              supplierPrice: supplierPrice,
               alertQty: 10,
               productTax: 0,
               taxMethod: 'exclusive',
               status: true,
-              productThumbnail: '/products/default.jpg',
-              productImages: ['/products/default.jpg'],
+              productThumbnail: '/Strattera 3_2.webp',
+              productImages: ['/Strattera 3_2.webp'],
               productDetails: `${item.FAMILLE || ''} - ${item['SOUS FAM'] || ''}`,
               content: item.DESIGNATION,
               supplier: { connect: { id: supplierId } },
-              subCategory: { connect: { id: subCategoryId } }, // Correct way to connect
+              subCategory: { connect: { id: subCategoryId } },
               brand: { connect: { id: brandId } },
               unit: { connect: { id: unitId } },
             },
@@ -508,7 +485,7 @@ async function main() {
           productCount++;
         }
       } catch (error) {
-        console.error(`Error creating product ${item.DESIGNATION}:`, error);
+        console.error(`Error creating product ${item.DESIGNATION || item['CODE ARTICLE'] || 'Unknown Product'}:`, error);
       }
     }));
     
